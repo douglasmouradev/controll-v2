@@ -1,6 +1,33 @@
+<p align="center">
+  <img src="https://img.shields.io/badge/PHP-8.1+-777BB4?style=flat-square&logo=php&logoColor=white" alt="PHP"/>
+  <img src="https://img.shields.io/badge/Tailwind-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind"/>
+  <img src="https://img.shields.io/badge/Help_Desk-0ea5e9?style=flat-square" alt="Help Desk"/>
+</p>
+
+<h1 align="center">Controll IT Help Desk</h1>
+
+<p align="center">
+  <strong>Central de atendimentos</strong> com filas, perfis de acesso (ACL), dashboard com filtros e integração ViaCEP.
+</p>
+
+<p align="center">
+  <a href="https://cea.controllit.com.br"><strong>Ver em produção</strong></a> ·
+  <a href="https://portifolio-douglas-moura.vercel.app">Portfólio</a> ·
+  <a href="https://github.com/douglasmouradev/controll-v2">Repositório</a>
+</p>
+
+---
+
 # Controll IT Help Desk (PHP MVC)
 
 Aplicação de CRM/Help Desk em PHP 8+, MySQL, Tailwind (CDN) e Vanilla JS, com sessões PHP e ACL por perfis.
+
+## Destaques
+
+- Dashboard com filtros rápidos e visual TDESK
+- Modal “Ver” com resumo e atualizações via **AJAX**
+- Preenchimento automático de endereço por **ViaCEP**
+- Perfis: superadmin, admin, suporte, gerente e usuário
 
 ## Requisitos
 - PHP 8.1+
