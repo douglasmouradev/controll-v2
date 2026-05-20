@@ -16,6 +16,16 @@
   <a href="https://github.com/douglasmouradev/controll-v2">Repositório</a>
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/github/actions/workflow/status/douglasmouradev/controll-v2/ci.yml?branch=main&label=CI&style=flat-square" alt="CI"/>
+</p>
+
+## Preview
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/douglasmouradev/portifolio/main/assets/projects/controllit.jpg" alt="Controll IT Help Desk" width="720"/>
+</p>
+
 ---
 
 # Controll IT Help Desk (PHP MVC)
