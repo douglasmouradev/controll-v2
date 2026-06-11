@@ -8,6 +8,7 @@ $countTotal   = (int)($stats['total_tickets'] ?? 0);
 $countAberto  = (int)($stats['open_tickets'] ?? 0);
 $countAndamento = (int)($stats['in_progress_tickets'] ?? 0);
 $countFechado = (int)($stats['closed_tickets'] ?? 0);
+$countAgendado = (int)($stats['scheduled_tickets'] ?? 0);
 ?>
 <div id="tab-chamados" class="tab-content">
 	<div class="ui-card ui-card-body">
@@ -18,6 +19,7 @@ $countFechado = (int)($stats['closed_tickets'] ?? 0);
 				<span class="badge badge-gray">Todos: <strong><?php echo $countTotal; ?></strong></span>
 				<span class="badge badge-blue">Aberto: <strong><?php echo $countAberto; ?></strong></span>
 				<span class="badge badge-yellow">Em andamento: <strong><?php echo $countAndamento; ?></strong></span>
+				<span class="badge badge-purple">Agendado: <strong><?php echo $countAgendado; ?></strong></span>
 				<span class="badge badge-green">Fechado: <strong><?php echo $countFechado; ?></strong></span>
 			</div>
 		</div>
@@ -33,6 +35,7 @@ $countFechado = (int)($stats['closed_tickets'] ?? 0);
 						<option value="">Todos</option>
 						<option <?php echo (($filters['status'] ?? '')==='Aberto')?'selected':''; ?>>Aberto</option>
 						<option <?php echo (($filters['status'] ?? '')==='Em andamento')?'selected':''; ?>>Em andamento</option>
+						<option <?php echo (($filters['status'] ?? '')==='Agendado')?'selected':''; ?>>Agendado</option>
 						<option <?php echo (($filters['status'] ?? '')==='Fechado')?'selected':''; ?>>Fechado</option>
 					</select>
 				</div>

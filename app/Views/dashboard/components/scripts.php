@@ -11,6 +11,8 @@
 		const map = {
 			'Fechado': 'badge badge-green',
 			'Em andamento': 'badge badge-yellow',
+			'Em Andamento': 'badge badge-yellow',
+			'Agendado': 'badge badge-purple',
 			'Aberto': 'badge badge-blue',
 		};
 		return map[status] || 'badge badge-gray';
@@ -330,6 +332,8 @@ let inventoryLocationsByCategory = {};
 			const colors = {
 				'Aberto': '#f59e0b',
 				'Em Andamento': '#3b82f6',
+				'Em andamento': '#3b82f6',
+				'Agendado': '#8b5cf6',
 				'Fechado': '#10b981',
 				'Cancelado': '#6b7280'
 			};

@@ -478,6 +478,7 @@ INSERT INTO `ticket_priorities` (`name`, `level`, `color`) VALUES
 INSERT INTO `ticket_statuses` (`name`, `slug`, `color`, `is_final`) VALUES
 ('Aberto', 'aberto', '#f59e0b', FALSE),
 ('Em Andamento', 'em_andamento', '#3b82f6', FALSE),
+('Agendado', 'agendado', '#8b5cf6', FALSE),
 ('Fechado', 'fechado', '#10b981', TRUE),
 ('Cancelado', 'cancelado', '#6b7280', TRUE);
 

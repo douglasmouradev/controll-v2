@@ -288,6 +288,7 @@ $users = $users ?? [];
 			<div class="flex gap-2 mr-auto">
 				<button type="button" data-status="Aberto" class="status-btn btn btn-secondary btn-sm">Aberto</button>
 				<button type="button" data-status="Em andamento" class="status-btn btn btn-secondary btn-sm">Em andamento</button>
+				<button type="button" data-status="Agendado" class="status-btn btn btn-secondary btn-sm">Agendado</button>
 				<button type="button" data-status="Fechado" class="status-btn btn btn-secondary btn-sm">Fechado</button>
 			</div>
 		<?php endif; ?>

@@ -15,6 +15,7 @@ final class DashboardController extends Controller
 	public function index(): void
 	{
 		$this->requireAuth([]);
+		Ticket::bootstrapStatuses();
 		$sessionUser = Auth::instance()->user();
 		// Carrega dados completos do usuário (incluindo créditos) quando possível
 		$fullUser = $sessionUser && isset($sessionUser['id'])
@@ -56,6 +57,7 @@ final class DashboardController extends Controller
 				'total_tickets' => 0,
 				'open_tickets' => 0,
 				'in_progress_tickets' => 0,
+				'scheduled_tickets' => 0,
 				'closed_tickets' => 0,
 				'total_users' => 0,
 				'support_agents' => 0,
@@ -213,6 +215,33 @@ final class DashboardController extends Controller
 			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
 			$inProgressTickets = $row ? (int)$row['cnt'] : 0;
 		}
+
+		// Total de chamados agendados
+		$scheduledTickets = 0;
+		if ($hasTicketStatuses || $hasStatusesTable || $hasStatusColumn) {
+			$params = [];
+			$sql = 'SELECT COUNT(*) as cnt FROM tickets t';
+			if ($hasTicketStatuses) {
+				$sql .= ' LEFT JOIN ticket_statuses ts ON ts.id = t.status_id WHERE ts.name = :status';
+			} elseif ($hasStatusesTable) {
+				$sql .= ' LEFT JOIN statuses s ON s.id = t.status_id WHERE s.name = :status';
+			} elseif ($hasStatusColumn) {
+				$sql .= ' WHERE t.status = :status';
+			}
+			$params[':status'] = 'Agendado';
+			if ($user['role'] === 'user') {
+				if (strpos($sql, 'WHERE') === false) {
+					$sql .= ' WHERE t.user_id = :user_id';
+				} else {
+					$sql .= ' AND t.user_id = :user_id';
+				}
+				$params[':user_id'] = (int)$user['id'];
+			}
+			$stmt = $pdo->prepare($sql);
+			$stmt->execute($params);
+			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
+			$scheduledTickets = $row ? (int)$row['cnt'] : 0;
+		}
 		
 		// Diárias de Projeto (tickets com categoria 'Projeto')
 		$projectDailies = 0;
@@ -294,6 +323,7 @@ final class DashboardController extends Controller
 			'closed_tickets' => $closedTickets,
 			'open_tickets' => $openTickets,
 			'in_progress_tickets' => $inProgressTickets,
+			'scheduled_tickets' => $scheduledTickets,
 			'total_users' => $totalUsers,
 			'support_agents' => $supportAgents,
 			'avg_resolution_hours' => $avgResolution,

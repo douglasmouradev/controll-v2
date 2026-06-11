@@ -5,7 +5,8 @@ function ui_status_badge_class(string $status): string
 {
 	return match ($status) {
 		'Fechado' => 'badge badge-green',
-		'Em andamento' => 'badge badge-yellow',
+		'Em andamento', 'Em Andamento' => 'badge badge-yellow',
+		'Agendado' => 'badge badge-purple',
 		'Aberto' => 'badge badge-blue',
 		default => 'badge badge-gray',
 	};

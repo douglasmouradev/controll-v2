@@ -189,7 +189,7 @@ CREATE TABLE ticket_attachments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 INSERT INTO ticket_categories (name, color) VALUES ('Geral', '#9b59b6');
 INSERT INTO ticket_priorities (name, level, color) VALUES ('Baixa', 1, '#10b981'), ('Média', 2, '#f59e0b'), ('Alta', 3, '#ef4444'), ('Crítica', 4, '#dc2626');
-INSERT INTO ticket_statuses (name, slug, color, is_final) VALUES ('Aberto', 'aberto', '#f59e0b', 0), ('Em Andamento', 'em_andamento', '#3b82f6', 0), ('Fechado', 'fechado', '#10b981', 1);
+INSERT INTO ticket_statuses (name, slug, color, is_final) VALUES ('Aberto', 'aberto', '#f59e0b', 0), ('Em Andamento', 'em_andamento', '#3b82f6', 0), ('Agendado', 'agendado', '#8b5cf6', 0), ('Fechado', 'fechado', '#10b981', 1);
 SQL;
 	$dbh->exec($schema);
 	echo "Schema aplicado com sucesso.\n";

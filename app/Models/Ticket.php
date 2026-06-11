@@ -484,8 +484,19 @@ final class Ticket
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
+	public static function allowedStatuses(): array
+	{
+		return ['Aberto', 'Em andamento', 'Agendado', 'Fechado'];
+	}
+
+	public static function bootstrapStatuses(): void
+	{
+		self::ensureTicketStatusRow('Agendado', 'agendado', '#8b5cf6', false);
+	}
+
 	public static function updateStatus(int $id, string $status): bool
 	{
+		self::bootstrapStatuses();
 		$pdo = Database::pdo();
 		if (self::tableExists('ticket_statuses')) {
 			$stId = self::getIdByName('ticket_statuses', $status);
@@ -575,6 +586,24 @@ final class Ticket
 		$stmt->execute([$name]);
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 		return $row ? (int)$row['id'] : null;
+	}
+
+	private static function ensureTicketStatusRow(string $name, string $slug, string $color, bool $isFinal): void
+	{
+		if (!self::tableExists('ticket_statuses')) {
+			return;
+		}
+		if (self::getIdByName('ticket_statuses', $name)) {
+			return;
+		}
+		try {
+			$stmt = Database::pdo()->prepare(
+				'INSERT INTO ticket_statuses (name, slug, color, is_final) VALUES (?, ?, ?, ?)'
+			);
+			$stmt->execute([$name, $slug, $color, $isFinal ? 1 : 0]);
+		} catch (\Throwable $e) {
+			error_log('ensureTicketStatusRow(' . $name . '): ' . $e->getMessage());
+		}
 	}
 
 	private static function applyAuthScope(array $authUser, array &$where, array &$params): void
