@@ -1143,9 +1143,13 @@ final class DashboardController extends Controller
 
 		if ((int) ($parsed['summary']['total_rows'] ?? 0) === 0) {
 			@unlink($targetPath);
+			$detected = $parsed['summary']['detected_headers'] ?? [];
+			$headersHint = is_array($detected) && count($detected) > 0
+				? ' Colunas encontradas: ' . implode(', ', array_slice($detected, 0, 12)) . '.'
+				: '';
 			$this->json([
 				'success' => false,
-				'message' => 'Nenhum registro válido encontrado. Verifique colunas Data, Loja e Quantidade.',
+				'message' => 'Nenhum registro válido encontrado. Verifique colunas Data, Loja e Quantidade (ou Diárias compradas / Qtd / Previsto).' . $headersHint,
 			], 422);
 			return;
 		}
@@ -1211,7 +1215,9 @@ final class DashboardController extends Controller
 		if ($ext === 'csv') {
 			$rows = $this->readCsvRows($path);
 		} else {
-			$rows = $this->readXlsxRows($path);
+			$rows = $this->readXlsxRows($path, [
+				'DATA', 'LOJA', 'COMPRAD', 'QUANT', 'QTD', 'DIARIA', 'TIPO', 'PREVISTO', 'UNIDADE', 'SIGLA',
+			]);
 		}
 		return PurchasedDailies::parseRows($rows);
 	}
@@ -1293,7 +1299,11 @@ final class DashboardController extends Controller
 	 *
 	 * @return array<int, array<int, string>>
 	 */
-	private function readXlsxRows(string $xlsxPath): array
+	/**
+	 * @param array<int, string>|null $preferredHeaders
+	 * @return array<int, array<int, string>>
+	 */
+	private function readXlsxRows(string $xlsxPath, ?array $preferredHeaders = null): array
 	{
 		if (!class_exists(\ZipArchive::class)) {
 			throw new \RuntimeException('Extensão ZipArchive não está disponível no PHP.');
@@ -1400,23 +1410,47 @@ final class DashboardController extends Controller
 		if (count($sheetCandidates) > 0) {
 			// Escolher automaticamente a aba com maior aderência ao cabeçalho esperado
 			// para evitar "importação vazia" quando a primeira aba for Dashboard/Resumo.
-			$requiredHeaders = ['DATA', 'LOJA', 'SETUP', 'ROLLOUT', 'HEXAPADS', 'DEFEITO', 'SUPORTE'];
+			$requiredHeaders = $preferredHeaders ?? ['DATA', 'LOJA', 'SETUP', 'ROLLOUT', 'HEXAPADS', 'DEFEITO', 'SUPORTE'];
+			$normalizeSheetHeader = static function (string $text): string {
+				$text = strtoupper(trim($text));
+				$from = ['Á', 'À', 'Â', 'Ã', 'Ä', 'É', 'È', 'Ê', 'Ë', 'Í', 'Ì', 'Î', 'Ï', 'Ó', 'Ò', 'Ô', 'Õ', 'Ö', 'Ú', 'Ù', 'Û', 'Ü', 'Ç'];
+				$to =   ['A', 'A', 'A', 'A', 'A', 'E', 'E', 'E', 'E', 'I', 'I', 'I', 'I', 'O', 'O', 'O', 'O', 'O', 'U', 'U', 'U', 'U', 'C'];
+				$text = str_replace($from, $to, $text);
+				return preg_replace('/[^A-Z0-9]/', '', $text) ?? $text;
+			};
 			$bestScore = -1;
 			foreach ($sheetCandidates as $candidate) {
 				$rows = $this->extractRowsFromSheetXml((string) $candidate['xml'], $sharedStrings);
 				if (count($rows) === 0) {
 					continue;
 				}
-				$header = array_map(static fn($v) => strtoupper(trim((string) $v)), $rows[0]);
-				$headerSet = array_values(array_filter($header, static fn($h) => $h !== ''));
-				$score = 0;
-				foreach ($requiredHeaders as $requiredHeader) {
-					if (in_array($requiredHeader, $headerSet, true)) {
-						$score++;
+				$headerLimit = min(count($rows), 8);
+				$bestRowScore = -1;
+				for ($headerRowIdx = 0; $headerRowIdx < $headerLimit; $headerRowIdx++) {
+					$headerKeys = array_map(
+						static fn($v) => $normalizeSheetHeader((string) $v),
+						$rows[$headerRowIdx]
+					);
+					$headerKeys = array_values(array_filter($headerKeys, static fn($h) => $h !== ''));
+					$rowScore = 0;
+					foreach ($requiredHeaders as $requiredHeader) {
+						$needle = $normalizeSheetHeader($requiredHeader);
+						if ($needle === '') {
+							continue;
+						}
+						foreach ($headerKeys as $headerKey) {
+							if ($headerKey === $needle || str_contains($headerKey, $needle) || str_contains($needle, $headerKey)) {
+								$rowScore++;
+								break;
+							}
+						}
+					}
+					if ($rowScore > $bestRowScore) {
+						$bestRowScore = $rowScore;
 					}
 				}
-				if ($score > $bestScore) {
-					$bestScore = $score;
+				if ($bestRowScore > $bestScore) {
+					$bestScore = $bestRowScore;
 					$sheetXml = (string) $candidate['xml'];
 				}
 			}

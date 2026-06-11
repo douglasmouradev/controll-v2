@@ -38,7 +38,7 @@ final class PurchasedDailies
 
 	/**
 	 * @param array<int, array<int, string>> $rows
-	 * @return array{rows: array<int, array<string, mixed>>, summary: array<string, int|string>}
+	 * @return array{rows: array<int, array<string, mixed>>, summary: array<string, int|string|array<int, string>>}
 	 */
 	public static function parseRows(array $rows): array
 	{
@@ -57,16 +57,18 @@ final class PurchasedDailies
 				$indexByHeader[$name] = $idx;
 			}
 		}
+		$detectedHeaders = array_values(array_filter($header, static fn($h) => $h !== ''));
 
-		$dateIdx = self::findColumnIndex($indexByHeader, ['DATA', 'DATE', 'DT']);
-		$storeIdx = self::findColumnIndex($indexByHeader, ['LOJA', 'UNIDADE', 'SIGLA', 'STORE', 'FILIAL']);
-		$qtdIdx = self::findColumnIndex($indexByHeader, ['QTD', 'QTDE', 'QUANTIDADE', 'DIARIAS', 'DIÁRIAS', 'DIARIA', 'DIÁRIA']);
-		$typeIdx = self::findColumnIndex($indexByHeader, ['TIPO', 'CATEGORIA', 'MODALIDADE', 'CREDITO', 'CRÉDITO']);
-		$descIdx = self::findColumnIndex($indexByHeader, ['DESCRICAO', 'DESCRIÇÃO', 'OBS', 'OBSERVACAO', 'OBSERVAÇÃO']);
+		$dateIdx = self::findColumnIndex($indexByHeader, ['DATA', 'DATE', 'DT'])
+			?? self::findColumnIndexLike($indexByHeader, ['DATA', 'DATE', 'DT']);
+		$storeIdx = self::findColumnIndex($indexByHeader, ['LOJA', 'UNIDADE', 'SIGLA', 'STORE', 'FILIAL'])
+			?? self::findColumnIndexLike($indexByHeader, ['LOJA', 'UNIDADE', 'SIGLA', 'FILIAL', 'STORE']);
+		$typeIdx = self::findColumnIndex($indexByHeader, ['TIPO', 'CATEGORIA', 'MODALIDADE', 'CREDITO', 'CRÉDITO'])
+			?? self::findColumnIndexLike($indexByHeader, ['TIPO', 'CATEGORIA', 'MODALIDADE', 'CREDITO']);
+		$descIdx = self::findColumnIndex($indexByHeader, ['DESCRICAO', 'DESCRIÇÃO', 'OBS', 'OBSERVACAO', 'OBSERVAÇÃO'])
+			?? self::findColumnIndexLike($indexByHeader, ['DESCRICAO', 'OBSERVACAO', 'OBS']);
 
-		if ($qtdIdx === null && count($indexByHeader) >= 2) {
-			$qtdIdx = max(array_values($indexByHeader));
-		}
+		$qtdIdx = self::resolveQuantityColumnIndex($indexByHeader);
 
 		$parsedRows = [];
 		$dailyTotal = 0;
@@ -78,17 +80,27 @@ final class PurchasedDailies
 				continue;
 			}
 
-			$qtd = $qtdIdx !== null ? self::parseQuantity((string) ($row[$qtdIdx] ?? '')) : 0;
+			$qtd = $qtdIdx !== null
+				? self::parseQuantity((string) ($row[$qtdIdx] ?? ''))
+				: self::findQuantityInRow($row, [$dateIdx, $storeIdx, $typeIdx, $descIdx]);
 			if ($qtd <= 0) {
 				continue;
 			}
 
+			$storeRaw = $storeIdx !== null ? trim((string) ($row[$storeIdx] ?? '')) : '';
+			if ($storeRaw === '-' || self::isSummaryLabel($storeRaw)) {
+				continue;
+			}
+
 			$typeRaw = $typeIdx !== null ? (string) ($row[$typeIdx] ?? '') : '';
+			if ($typeRaw === '' && $storeRaw !== '') {
+				$typeRaw = $storeRaw;
+			}
 			$creditType = self::detectCreditType($typeRaw);
 
 			$parsedRows[] = [
 				'date' => $dateIdx !== null ? trim((string) ($row[$dateIdx] ?? '')) : '',
-				'store' => $storeIdx !== null ? trim((string) ($row[$storeIdx] ?? '')) : '',
+				'store' => $storeRaw,
 				'quantity' => $qtd,
 				'type' => $creditType,
 				'type_label' => $creditType === 'project_dailies' ? 'Projeto' : 'Diária',
@@ -109,8 +121,91 @@ final class PurchasedDailies
 				'daily_purchased' => $dailyTotal,
 				'project_purchased' => $projectTotal,
 				'total_purchased' => $dailyTotal + $projectTotal,
+				'detected_headers' => $detectedHeaders,
 			],
 		];
+	}
+
+	/**
+	 * @param array<string, int> $indexByHeader
+	 */
+	private static function resolveQuantityColumnIndex(array $indexByHeader): ?int
+	{
+		$exactCandidates = [
+			'DIARIAS COMPRADAS',
+			'DIÁRIAS COMPRADAS',
+			'DIARIAS ADQUIRIDAS',
+			'DIÁRIAS ADQUIRIDAS',
+			'COMPRADAS',
+			'QTD COMPRADA',
+			'QTDE COMPRADA',
+			'QUANTIDADE COMPRADA',
+			'QTD',
+			'QTDE',
+			'QUANTIDADE',
+		];
+		$idx = self::findColumnIndex($indexByHeader, $exactCandidates);
+		if ($idx !== null) {
+			return $idx;
+		}
+
+		$idx = self::findColumnIndexLike($indexByHeader, [
+			'DIARIASCOMPRADAS',
+			'DIARIASADQUIRIDAS',
+			'COMPRADAS',
+			'QTDCOMPRADA',
+			'QUANTIDADECOMPRADA',
+		]);
+		if ($idx !== null) {
+			return $idx;
+		}
+
+		$idx = self::findColumnIndexLike($indexByHeader, ['QUANTIDADE', 'QTD', 'QTDE']);
+		if ($idx !== null) {
+			return $idx;
+		}
+
+		$idx = self::findColumnIndexLike($indexByHeader, ['DIARIAS', 'DIARIA'], ['CONSUMID', 'CONSUMIDA', 'UTILIZAD']);
+		if ($idx !== null) {
+			return $idx;
+		}
+
+		return self::findColumnIndexLike($indexByHeader, ['PREVISTO'], ['EXECUTADO', 'REALIZADO']);
+	}
+
+	/**
+	 * @param array<int, string> $row
+	 * @param array<int, int|null> $skipIndexes
+	 */
+	private static function findQuantityInRow(array $row, array $skipIndexes): int
+	{
+		$skip = array_values(array_filter($skipIndexes, static fn($v) => $v !== null));
+		$best = 0;
+		foreach ($row as $idx => $cell) {
+			if (in_array($idx, $skip, true)) {
+				continue;
+			}
+			$qtd = self::parseQuantity((string) $cell);
+			if ($qtd > $best) {
+				$best = $qtd;
+			}
+		}
+		return $best;
+	}
+
+	private static function isSummaryLabel(string $value): bool
+	{
+		$key = self::normalizeHeaderKey($value);
+		if ($key === '') {
+			return false;
+		}
+		$labels = ['TOTAL', 'TOTAIS', 'SUBTOTAL', 'RESUMO', 'GERAL'];
+		foreach ($labels as $label) {
+			if ($key === $label || str_contains($key, $label)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static function emptySummary(): array
@@ -120,6 +215,7 @@ final class PurchasedDailies
 			'daily_purchased' => 0,
 			'project_purchased' => 0,
 			'total_purchased' => 0,
+			'detected_headers' => [],
 		];
 	}
 
@@ -128,16 +224,26 @@ final class PurchasedDailies
 	 */
 	private static function detectHeaderRowIndex(array $rows): int
 	{
-		$keywords = ['DATA', 'LOJA', 'UNIDADE', 'SIGLA', 'QTD', 'QUANTIDADE', 'DIARIAS', 'DIÁRIAS', 'TIPO'];
+		$keywords = [
+			'DATA', 'LOJA', 'UNIDADE', 'SIGLA', 'QTD', 'QUANTIDADE', 'DIARIAS', 'DIARIA',
+			'COMPRADAS', 'PREVISTO', 'TIPO', 'COMPRA',
+		];
 		$bestIndex = 0;
 		$bestScore = -1;
-		$limit = min(count($rows), 10);
+		$limit = min(count($rows), 15);
 		for ($i = 0; $i < $limit; $i++) {
-			$normalized = array_map(static fn($v) => self::normalizeHeader((string) $v), $rows[$i]);
+			$normalized = array_map(static fn($v) => self::normalizeHeaderKey((string) $v), $rows[$i]);
 			$score = 0;
 			foreach ($normalized as $cell) {
-				if (in_array($cell, $keywords, true)) {
-					$score++;
+				if ($cell === '') {
+					continue;
+				}
+				foreach ($keywords as $keyword) {
+					$key = self::normalizeHeaderKey($keyword);
+					if ($cell === $key || str_contains($cell, $key) || str_contains($key, $cell)) {
+						$score++;
+						break;
+					}
 				}
 			}
 			if ($score > $bestScore) {
@@ -159,6 +265,13 @@ final class PurchasedDailies
 		return $value;
 	}
 
+	private static function normalizeHeaderKey(string $value): string
+	{
+		$value = self::normalizeHeader($value);
+		$value = preg_replace('/[^A-Z0-9]/', '', $value) ?? $value;
+		return $value;
+	}
+
 	/**
 	 * @param array<string, int> $indexByHeader
 	 * @param array<int, string> $candidates
@@ -173,10 +286,51 @@ final class PurchasedDailies
 		return null;
 	}
 
+	/**
+	 * @param array<string, int> $indexByHeader
+	 * @param array<int, string> $needles
+	 * @param array<int, string> $excludeNeedles
+	 */
+	private static function findColumnIndexLike(array $indexByHeader, array $needles, array $excludeNeedles = []): ?int
+	{
+		$normalized = [];
+		foreach ($indexByHeader as $name => $idx) {
+			$normalized[self::normalizeHeaderKey($name)] = (int) $idx;
+		}
+
+		foreach ($needles as $needle) {
+			$needleKey = self::normalizeHeaderKey($needle);
+			if ($needleKey === '') {
+				continue;
+			}
+			foreach ($normalized as $key => $idx) {
+				if (!str_contains($key, $needleKey) && $key !== $needleKey) {
+					continue;
+				}
+				$excluded = false;
+				foreach ($excludeNeedles as $exclude) {
+					$excludeKey = self::normalizeHeaderKey($exclude);
+					if ($excludeKey !== '' && str_contains($key, $excludeKey)) {
+						$excluded = true;
+						break;
+					}
+				}
+				if (!$excluded) {
+					return $idx;
+				}
+			}
+		}
+
+		return null;
+	}
+
 	private static function parseQuantity(string $value): int
 	{
 		$value = trim($value);
-		if ($value === '') {
+		if ($value === '' || $value === '-') {
+			return 0;
+		}
+		if (preg_match('/^\d{1,2}\/\d{1,2}\/\d{2,4}$/', $value) === 1) {
 			return 0;
 		}
 		$value = str_replace(['.', ' '], '', $value);
@@ -184,12 +338,19 @@ final class PurchasedDailies
 		if (!is_numeric($value)) {
 			return 0;
 		}
-		return max(0, (int) round((float) $value));
+		$float = (float) $value;
+		if ($float > 0 && $float < 1) {
+			return 0;
+		}
+		if ($float >= 40000 && $float <= 60000) {
+			return 0;
+		}
+		return max(0, (int) round($float));
 	}
 
 	private static function detectCreditType(string $typeRaw): string
 	{
-		$type = self::normalizeHeader($typeRaw);
+		$type = self::normalizeHeaderKey($typeRaw);
 		if ($type === '') {
 			return 'daily';
 		}

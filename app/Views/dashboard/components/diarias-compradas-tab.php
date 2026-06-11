@@ -35,7 +35,7 @@
 
 	<div class="bg-white rounded-lg shadow p-4 mb-4">
 		<p class="text-sm text-gray-600 mb-2">
-			<strong>Formato esperado:</strong> colunas como Data, Loja/Unidade/Sigla, Quantidade (ou Qtd/Diárias) e, opcionalmente, Tipo (Diária ou Projeto) e Descrição.
+			<strong>Formato esperado:</strong> colunas como Data, Loja/Unidade/Sigla e Quantidade (Qtd, Diárias compradas, Previsto ou similar). Opcional: Tipo (Diária ou Projeto) e Descrição.
 		</p>
 		<p class="text-xs text-gray-500" id="purchased-dailies-source">Nenhuma planilha importada.</p>
 	</div>
