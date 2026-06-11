@@ -22,11 +22,11 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
 header(
 	"Content-Security-Policy: default-src 'self'; "
-	. "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; "
-	. "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; "
+	. "script-src 'self' 'unsafe-inline'; "
+	. "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
 	. "font-src 'self' https://fonts.gstatic.com; "
 	. "img-src 'self' data:; "
-	. "connect-src 'self' https://viacep.com.br https://cdn.jsdelivr.net"
+	. "connect-src 'self' https://viacep.com.br"
 );
 
 // Composer autoload (for App\ namespace)

@@ -89,13 +89,17 @@ Também disponível pelo menu **Administração** → Modo manutenção (toggle 
 app/
   Controllers/   # HTTP
   Models/        # Dados
-  Services/      # Regras de negócio
+  Services/      # Regras de negócio (TicketService, Cache, AuditLog...)
   Views/         # Templates PHP
+public/assets/
+  css/app.css    # Estilos principais
+  js/vendor/     # Chart.js e Tailwind (local, sem CDN)
+  js/dashboard/  # utils.js, charts.js, maintenance.js
 bin/migrate.php  # Runner de migrations
 database/
   schema.sql     # Schema inicial
   migrations/    # Migrations incrementais
-public/          # Document root
+tests/Unit/      # PHPUnit
 ```
 
 ## Segurança

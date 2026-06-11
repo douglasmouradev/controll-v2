@@ -40,7 +40,8 @@ $roleLabel = $roleLabels[$user['role'] ?? ''] ?? ($user['role'] ?? 'Usuário');
 			Chamados Fechados
 		</button>
 
-		<?php if (in_array($user['role'], ['support', 'admin'], true)): ?>
+		<?php require_once BASE_PATH . '/app/Views/helpers/auth.php'; ?>
+		<?php if (view_is_support_or_admin($user)): ?>
 			<div class="sidebar-section mt-2">Administração</div>
 			<button type="button" class="sidebar-menu-item sidebar-item" data-tab="usuarios" data-title="Usuários">
 				<svg fill="currentColor" viewBox="0 0 20 20"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
@@ -54,7 +55,11 @@ $roleLabel = $roleLabels[$user['role'] ?? ''] ?? ($user['role'] ?? 'Usuário');
 				<svg fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm0 5v5a2 2 0 002 2h8a2 2 0 002-2V9H4zm3 2h2v3H7v-3z"/></svg>
 				Diárias compradas
 			</button>
-			<?php if (($user['role'] ?? '') === 'admin'): ?>
+			<?php if (view_is_admin($user)): ?>
+				<button type="button" class="sidebar-menu-item sidebar-item" data-tab="logs" data-title="Logs">
+					<svg fill="currentColor" viewBox="0 0 20 20"><path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/><path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/></svg>
+					Logs
+				</button>
 				<button type="button" class="sidebar-menu-item sidebar-item" data-tab="configuracoes" data-title="Configurações">
 					<svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.19 2.042-.948 2.286-1.56.38-1.56 2.6 0 2.98a1.532 1.532 0 01.948 2.286c-.836 1.372.734 2.942 2.106 2.106.886-.54 2.042-.19 2.286.948.38 1.56 2.6 1.56 2.98 0a1.533 1.533 0 012.286-.948c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.948-2.286c1.56-.38 1.56-2.6 0-2.98a1.532 1.532 0 01-.948-2.286c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.286-.948zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
 					Configurações

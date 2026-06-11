@@ -4,7 +4,12 @@
 /** @var array $filters */
 /** @var array $stats */
 /** @var array $users */
+/** @var array $ticket_pagination */
+/** @var array $access_logs */
+require_once BASE_PATH . '/app/Views/helpers/auth.php';
 $users = $users ?? [];
+$ticket_pagination = $ticket_pagination ?? ['page' => 1, 'per_page' => 50, 'total' => 0, 'pages' => 1];
+$access_logs = $access_logs ?? [];
 ?>
 
 <!-- Sidebar -->
@@ -24,7 +29,7 @@ $users = $users ?? [];
 			</div>
 		</div>
 		<div class="flex items-center gap-3">
-			<?php if (($user['role'] ?? '') === 'admin' && !empty($maintenance_mode)): ?>
+			<?php if (view_is_admin($user) && !empty($maintenance_mode)): ?>
 				<span id="maintenance-topbar-badge" class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200 px-3 py-1 text-xs font-semibold">
 					Manutenção ativa
 				</span>
@@ -42,10 +47,11 @@ $users = $users ?? [];
 	<?php include __DIR__ . '/components/painel-tab.php'; ?>
 	<?php include __DIR__ . '/components/chamados-tab.php'; ?>
 	<?php include __DIR__ . '/components/chamados-fechados-tab.php'; ?>
-	<?php if (($user['role'] ?? '') === 'admin'): ?>
+	<?php if (view_is_admin($user)): ?>
 		<?php include __DIR__ . '/components/configuracoes-tab.php'; ?>
+		<?php include __DIR__ . '/components/logs-tab.php'; ?>
 	<?php endif; ?>
-	<?php if (in_array($user['role'], ['support', 'admin'], true)): ?>
+	<?php if (view_is_support_or_admin($user)): ?>
 		<?php include __DIR__ . '/components/usuarios-tab.php'; ?>
 		<?php include __DIR__ . '/components/relatorios-tab.php'; ?>
 		<?php include __DIR__ . '/components/diarias-compradas-tab.php'; ?>
@@ -308,7 +314,9 @@ $users = $users ?? [];
 
 <!-- Scripts do Sidebar e Abas -->
 <?php include __DIR__ . '/components/sidebar-script.php'; ?>
-<?php if (($user['role'] ?? '') === 'admin'): ?>
+<script src="/assets/js/dashboard/utils.js"></script>
+<script src="/assets/js/dashboard/charts.js"></script>
+<?php if (view_is_admin($user)): ?>
 	<script src="/assets/js/dashboard/maintenance.js"></script>
 <?php endif; ?>
 <?php include __DIR__ . '/components/scripts.php'; ?>

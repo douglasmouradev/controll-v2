@@ -46,7 +46,7 @@ $bodyClass = $isDashboard ? 'layout-dashboard' : ($isAuth ? 'layout-auth' : '');
 		};
 	})();
 	</script>
-	<script src="https://cdn.tailwindcss.com"></script>
+	<script src="/assets/js/vendor/tailwindcdn.js"></script>
 	<script>
 		tailwind.config = {
 			theme: {
@@ -60,7 +60,7 @@ $bodyClass = $isDashboard ? 'layout-dashboard' : ($isAuth ? 'layout-auth' : '');
 			},
 		};
 	</script>
-	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<script src="/assets/js/vendor/chart.umd.min.js"></script>
 	<link rel="icon" href="/favicon.svg">
 </head>
 <body class="<?php echo htmlspecialchars($bodyClass, ENT_QUOTES, 'UTF-8'); ?>">

@@ -4,6 +4,8 @@
 /** @var array $filters */
 /** @var array $stats */
 require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
+require_once BASE_PATH . '/app/Views/helpers/auth.php';
+$ticket_pagination = $ticket_pagination ?? ['page' => 1, 'per_page' => 50, 'total' => 0, 'pages' => 1];
 $countTotal   = (int)($stats['total_tickets'] ?? 0);
 $countAberto  = (int)($stats['open_tickets'] ?? 0);
 $countAndamento = (int)($stats['in_progress_tickets'] ?? 0);
@@ -60,7 +62,7 @@ $countAgendado = (int)($stats['scheduled_tickets'] ?? 0);
 					<label class="label">UF</label>
 					<input id="f-estado" class="input w-16 uppercase" placeholder="UF" maxlength="2" value="<?php echo htmlspecialchars((string)($filters['estado'] ?? '')); ?>" autocomplete="off">
 				</div>
-				<?php if (in_array($user['role'], ['support','admin'], true)): ?>
+				<?php if (view_is_support_or_admin($user)): ?>
 					<div>
 						<label class="label">Usuário</label>
 						<input id="f-user" class="input w-32" placeholder="ID ou Nome" value="<?php echo htmlspecialchars((string)($filters['user'] ?? '')); ?>">
@@ -135,13 +137,13 @@ $countAgendado = (int)($stats['scheduled_tickets'] ?? 0);
 								</td>
 								<td class="px-3 py-2 whitespace-nowrap">
 									<button type="button" class="btn-link btn-view">Ver</button>
-							<?php if (in_array($user['role'], ['support','admin'], true)): ?>
+							<?php if (view_is_support_or_admin($user)): ?>
 								<button type="button" class="btn-link ml-2 btn-clone-ticket" data-id="<?php echo (int) $t['id']; ?>">Clonar</button>
 							<?php endif; ?>
-							<?php if ((int)($t['user_id'] ?? 0) === (int)($user['id'] ?? 0) || in_array($user['role'], ['support','admin'], true)): ?>
+							<?php if ((int)($t['user_id'] ?? 0) === (int)($user['id'] ?? 0) || view_is_support_or_admin($user)): ?>
 								<button type="button" class="btn-link ml-2 btn-edit-ticket">Editar</button>
 							<?php endif; ?>
-							<?php if (in_array($user['role'], ['support','admin'], true)): ?>
+							<?php if (view_is_support_or_admin($user)): ?>
 								<button type="button" class="btn-link ml-2 btn-assign">Atribuir</button>
 								<button type="button" class="btn-link danger btn-delete-ticket ml-2">Excluir</button>
 							<?php endif; ?>
@@ -152,5 +154,41 @@ $countAgendado = (int)($stats['scheduled_tickets'] ?? 0);
 				</tbody>
 			</table>
 		</div>
+
+		<?php if (($ticket_pagination['pages'] ?? 1) > 1): ?>
+			<div class="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm text-slate-600">
+				<p>
+					Página <strong><?php echo (int) $ticket_pagination['page']; ?></strong>
+					de <strong><?php echo (int) $ticket_pagination['pages']; ?></strong>
+					— <?php echo (int) $ticket_pagination['total']; ?> chamado(s)
+				</p>
+				<div class="flex items-center gap-2">
+					<?php
+					$buildPageUrl = static function (int $targetPage) use ($filters): string {
+						$params = array_filter([
+							'id' => $filters['id'] ?? null,
+							'status' => $filters['status'] ?? null,
+							'priority' => $filters['priority'] ?? null,
+							'user' => $filters['user'] ?? null,
+							'sigla' => $filters['sigla'] ?? null,
+							'cidade' => $filters['cidade'] ?? null,
+							'estado' => $filters['estado'] ?? null,
+							'page' => $targetPage > 1 ? $targetPage : null,
+							'tab' => 'chamados',
+						], static fn ($value) => $value !== null && $value !== '');
+						return '/?' . http_build_query($params);
+					};
+					$currentPage = (int) ($ticket_pagination['page'] ?? 1);
+					$totalPages = (int) ($ticket_pagination['pages'] ?? 1);
+					?>
+					<?php if ($currentPage > 1): ?>
+						<a class="btn btn-secondary btn-sm" href="<?php echo htmlspecialchars($buildPageUrl($currentPage - 1)); ?>">Anterior</a>
+					<?php endif; ?>
+					<?php if ($currentPage < $totalPages): ?>
+						<a class="btn btn-secondary btn-sm" href="<?php echo htmlspecialchars($buildPageUrl($currentPage + 1)); ?>">Próxima</a>
+					<?php endif; ?>
+				</div>
+			</div>
+		<?php endif; ?>
 	</div>
 </div>

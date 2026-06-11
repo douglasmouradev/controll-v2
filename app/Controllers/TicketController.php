@@ -11,6 +11,7 @@ use App\Models\CreditHistory;
 use App\Services\Auth;
 use App\Services\TicketAccess;
 use App\Services\TicketNotification;
+use App\Services\TicketService;
 
 final class TicketController extends Controller
 {
@@ -821,14 +822,15 @@ final class TicketController extends Controller
 	public function updateStatus(): void
 	{
 		$this->requireAuth(['support', 'admin']);
+		$user = Auth::instance()->user();
 		$id = (int) ($_POST['id'] ?? 0);
 		$status = (string) ($_POST['status'] ?? '');
 		if (!$id || !in_array($status, Ticket::allowedStatuses(), true)) {
 			$this->json(['success' => false, 'message' => 'Parâmetros inválidos'], 422);
 			return;
 		}
-		$ok = Ticket::updateStatus($id, $status);
-		$this->json(['success' => $ok, 'message' => $ok ? 'Status atualizado' : 'Falha ao atualizar']);
+		$result = TicketService::updateStatus($id, $status, $user ?: []);
+		$this->json($result, $result['success'] ? 200 : 422);
 	}
 
 	public function assignToMe(): void
@@ -855,8 +857,13 @@ final class TicketController extends Controller
 			return;
 		}
 
-		$responseUpdated = Ticket::updateResponse($id, $response);
-		
+		$user = Auth::instance()->user();
+		$responseResult = TicketService::saveSupportResponse($id, $response, $user ?: []);
+		if (!$responseResult['success']) {
+			$this->json($responseResult, 422);
+			return;
+		}
+
 		// Processar upload de anexos da resposta (imagem/PDF)
 		$uploadedAttachments = [];
 		if (!empty($_FILES['images']) && is_array($_FILES['images']['name'])) {
@@ -932,9 +939,9 @@ final class TicketController extends Controller
 		}
 		
 		$hasUploadedAttachments = count($uploadedAttachments) > 0;
-		$success = $responseUpdated || $hasUploadedAttachments;
-		$message = $success ? 'Resposta salva com sucesso' : 'Falha ao salvar resposta';
-		if (!$responseUpdated && $hasUploadedAttachments) {
+		$success = $responseResult['success'] || $hasUploadedAttachments;
+		$message = $success ? ($responseResult['message'] ?? 'Resposta salva com sucesso') : 'Falha ao salvar resposta';
+		if (!$responseResult['success'] && $hasUploadedAttachments) {
 			$message = 'Anexos salvos com sucesso';
 		}
 		

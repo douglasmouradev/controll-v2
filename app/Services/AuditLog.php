@@ -44,4 +44,32 @@ final class AuditLog
 			error_log('AuditLog::record: ' . $e->getMessage());
 		}
 	}
+
+	/** @return array<int, array<string, mixed>> */
+	public static function recent(int $limit = 100): array
+	{
+		$limit = max(1, min($limit, 500));
+
+		try {
+			$pdo = Database::pdo();
+			if (!DatabaseSchema::tableExists($pdo, 'access_logs')) {
+				return [];
+			}
+
+			$stmt = $pdo->prepare(
+				'SELECT al.id, al.user_id, al.ip_address, al.action, al.resource, al.success, al.created_at, u.name AS user_name
+				 FROM access_logs al
+				 LEFT JOIN users u ON u.id = al.user_id
+				 ORDER BY al.created_at DESC
+				 LIMIT ' . $limit
+			);
+			$stmt->execute();
+
+			return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+		} catch (\Throwable $e) {
+			error_log('AuditLog::recent: ' . $e->getMessage());
+
+			return [];
+		}
+	}
 }

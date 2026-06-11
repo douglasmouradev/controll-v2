@@ -398,6 +398,86 @@ final class Ticket
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
+	public static function countForUser(array $authUser, array $filters = []): int
+	{
+		$pdo = Database::pdo();
+		$hasTP = self::tableExists('ticket_priorities');
+		$hasP = !$hasTP && self::tableExists('priorities');
+		$hasTS = self::tableExists('ticket_statuses');
+		$hasS = !$hasTS && self::tableExists('statuses');
+
+		$joins = [
+			'LEFT JOIN users u ON u.id = t.user_id',
+		];
+		if ($hasTP) {
+			$joins[] = 'LEFT JOIN ticket_priorities tp ON tp.id = t.priority_id';
+		} elseif ($hasP) {
+			$joins[] = 'LEFT JOIN priorities p ON p.id = t.priority_id';
+		}
+		if ($hasTS) {
+			$joins[] = 'LEFT JOIN ticket_statuses ts ON ts.id = t.status_id';
+		} elseif ($hasS) {
+			$joins[] = 'LEFT JOIN statuses s ON s.id = t.status_id';
+		}
+
+		$where = [];
+		$params = [];
+		if (!empty($filters['status'])) {
+			if ($hasTS) {
+				$where[] = 'ts.name = :status';
+			} elseif ($hasS) {
+				$where[] = 's.name = :status';
+			} elseif (self::columnExists('tickets', 'status')) {
+				$where[] = 't.status = :status';
+			}
+			$params[':status'] = $filters['status'];
+		}
+		if (!empty($filters['priority'])) {
+			if ($hasTP) {
+				$where[] = 'tp.name = :priority';
+			} elseif ($hasP) {
+				$where[] = 'p.name = :priority';
+			} elseif (self::columnExists('tickets', 'priority')) {
+				$where[] = 't.priority = :priority';
+			}
+			$params[':priority'] = $filters['priority'];
+		}
+		if (!empty($filters['user'])) {
+			$userFilter = $filters['user'];
+			if (is_numeric($userFilter)) {
+				$where[] = 't.user_id = :user';
+				$params[':user'] = (int) $userFilter;
+			} else {
+				$where[] = 'u.name LIKE :user';
+				$params[':user'] = '%' . $userFilter . '%';
+			}
+		}
+		if (!empty($filters['id'])) {
+			$where[] = 't.id = :id';
+			$params[':id'] = (int) $filters['id'];
+		}
+		if (!empty($filters['sigla']) && self::columnExists('tickets', 'unit')) {
+			$where[] = 'UPPER(TRIM(t.unit)) LIKE :sigla';
+			$params[':sigla'] = '%' . strtoupper(trim((string) $filters['sigla'])) . '%';
+		}
+		if (!empty($filters['cidade']) && self::columnExists('tickets', 'city')) {
+			$where[] = 't.city LIKE :cidade';
+			$params[':cidade'] = '%' . trim((string) $filters['cidade']) . '%';
+		}
+		if (!empty($filters['estado']) && self::columnExists('tickets', 'uf')) {
+			$where[] = 'UPPER(TRIM(t.uf)) LIKE :estado';
+			$params[':estado'] = '%' . strtoupper(trim((string) $filters['estado'])) . '%';
+		}
+		self::applyAuthScope($authUser, $where, $params);
+
+		$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+		$sql = 'SELECT COUNT(*) FROM tickets t ' . implode(' ', $joins) . ' ' . $whereSql;
+		$stmt = $pdo->prepare($sql);
+		$stmt->execute($params);
+
+		return (int) $stmt->fetchColumn();
+	}
+
 	public static function find(int $id, ?array $authUser = null): ?array
 	{
 		if ($id <= 0) {

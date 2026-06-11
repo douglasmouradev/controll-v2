@@ -13,6 +13,7 @@ use App\Services\DashboardStatsService;
 use App\Services\Database;
 use App\Services\DatabaseSchema;
 use App\Services\PurchasedDailies;
+use App\Services\AuditLog;
 use App\Services\TicketAccess;
 
 final class DashboardController extends Controller
@@ -33,6 +34,8 @@ final class DashboardController extends Controller
 			return;
 		}
 
+		$perPage = 50;
+		$page = max(1, (int) ($_GET['page'] ?? 1));
 		$filters = [
 			'id' => $_GET['id'] ?? null,
 			'status' => $_GET['status'] ?? null,
@@ -41,8 +44,15 @@ final class DashboardController extends Controller
 			'sigla' => $_GET['sigla'] ?? null,
 			'cidade' => $_GET['cidade'] ?? null,
 			'estado' => $_GET['estado'] ?? null,
+			'limit' => $perPage,
+			'offset' => ($page - 1) * $perPage,
 		];
 		$tickets = Ticket::listForUser($user, $filters);
+		$ticketTotal = Ticket::countForUser($user, $filters);
+		$ticketPages = max(1, (int) ceil($ticketTotal / $perPage));
+		if ($page > $ticketPages) {
+			$page = $ticketPages;
+		}
 
 		// Carregar chamados fechados
 		$closedFilters = [
@@ -72,7 +82,7 @@ final class DashboardController extends Controller
 
 		// Lista de usuários (para admin/suporte)
 		$users = [];
-		if (in_array($user['role'], ['support', 'admin'], true)) {
+		if (Auth::instance()->isSupport()) {
 			try {
 				$users = User::listAll();
 			} catch (\Throwable $e) {
@@ -80,6 +90,8 @@ final class DashboardController extends Controller
 				$users = [];
 			}
 		}
+
+		$accessLogs = Auth::instance()->isAdmin() ? AuditLog::recent(100) : [];
 
 		$this->view('dashboard/index', [
 			'layout' => 'dashboard',
@@ -91,6 +103,13 @@ final class DashboardController extends Controller
 			'stats' => $stats,
 			'users' => $users,
 			'maintenance_mode' => AuditLock::isMaintenanceEnabled(),
+			'ticket_pagination' => [
+				'page' => $page,
+				'per_page' => $perPage,
+				'total' => $ticketTotal,
+				'pages' => $ticketPages,
+			],
+			'access_logs' => $accessLogs,
 		]);
 	}
 

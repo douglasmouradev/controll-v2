@@ -105,6 +105,80 @@ final class TicketNotification
 		}
 	}
 
+	public static function notifyStatusChanged(int $ticketId, array $ticket, string $newStatus, array $actor): void
+	{
+		$recipient = TicketService::ticketOwnerEmail($ticket);
+		if ($recipient === '' || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+			return;
+		}
+
+		$title = (string) ($ticket['title'] ?? '');
+		$actorName = (string) ($actor['name'] ?? 'Suporte');
+		$subject = sprintf('[Controll IT] Chamado #%d atualizado para %s', $ticketId, $newStatus);
+		$htmlBody = self::simpleHtml(
+			'Status do chamado atualizado',
+			[
+				'Chamado' => '#' . $ticketId,
+				'Título' => $title,
+				'Novo status' => $newStatus,
+				'Atualizado por' => $actorName,
+				'Data/Hora' => date('d/m/Y H:i:s'),
+			]
+		);
+		$textBody = "Status do chamado #{$ticketId} alterado para {$newStatus} por {$actorName}.";
+		Mail::send($recipient, $subject, $htmlBody, $textBody);
+	}
+
+	public static function notifySupportResponse(int $ticketId, array $ticket, string $response, array $actor): void
+	{
+		$recipient = TicketService::ticketOwnerEmail($ticket);
+		if ($recipient === '' || !filter_var($recipient, FILTER_VALIDATE_EMAIL)) {
+			return;
+		}
+
+		$title = (string) ($ticket['title'] ?? '');
+		$actorName = (string) ($actor['name'] ?? 'Suporte');
+		$subject = sprintf('[Controll IT] Resposta no chamado #%d', $ticketId);
+		$htmlBody = self::simpleHtml(
+			'Nova resposta do suporte',
+			[
+				'Chamado' => '#' . $ticketId,
+				'Título' => $title,
+				'Respondido por' => $actorName,
+				'Data/Hora' => date('d/m/Y H:i:s'),
+			],
+			$response
+		);
+		$textBody = "Resposta no chamado #{$ticketId}:\n\n{$response}";
+		Mail::send($recipient, $subject, $htmlBody, $textBody);
+	}
+
+	/** @param array<string, string> $rows */
+	private static function simpleHtml(string $heading, array $rows, ?string $extraText = null): string
+	{
+		$htmlRows = '';
+		foreach ($rows as $label => $value) {
+			$htmlRows .= '<tr><td style="padding:8px 12px;border:1px solid #e5e7eb;background:#f9fafb;font-weight:600;width:160px;">'
+				. htmlspecialchars($label, ENT_QUOTES, 'UTF-8')
+				. '</td><td style="padding:8px 12px;border:1px solid #e5e7eb;">'
+				. htmlspecialchars($value, ENT_QUOTES, 'UTF-8')
+				. '</td></tr>';
+		}
+
+		$html = '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;color:#111827;line-height:1.5;">'
+			. '<div style="max-width:640px;margin:0 auto;padding:24px;">'
+			. '<h2 style="margin:0 0 16px;color:#1d4ed8;">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</h2>'
+			. '<table style="width:100%;border-collapse:collapse;margin-bottom:20px;">' . $htmlRows . '</table>';
+
+		if ($extraText !== null && $extraText !== '') {
+			$html .= '<div style="padding:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;white-space:pre-wrap;">'
+				. nl2br(htmlspecialchars($extraText, ENT_QUOTES, 'UTF-8'))
+				. '</div>';
+		}
+
+		return $html . '</div></body></html>';
+	}
+
 	private static function appUrl(): string
 	{
 		$configured = trim((string) (getenv('APP_URL') ?: ''));
