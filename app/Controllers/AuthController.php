@@ -12,7 +12,7 @@ final class AuthController extends Controller
 {
 	public function loginForm(): void
 	{
-		$this->view('auth/login', []);
+		$this->view('auth/login', ['layout' => 'auth']);
 	}
 
 	public function login(): void
@@ -23,19 +23,19 @@ final class AuthController extends Controller
 		$rateKey = 'login:' . strtolower($email !== '' ? $email : $ip);
 
 		if ($email === '' || $password === '') {
-			$this->view('auth/login', ['error' => 'Informe e-mail e senha.']);
+			$this->view('auth/login', ['layout' => 'auth', 'error' => 'Informe e-mail e senha.']);
 			return;
 		}
 
 		if (RateLimiter::tooManyAttempts($rateKey, 5, 15)) {
-			$this->view('auth/login', ['error' => 'Muitas tentativas. Aguarde 15 minutos e tente novamente.']);
+			$this->view('auth/login', ['layout' => 'auth', 'error' => 'Muitas tentativas. Aguarde 15 minutos e tente novamente.']);
 			return;
 		}
 
 		$user = User::findByEmail($email);
 		if (!$user || !password_verify($password, $user['password'])) {
 			RateLimiter::hit($rateKey, $ip);
-			$this->view('auth/login', ['error' => 'Credenciais inválidas.']);
+			$this->view('auth/login', ['layout' => 'auth', 'error' => 'Credenciais inválidas.']);
 			return;
 		}
 
@@ -62,7 +62,7 @@ final class AuthController extends Controller
 			return;
 		}
 		
-		$this->view('auth/change-password-first', ['user' => $user]);
+		$this->view('auth/change-password-first', ['layout' => 'auth', 'user' => $user]);
 	}
 
 	public function updatePasswordFirst(): void
@@ -81,6 +81,7 @@ final class AuthController extends Controller
 		
 		if ($newPassword === '' || $confirmPassword === '') {
 			$this->view('auth/change-password-first', [
+				'layout' => 'auth',
 				'user' => $user,
 				'error' => 'Informe a nova senha e confirmação.'
 			]);
@@ -89,6 +90,7 @@ final class AuthController extends Controller
 		
 		if ($newPassword !== $confirmPassword) {
 			$this->view('auth/change-password-first', [
+				'layout' => 'auth',
 				'user' => $user,
 				'error' => 'As senhas não conferem.'
 			]);
@@ -97,6 +99,7 @@ final class AuthController extends Controller
 		
 		if (strlen($newPassword) < 6) {
 			$this->view('auth/change-password-first', [
+				'layout' => 'auth',
 				'user' => $user,
 				'error' => 'A senha deve ter no mínimo 6 caracteres.'
 			]);
@@ -110,6 +113,7 @@ final class AuthController extends Controller
 			header('Location: /');
 		} else {
 			$this->view('auth/change-password-first', [
+				'layout' => 'auth',
 				'user' => $user,
 				'error' => 'Erro ao atualizar senha. Tente novamente.'
 			]);

@@ -70,6 +70,7 @@ final class DashboardController extends Controller
 		}
 
 		$this->view('dashboard/index', [
+			'layout' => 'dashboard',
 			'user' => $user,
 			'tickets' => $tickets,
 			'closed_tickets' => $closedTickets,

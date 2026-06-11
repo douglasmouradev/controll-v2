@@ -10,22 +10,26 @@ $users = $users ?? [];
 <!-- Sidebar -->
 <?php include __DIR__ . '/components/sidebar.php'; ?>
 
-<!-- Overlay para mobile e desktop -->
-<div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 hidden z-40"></div>
+<div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-40"></div>
 
-<!-- Main Content -->
-<div id="main-content" class="transition-all duration-300">
-	<!-- Header com Hamburguer (Desktop e Mobile) -->
-	<div class="bg-white border-b border-gray-200 p-4 flex items-center gap-4 sticky top-0 z-30">
-		<button id="sidebar-toggle" class="text-blue-900 hover:text-blue-700">
-			<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-			</svg>
-		</button>
-		<h1 class="text-xl font-bold text-blue-900">Controll</h1>
-	</div>
+<div id="main-content" class="transition-all duration-300 min-h-screen">
+	<header class="topbar">
+		<div class="topbar-left">
+			<button id="sidebar-toggle" type="button" class="btn btn-ghost p-2" aria-label="Abrir menu">
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+			</button>
+			<div class="min-w-0">
+				<h1 id="page-title" class="topbar-title">Painel Operacional</h1>
+				<p class="topbar-breadcrumb hidden sm:block">Controll IT Help Desk</p>
+			</div>
+		</div>
+		<div class="flex items-center gap-2">
+			<span class="hidden md:inline text-sm text-slate-500"><?php echo htmlspecialchars($user['name'] ?? ''); ?></span>
+			<button type="button" id="btn-abrir-chamado-top" class="btn btn-primary btn-sm">+ Chamado</button>
+		</div>
+	</header>
 
-<div class="max-w-7xl mx-auto">
+<div class="max-w-[1400px] mx-auto px-4 md:px-6 py-6">
 	<!-- Componentes de Tabs -->
 	<?php include __DIR__ . '/components/painel-tab.php'; ?>
 	<?php include __DIR__ . '/components/chamados-tab.php'; ?>
@@ -39,21 +43,22 @@ $users = $users ?? [];
 </div>
 
 <!-- Modal de Abrir Chamado -->
-<dialog id="modal-abrir-chamado" class="rounded-lg w-11/12 max-w-3xl p-0">
-	<div class="bg-blue-700 text-white px-6 py-4 rounded-t-lg">
+<dialog id="modal-abrir-chamado" class="ui-modal">
+	<div class="ui-modal-header">
 		<h2 class="text-lg font-semibold">Abrir Novo Chamado</h2>
+		<p class="text-sm text-blue-100 mt-0.5 opacity-90">Preencha os dados do atendimento</p>
 	</div>
-	<div class="p-6">
-		<form id="new-ticket-form" class="grid grid-cols-2 gap-4" enctype="multipart/form-data">
+	<div class="ui-modal-body">
+		<form id="new-ticket-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
 			<?php echo \App\Services\Csrf::field(); ?>
 			<input type="hidden" name="ticket_id" id="ticket_id">
 			<input type="hidden" name="original_qtd" id="original_qtd">
-			<input class="col-span-2 border rounded px-3 py-2" name="title" placeholder="Título do Problema" required>
-			<select class="border rounded px-3 py-2" name="priority" required>
+			<input class="col-span-2 input" name="title" placeholder="Título do Problema" required>
+			<select class="select" name="priority" required>
 				<option value="">Prioridade</option>
 				<option>Baixa</option><option>Média</option><option>Alta</option>
 			</select>
-			<select class="border rounded px-3 py-2" name="category" required>
+			<select class="select" name="category" required>
 				<option value="">Categoria</option>
 				<option>Ticket</option>
 				<option>Diária</option>
@@ -61,41 +66,41 @@ $users = $users ?? [];
 				<option>Projeto</option>
 			</select>
 			<div id="project-name-field" class="col-span-2 hidden">
-				<input class="border rounded px-3 py-2 w-full" name="project_name" id="project_name" placeholder="Nome do Projeto">
+				<input class="input w-full" name="project_name" id="project_name" placeholder="Nome do Projeto">
 			</div>
-			<input class="border rounded px-3 py-2" name="name" placeholder="Nome do Solicitante" required>
-			<input class="border rounded px-3 py-2" name="registration" placeholder="Matrícula">
-			<input class="border rounded px-3 py-2 w-full" name="unit" placeholder="Sigla da Loja" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();" required>
+			<input class="input" name="name" placeholder="Nome do Solicitante" required>
+			<input class="input" name="registration" placeholder="Matrícula">
+			<input class="input w-full" name="unit" placeholder="Sigla da Loja" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();" required>
 			<div class="col-span-2">
-				<input class="border rounded px-3 py-2 w-full" name="cep" id="cep" placeholder="CEP" required>
+				<input class="input w-full" name="cep" id="cep" placeholder="CEP" required>
 			</div>
-			<input class="col-span-2 border rounded px-3 py-2" name="address" id="address" placeholder="Endereço" required>
-			<input class="border rounded px-3 py-2" name="address_number" id="address_number" placeholder="Número">
-			<input class="border rounded px-3 py-2" name="city" id="city" placeholder="Cidade">
-			<input class="border rounded px-3 py-2" name="uf" id="uf" placeholder="UF">
-			<textarea class="col-span-2 border rounded px-3 py-2" name="description" placeholder="Descrição do Problema" rows="4" required></textarea>
-			<input class="border rounded px-3 py-2" name="technician_name" placeholder="Nome do técnico (opcional)">
-			<input class="border rounded px-3 py-2" name="technician_rg" placeholder="RG do técnico (opcional)">
-			<input class="border rounded px-3 py-2" name="technician_cpf" placeholder="CPF do técnico (opcional)">
+			<input class="col-span-2 input" name="address" id="address" placeholder="Endereço" required>
+			<input class="input" name="address_number" id="address_number" placeholder="Número">
+			<input class="input" name="city" id="city" placeholder="Cidade">
+			<input class="input" name="uf" id="uf" placeholder="UF">
+			<textarea class="col-span-2 textarea" name="description" placeholder="Descrição do Problema" rows="4" required></textarea>
+			<input class="input" name="technician_name" placeholder="Nome do técnico (opcional)">
+			<input class="input" name="technician_rg" placeholder="RG do técnico (opcional)">
+			<input class="input" name="technician_cpf" placeholder="CPF do técnico (opcional)">
 			<div>
 				<label class="block text-sm text-gray-600 mb-1">Data para atendimento (opcional)</label>
-				<input class="border rounded px-3 py-2 w-full" type="date" name="service_date" placeholder="Data para atendimento">
+				<input class="input w-full" type="date" name="service_date" placeholder="Data para atendimento">
 			</div>
 			<div>
 				<label class="block text-sm text-gray-600 mb-1">Hora para atendimento (opcional)</label>
-				<input class="border rounded px-3 py-2 w-full" type="time" name="service_time" placeholder="Hora para atendimento">
+				<input class="input w-full" type="time" name="service_time" placeholder="Hora para atendimento">
 			</div>
-			<input class="border rounded px-3 py-2" name="internal_order" placeholder="Pedido (interno)">
+			<input class="input" name="internal_order" placeholder="Pedido (interno)">
 			<div>
 				<label class="block text-sm text-gray-600 mb-1">QTD</label>
 				<div class="flex items-center gap-2">
 					<button type="button" id="qtd-minus" class="px-3 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">-</button>
-					<input type="number" name="qtd" id="qtd" class="border rounded px-3 py-2 w-20 text-center" min="0" step="1" value="1">
+					<input type="number" name="qtd" id="qtd" class="input w-20 text-center" min="0" step="1" value="1">
 					<button type="button" id="qtd-plus" class="px-3 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">+</button>
 				</div>
 			</div>
-			<input class="border rounded px-3 py-2" name="invoice" placeholder="NF">
-			<input class="border rounded px-3 py-2" name="daily_destination" placeholder="Destino da diária">
+			<input class="input" name="invoice" placeholder="NF">
+			<input class="input" name="daily_destination" placeholder="Destino da diária">
 			<div class="col-span-2">
 				<label class="block text-sm text-gray-600 mb-1">Anexos (PDF, PNG, JPG, JPEG) - até 20 arquivos, 40MB cada</label>
 				<input type="file" id="ticket-attachments" name="attachments[]" multiple accept=".pdf,image/*" class="w-full border rounded px-3 py-2">

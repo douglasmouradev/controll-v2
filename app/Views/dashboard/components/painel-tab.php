@@ -2,33 +2,38 @@
 /** @var array $stats */
 /** @var int $closed_tickets */
 ?>
-<div id="tab-painel" class="tab-content px-4 md:px-0" data-user-id="<?php echo (int) $user['id']; ?>">
-	<!-- Título e Subtítulo -->
-	<div class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div id="tab-painel" class="tab-content" data-user-id="<?php echo (int) $user['id']; ?>">
+	<div class="page-header flex flex-col md:flex-row md:items-end md:justify-between gap-4">
 		<div>
-			<h1 class="text-3xl font-bold text-blue-900 mb-2">Painel Operacional</h1>
-			<p class="text-gray-600">Gestão completa de chamados e diárias</p>
+			<h2 class="page-title">Painel Operacional</h2>
+			<p class="page-subtitle">Gestão completa de chamados e diárias</p>
 		</div>
-		<div class="flex flex-wrap gap-2">
-			<button id="btn-abrir-chamado" class="bg-blue-700 text-white px-6 py-3 rounded hover:bg-blue-800 font-semibold flex-shrink-0">Abrir Chamado</button>
+		<div class="flex flex-wrap items-center gap-2">
+			<button type="button" id="btn-abrir-chamado" class="btn btn-primary">Abrir Chamado</button>
 			<?php if ($user['role'] === 'admin'): ?>
-				<button id="btn-global-credits-ticket" class="bg-purple-700 text-white px-4 py-3 rounded hover:bg-purple-800 font-semibold text-sm flex-shrink-0" title="Ajustar Créditos Ticket para todos os usuários">Créditos Ticket</button>
-				<button id="btn-global-credits-daily" class="bg-indigo-700 text-white px-4 py-3 rounded hover:bg-indigo-800 font-semibold text-sm flex-shrink-0" title="Ajustar Créditos Diária para todos os usuários">Créditos Diária</button>
-				<button id="btn-global-credits-project" class="bg-orange-700 text-white px-4 py-3 rounded hover:bg-orange-800 font-semibold text-sm flex-shrink-0" title="Ajustar Créditos Projeto para todos os usuários">Créditos Projeto</button>
-				<button id="btn-reset-credits-ticket" class="bg-red-700 text-white px-4 py-3 rounded hover:bg-red-800 font-semibold text-xs flex-shrink-0" title="Zerar créditos e histórico de Ticket de todos os usuários">Zerar Ticket</button>
-				<button id="btn-reset-credits-daily" class="bg-red-700 text-white px-4 py-3 rounded hover:bg-red-800 font-semibold text-xs flex-shrink-0" title="Zerar créditos e histórico de Diária de todos os usuários">Zerar Diária</button>
-				<button id="btn-reset-credits-project" class="bg-red-700 text-white px-4 py-3 rounded hover:bg-red-800 font-semibold text-xs flex-shrink-0" title="Zerar créditos e histórico de Projeto de todos os usuários">Zerar Projeto</button>
+				<div class="relative">
+					<button type="button" id="admin-actions-toggle" class="btn btn-secondary">Administração ▾</button>
+					<div id="admin-actions-menu" class="hidden absolute right-0 mt-2 w-56 ui-dropdown">
+						<button type="button" id="btn-global-credits-ticket">Ajustar créditos Ticket</button>
+						<button type="button" id="btn-global-credits-daily">Ajustar créditos Diária</button>
+						<button type="button" id="btn-global-credits-project">Ajustar créditos Projeto</button>
+						<hr class="my-1 border-slate-200">
+						<button type="button" id="btn-reset-credits-ticket" class="danger">Zerar Ticket</button>
+						<button type="button" id="btn-reset-credits-daily" class="danger">Zerar Diária</button>
+						<button type="button" id="btn-reset-credits-project" class="danger">Zerar Projeto</button>
+					</div>
+				</div>
 			<?php endif; ?>
 		</div>
 	</div>
 
 	<!-- Cards de Métricas -->
-	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
 		<!-- Card Créditos Ticket -->
-		<div class="bg-white rounded-lg shadow-md p-6 flex flex-col hover:shadow-lg transition">
+		<div class="ui-card ui-card-hover ui-stat-card">
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex-1">
-					<p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-1">Créditos Ticket</p>
+					<p class="ui-stat-label mb-1">Créditos Ticket</p>
 					<p class="text-gray-500 text-xs mb-3">Disponível</p>
 				</div>
 				<div class="text-blue-900 ml-2">
@@ -39,19 +44,19 @@
 				</div>
 			</div>
 			<div class="flex-1">
-				<p class="text-4xl font-bold text-blue-900" id="ticket-available">0</p>
+				<p class="ui-stat-value text-blue-900" id="ticket-available">0</p>
 			</div>
 			<div class="mt-4 pt-4 border-t border-gray-200">
 				<p class="text-xs text-gray-600 mb-3" id="ticket-summary">Comprados 0 / Consumidos 0 / Disponível 0</p>
-				<button onclick="openCreditExtract('ticket', 0)" class="w-full bg-blue-700 text-white text-sm py-2 rounded hover:bg-blue-800 transition">Ver Mais</button>
+				<button type="button" onclick="openCreditExtract('ticket', 0)" class="btn btn-primary btn-sm w-full">Ver extrato</button>
 			</div>
 		</div>
 
 		<!-- Card Créditos Diária -->
-		<div class="bg-white rounded-lg shadow-md p-6 flex flex-col hover:shadow-lg transition">
+		<div class="ui-card ui-card-hover ui-stat-card">
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex-1">
-					<p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-1">Créditos Diária</p>
+					<p class="ui-stat-label mb-1">Créditos Diária</p>
 					<p class="text-gray-500 text-xs mb-3">Disponível</p>
 				</div>
 				<div class="text-purple-700 ml-2">
@@ -61,19 +66,19 @@
 				</div>
 			</div>
 			<div class="flex-1">
-				<p class="text-4xl font-bold text-purple-700" id="daily-available">0</p>
+				<p class="ui-stat-value text-purple-700" id="daily-available">0</p>
 			</div>
 			<div class="mt-4 pt-4 border-t border-gray-200">
 				<p class="text-xs text-gray-600 mb-3" id="daily-summary">Comprados 0 / Consumidos 0 / Disponível 0</p>
-				<button onclick="openCreditExtract('daily', 0)" class="w-full bg-purple-700 text-white text-sm py-2 rounded hover:bg-purple-800 transition">Ver Mais</button>
+				<button type="button" onclick="openCreditExtract('daily', 0)" class="btn btn-primary btn-sm w-full">Ver extrato</button>
 			</div>
 		</div>
 
 		<!-- Card Diárias Projeto -->
-		<div class="bg-white rounded-lg shadow-md p-6 flex flex-col hover:shadow-lg transition">
+		<div class="ui-card ui-card-hover ui-stat-card">
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex-1">
-					<p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-1">Diárias Projeto</p>
+					<p class="ui-stat-label mb-1">Diárias Projeto</p>
 					<p class="text-gray-500 text-xs mb-3">Disponível</p>
 				</div>
 				<div class="text-orange-600 ml-2">
@@ -83,19 +88,19 @@
 				</div>
 			</div>
 			<div class="flex-1">
-				<p class="text-4xl font-bold text-orange-600" id="project-dailies-available">0</p>
+				<p class="ui-stat-value text-orange-600" id="project-dailies-available">0</p>
 			</div>
 			<div class="mt-4 pt-4 border-t border-gray-200">
 				<p class="text-xs text-gray-600 mb-3" id="project-dailies-summary">Comprados 0 / Consumidos 0 / Disponível 0</p>
-				<button onclick="openCreditExtract('project_dailies', 0)" class="w-full bg-orange-600 text-white text-sm py-2 rounded hover:bg-orange-700 transition">Ver Mais</button>
+				<button type="button" onclick="openCreditExtract('project_dailies', 0)" class="btn btn-primary btn-sm w-full">Ver extrato</button>
 			</div>
 		</div>
 
 		<!-- Card Diárias Utilizadas -->
-		<div class="bg-white rounded-lg shadow-md p-6 flex flex-col hover:shadow-lg transition">
+		<div class="ui-card ui-card-hover ui-stat-card">
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex-1">
-					<p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-1">Diárias Utilizadas</p>
+					<p class="ui-stat-label mb-1">Diárias Utilizadas</p>
 					<p class="text-gray-500 text-xs mb-3">Consumidas</p>
 				</div>
 				<div class="text-red-600 ml-2">
@@ -106,7 +111,7 @@
 				</div>
 			</div>
 			<div class="flex-1">
-				<p class="text-4xl font-bold text-red-600" id="daily-used">0</p>
+				<p class="ui-stat-value text-red-600" id="daily-used">0</p>
 			</div>
 			<div class="mt-4 pt-4 border-t border-gray-200">
 				<p class="text-xs text-gray-600 mb-3">Total de diárias já utilizadas no período</p>
@@ -115,10 +120,10 @@
 
 		<!-- Card Total Créditos Ticket (Admin) -->
 		<?php if (false && (($user['role'] ?? null) === 'admin')): ?>
-		<div class="bg-white rounded-lg shadow-md p-6 flex flex-col">
+		<div class="ui-card ui-card-body flex flex-col">
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex-1">
-					<p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-1">Total Créditos Ticket</p>
+					<p class="ui-stat-label mb-1">Total Créditos Ticket</p>
 					<p class="text-gray-500 text-xs mb-3">Todos os usuários</p>
 				</div>
 				<div class="text-blue-900 ml-2">
@@ -133,10 +138,10 @@
 		</div>
 
 		<!-- Card Total Créditos Diária (Admin) -->
-		<div class="bg-white rounded-lg shadow-md p-6 flex flex-col">
+		<div class="ui-card ui-card-body flex flex-col">
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex-1">
-					<p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-1">Total Créditos Diária</p>
+					<p class="ui-stat-label mb-1">Total Créditos Diária</p>
 					<p class="text-gray-500 text-xs mb-3">Todos os usuários</p>
 				</div>
 				<div class="text-purple-700 ml-2">
@@ -151,10 +156,10 @@
 		</div>
 
 		<!-- Card Total Créditos Diárias Projeto (Admin) -->
-		<div class="bg-white rounded-lg shadow-md p-6 flex flex-col">
+		<div class="ui-card ui-card-body flex flex-col">
 			<div class="flex items-start justify-between mb-4">
 				<div class="flex-1">
-					<p class="text-gray-600 text-xs font-semibold uppercase tracking-wide mb-1">Total Créditos Projeto</p>
+					<p class="ui-stat-label mb-1">Total Créditos Projeto</p>
 					<p class="text-gray-500 text-xs mb-3">Todos os usuários</p>
 				</div>
 				<div class="text-orange-600 ml-2">
@@ -169,7 +174,7 @@
 		</div>
 		<?php endif; ?>
 
-		<div class="bg-white rounded-lg shadow-md p-6">
+		<div class="ui-card ui-card-body">
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-gray-600 text-sm mb-2">Total de Chamados</p>
@@ -183,7 +188,7 @@
 				</div>
 			</div>
 		</div>
-		<div class="bg-white rounded-lg shadow-md p-6">
+		<div class="ui-card ui-card-body">
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-gray-600 text-sm mb-2">Chamados Fechados</p>
@@ -198,7 +203,7 @@
 		</div>
 		<!-- Card Usuários (apenas admin e support) -->
 		<?php if (in_array($user['role'] ?? null, ['admin', 'support'], true)): ?>
-		<div class="bg-white rounded-lg shadow-md p-6">
+		<div class="ui-card ui-card-body">
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-gray-600 text-sm mb-2">Usuários</p>
@@ -213,7 +218,7 @@
 		</div>
 		<?php endif; ?>
 
-		<div class="bg-white rounded-lg shadow-md p-6">
+		<div class="ui-card ui-card-body">
 			<div class="flex items-center justify-between">
 				<div>
 					<p class="text-gray-600 text-sm mb-2">Agentes de Suporte</p>
@@ -227,7 +232,7 @@
 			</div>
 		</div>
 		<?php if ($user['role'] === 'admin'): ?>
-			<div class="bg-white rounded-lg shadow-md p-6">
+			<div class="ui-card ui-card-body">
 				<div class="flex items-center justify-between">
 					<div>
 						<p class="text-gray-600 text-sm mb-2">Tempo Médio Resolução</p>
@@ -245,21 +250,21 @@
 
 	<!-- Seção de Gráficos -->
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-			<section class="bg-white rounded-lg shadow p-6">
+			<section class="ui-card ui-card-body">
 				<h2 class="text-blue-700 font-semibold mb-4 text-lg">Créditos Ticket</h2>
 				<p class="text-gray-600 text-sm mb-4">Distribuição: Comprados / Consumidos / Disponível</p>
 				<div class="h-72">
 					<canvas id="credits-ticket-pie" class="w-full h-full"></canvas>
 				</div>
 			</section>
-			<section class="bg-white rounded-lg shadow p-6">
+			<section class="ui-card ui-card-body">
 				<h2 class="text-blue-700 font-semibold mb-4 text-lg">Créditos Diária</h2>
 				<p class="text-gray-600 text-sm mb-4">Distribuição: Comprados / Consumidos / Disponível</p>
 				<div class="h-72">
 					<canvas id="credits-daily-pie" class="w-full h-full"></canvas>
 				</div>
 			</section>
-			<section class="bg-white rounded-lg shadow p-6">
+			<section class="ui-card ui-card-body">
 				<h2 class="text-blue-700 font-semibold mb-4 text-lg">Diárias Projeto</h2>
 				<p class="text-gray-600 text-sm mb-4">Distribuição: Comprados / Consumidos / Disponível</p>
 				<div class="h-72">
@@ -271,7 +276,7 @@
 
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
 		<!-- Gráfico de Diárias por Dia -->
-		<section class="bg-white rounded-lg shadow p-6">
+		<section class="ui-card ui-card-body">
 			<h2 class="text-blue-700 font-semibold mb-4 text-lg">Chamados por Dia</h2>
 			<p class="text-gray-600 text-sm mb-4">Evolução diária de chamados abertos</p>
 			<div class="h-80">
@@ -280,7 +285,7 @@
 		</section>
 
 		<!-- Gráfico de Distribuição por Status -->
-		<section class="bg-white rounded-lg shadow p-6">
+		<section class="ui-card ui-card-body">
 			<h2 class="text-blue-700 font-semibold mb-4 text-lg">Distribuição por Status</h2>
 			<p class="text-gray-600 text-sm mb-4">Análise do status dos chamados</p>
 			<div class="h-80">
@@ -289,7 +294,7 @@
 		</section>
 	</div>
 
-	<section class="bg-white rounded-lg shadow p-6 mb-6">
+	<section class="ui-card ui-card-body mb-6">
 		<h2 class="text-blue-700 font-semibold mb-4 text-lg">Uso de Diárias por Destino</h2>
 		<p class="text-gray-600 text-sm mb-4">Onde as diárias foram utilizadas</p>
 		<div class="h-80">

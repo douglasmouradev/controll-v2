@@ -570,7 +570,7 @@ let inventoryLocationsByCategory = {};
 		const tbody = document.getElementById('purchased-dailies-table-body');
 		if (!tbody) return;
 		if (!Array.isArray(rows) || rows.length === 0) {
-			tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">Nenhum registro encontrado na planilha.</td></tr>';
+			tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum registro encontrado na planilha.</td></tr>';
 			return;
 		}
 		const limited = rows.slice(0, 500);
@@ -1004,6 +1004,16 @@ let inventoryLocationsByCategory = {};
 	}
 
 	document.addEventListener('DOMContentLoaded', function() {
+		const adminToggle = document.getElementById('admin-actions-toggle');
+		const adminMenu = document.getElementById('admin-actions-menu');
+		adminToggle?.addEventListener('click', function (e) {
+			e.stopPropagation();
+			adminMenu?.classList.toggle('hidden');
+		});
+		document.addEventListener('click', function () {
+			adminMenu?.classList.add('hidden');
+		});
+
 		// Inicializar gráficos
 		if (document.getElementById('dailies-chart')) {
 			loadDailies();

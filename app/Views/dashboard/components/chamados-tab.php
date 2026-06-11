@@ -8,26 +8,27 @@ $countAberto  = (int)($stats['open_tickets'] ?? 0);
 $countAndamento = (int)($stats['in_progress_tickets'] ?? 0);
 $countFechado = (int)($stats['closed_tickets'] ?? 0);
 ?>
-<div id="tab-chamados" class="tab-content px-4 md:px-0">
-	<div class="bg-white rounded-lg shadow p-6">
-		<div class="mb-6">
-			<h2 class="text-blue-700 font-semibold text-lg mb-2">Gerenciamento de Chamados</h2>
-			<div class="flex flex-wrap items-center gap-2 mb-4">
-				<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800" title="Total de chamados">Todos: <strong><?php echo $countTotal; ?></strong></span>
-				<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800" title="Chamados abertos">Aberto: <strong><?php echo $countAberto; ?></strong></span>
-				<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800" title="Chamados em andamento">Em andamento: <strong><?php echo $countAndamento; ?></strong></span>
-				<span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800" title="Chamados fechados">Fechado: <strong><?php echo $countFechado; ?></strong></span>
+<div id="tab-chamados" class="tab-content">
+	<div class="ui-card ui-card-body">
+		<div class="page-header !mb-5">
+			<h2 class="page-title text-xl">Gerenciamento de Chamados</h2>
+			<p class="page-subtitle">Filtros por status, prioridade, unidade, cidade e UF</p>
+			<div class="flex flex-wrap items-center gap-2 mt-4">
+				<span class="badge badge-gray">Todos: <strong><?php echo $countTotal; ?></strong></span>
+				<span class="badge badge-blue">Aberto: <strong><?php echo $countAberto; ?></strong></span>
+				<span class="badge badge-yellow">Em andamento: <strong><?php echo $countAndamento; ?></strong></span>
+				<span class="badge badge-green">Fechado: <strong><?php echo $countFechado; ?></strong></span>
 			</div>
-			<p class="text-gray-600 text-sm mb-4">Filtros rápidos por status, prioridade, solicitante, sigla da unidade, cidade e UF</p>
-			
-			<div class="flex flex-wrap gap-3 items-end mb-4">
+		</div>
+
+		<div class="filter-bar">
 				<div>
-					<label class="block text-sm text-gray-600 mb-1">Buscar por ID</label>
-					<input id="f-id" class="border rounded px-3 py-2 w-24" placeholder="ID" value="<?php echo htmlspecialchars((string)($filters['id'] ?? '')); ?>">
+					<label class="label">ID</label>
+					<input id="f-id" class="input w-24" placeholder="ID" value="<?php echo htmlspecialchars((string)($filters['id'] ?? '')); ?>">
 				</div>
 				<div>
-					<label class="block text-sm text-gray-600 mb-1">Status</label>
-					<select id="f-status" class="border rounded px-3 py-2">
+					<label class="label">Status</label>
+					<select id="f-status" class="select">
 						<option value="">Todos</option>
 						<option <?php echo (($filters['status'] ?? '')==='Aberto')?'selected':''; ?>>Aberto</option>
 						<option <?php echo (($filters['status'] ?? '')==='Em andamento')?'selected':''; ?>>Em andamento</option>
@@ -35,8 +36,8 @@ $countFechado = (int)($stats['closed_tickets'] ?? 0);
 					</select>
 				</div>
 				<div>
-					<label class="block text-sm text-gray-600 mb-1">Prioridade</label>
-					<select id="f-priority" class="border rounded px-3 py-2">
+					<label class="label">Prioridade</label>
+					<select id="f-priority" class="select">
 						<option value="">Todas</option>
 						<option <?php echo (($filters['priority'] ?? '')==='Baixa')?'selected':''; ?>>Baixa</option>
 						<option <?php echo (($filters['priority'] ?? '')==='Média')?'selected':''; ?>>Média</option>
@@ -44,33 +45,31 @@ $countFechado = (int)($stats['closed_tickets'] ?? 0);
 					</select>
 				</div>
 				<div>
-					<label class="block text-sm text-gray-600 mb-1">Sigla (unidade)</label>
-					<input id="f-sigla" class="border rounded px-3 py-2 w-28 uppercase" placeholder="Sigla" value="<?php echo htmlspecialchars((string)($filters['sigla'] ?? '')); ?>" autocomplete="off">
+					<label class="label">Sigla (unidade)</label>
+					<input id="f-sigla" class="input w-28 uppercase" placeholder="Sigla" value="<?php echo htmlspecialchars((string)($filters['sigla'] ?? '')); ?>" autocomplete="off">
 				</div>
 				<div>
-					<label class="block text-sm text-gray-600 mb-1">Cidade</label>
-					<input id="f-cidade" class="border rounded px-3 py-2 w-36" placeholder="Cidade" value="<?php echo htmlspecialchars((string)($filters['cidade'] ?? '')); ?>" autocomplete="off">
+					<label class="label">Cidade</label>
+					<input id="f-cidade" class="input w-36" placeholder="Cidade" value="<?php echo htmlspecialchars((string)($filters['cidade'] ?? '')); ?>" autocomplete="off">
 				</div>
 				<div>
-					<label class="block text-sm text-gray-600 mb-1">UF</label>
-					<input id="f-estado" class="border rounded px-3 py-2 w-16 uppercase" placeholder="UF" maxlength="2" value="<?php echo htmlspecialchars((string)($filters['estado'] ?? '')); ?>" autocomplete="off">
+					<label class="label">UF</label>
+					<input id="f-estado" class="input w-16 uppercase" placeholder="UF" maxlength="2" value="<?php echo htmlspecialchars((string)($filters['estado'] ?? '')); ?>" autocomplete="off">
 				</div>
 				<?php if (in_array($user['role'], ['support','admin'], true)): ?>
 					<div>
-						<label class="block text-sm text-gray-600 mb-1">Usuário</label>
-						<input id="f-user" class="border rounded px-3 py-2 w-32" placeholder="ID ou Nome" value="<?php echo htmlspecialchars((string)($filters['user'] ?? '')); ?>">
+						<label class="label">Usuário</label>
+						<input id="f-user" class="input w-32" placeholder="ID ou Nome" value="<?php echo htmlspecialchars((string)($filters['user'] ?? '')); ?>">
 					</div>
 				<?php endif; ?>
-				<button id="f-apply" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Aplicar</button>
-				<button id="btn-abrir-chamado" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800 ml-auto">Abrir Chamado</button>
-			</div>
+				<button type="button" id="f-apply" class="btn btn-primary">Aplicar</button>
+				<button type="button" id="btn-abrir-chamado" class="btn btn-secondary ml-auto">Abrir Chamado</button>
 		</div>
 
-		<!-- Tabela de Chamados -->
-		<div class="overflow-x-auto">
-			<table class="min-w-full text-sm">
+		<div class="overflow-x-auto rounded-xl border border-slate-100">
+			<table class="data-table">
 				<thead>
-					<tr class="text-left text-gray-600 border-b">
+					<tr>
 						<th class="px-3 py-2">ID</th>
 						<th class="px-3 py-2">Título</th>
 						<th class="px-3 py-2">Categoria</th>
