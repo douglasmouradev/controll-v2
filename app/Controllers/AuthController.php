@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Models\User;
+use App\Services\AuditLock;
 use App\Services\Auth;
 use App\Services\RateLimiter;
 
@@ -41,14 +42,35 @@ final class AuthController extends Controller
 
 		RateLimiter::clear($rateKey);
 		Auth::instance()->login($user);
-		
+
+		if (AuditLock::shouldBlock($user)) {
+			header('Location: /auditoria');
+			return;
+		}
+
 		// Verificar se é primeiro login (password_changed_at é NULL)
 		if ($user && empty($user['password_changed_at'])) {
 			header('Location: /change-password-first');
 			return;
 		}
-		
+
 		header('Location: /');
+	}
+
+	public function auditoria(): void
+	{
+		$this->requireAuth([]);
+		$user = Auth::instance()->user();
+
+		if (!AuditLock::shouldBlock($user)) {
+			header('Location: /');
+			return;
+		}
+
+		$this->view('auth/auditoria', [
+			'layout' => 'auth',
+			'user' => $user,
+		]);
 	}
 
 	public function changePasswordFirst(): void

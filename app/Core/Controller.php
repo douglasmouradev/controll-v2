@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Services\Auth;
+use App\Services\AuditLock;
 
 abstract class Controller
 {
@@ -67,6 +68,27 @@ abstract class Controller
 			} else {
 				http_response_code(403);
 				echo 'Acesso negado';
+				exit;
+			}
+		}
+
+		$user = $auth->user();
+		if (AuditLock::shouldBlock($user)) {
+			$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+			if (!AuditLock::isAllowedPath($path)) {
+				while (ob_get_level() > 0) {
+					ob_end_clean();
+				}
+				if ($isAjax) {
+					http_response_code(403);
+					header('Content-Type: application/json; charset=utf-8');
+					echo json_encode([
+						'success' => false,
+						'message' => 'Sistema em auditoria. Disponível em ' . AuditLock::availableDateFormatted() . '.',
+					], JSON_UNESCAPED_UNICODE);
+					exit;
+				}
+				header('Location: /auditoria');
 				exit;
 			}
 		}

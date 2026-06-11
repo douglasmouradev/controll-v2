@@ -11,6 +11,7 @@ return [
 	'GET' => [
 		'/' => [DashboardController::class, 'index'],
 		'/login' => [AuthController::class, 'loginForm'],
+		'/auditoria' => [AuthController::class, 'auditoria'],
 		'/logout' => [AuthController::class, 'logout'],
 		'/change-password-first' => [AuthController::class, 'changePasswordFirst'],
 		'/dashboard/dailies' => [DashboardController::class, 'dailyStats'],
