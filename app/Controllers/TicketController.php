@@ -9,6 +9,7 @@ use App\Models\TicketAttachment;
 use App\Models\User;
 use App\Models\CreditHistory;
 use App\Services\Auth;
+use App\Services\TicketNotification;
 
 final class TicketController extends Controller
 {
@@ -368,6 +369,11 @@ final class TicketController extends Controller
 			]);
 			// Processar anexos enviados na abertura do chamado (attachments[])
 			$this->handleTicketAttachmentsUpload((int) $id, 'attachments');
+			try {
+				TicketNotification::notifyTicketOpened((int) $id, $data, $user);
+			} catch (\Throwable $e) {
+				error_log('Erro ao notificar abertura de chamado por e-mail: ' . $e->getMessage());
+			}
 			$this->json([
 				'success' => true,
 				'message' => 'Chamado aberto',
