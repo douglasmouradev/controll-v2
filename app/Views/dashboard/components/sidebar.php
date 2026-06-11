@@ -73,6 +73,17 @@
 				</div>
 				<p class="text-blue-200 text-xs mt-1 ml-8">Exportar relatórios</p>
 			</button>
+
+			<!-- Diárias compradas -->
+			<button class="sidebar-menu-item w-full text-left px-6 py-3 hover:bg-blue-800 transition-colors border-l-4 border-transparent hover:border-blue-400" data-tab="diarias-compradas">
+				<div class="flex items-center">
+					<svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+						<path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm0 5v5a2 2 0 002 2h8a2 2 0 002-2V9H4zm3 2h2v3H7v-3z"/>
+					</svg>
+					<span class="font-medium">Diárias compradas</span>
+				</div>
+				<p class="text-blue-200 text-xs mt-1 ml-8">Importar planilhas</p>
+			</button>
 		<?php endif; ?>
 
 		<!-- Projeto RFID (todos os perfis autenticados) -->

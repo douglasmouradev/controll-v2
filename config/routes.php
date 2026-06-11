@@ -19,6 +19,8 @@ return [
 		'/dashboard/credit-usage' => [DashboardController::class, 'creditUsageStats'],
 		'/dashboard/inventory-stats' => [DashboardController::class, 'inventoryStats'],
 		'/dashboard/inventory-download' => [DashboardController::class, 'downloadInventoryFile'],
+		'/dashboard/purchased-dailies' => [DashboardController::class, 'purchasedDailiesStats'],
+		'/dashboard/purchased-dailies-download' => [DashboardController::class, 'downloadPurchasedDailiesFile'],
 		'/dashboard/enderecos' => [DashboardController::class, 'storeAddresses'],
 		'/tickets' => [TicketController::class, 'index'],
 		'/tickets/view' => [TicketController::class, 'show'],
@@ -49,5 +51,6 @@ return [
 		'/users/credits/reset' => [UserController::class, 'resetCredits'],
 		'/users/credit-history/clear' => [UserController::class, 'clearCreditHistory'],
 		'/dashboard/inventory-upload' => [DashboardController::class, 'uploadInventoryFile'],
+		'/dashboard/purchased-dailies-upload' => [DashboardController::class, 'uploadPurchasedDailiesFile'],
 	],
 ];

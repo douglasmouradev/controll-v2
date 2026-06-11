@@ -33,6 +33,7 @@ $users = $users ?? [];
 	<?php if (in_array($user['role'], ['support', 'admin'], true)): ?>
 		<?php include __DIR__ . '/components/usuarios-tab.php'; ?>
 		<?php include __DIR__ . '/components/relatorios-tab.php'; ?>
+		<?php include __DIR__ . '/components/diarias-compradas-tab.php'; ?>
 	<?php endif; ?>
 	<?php include __DIR__ . '/components/inventario-tab.php'; ?>
 </div>

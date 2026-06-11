@@ -8,6 +8,7 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\Auth;
 use App\Services\Database;
+use App\Services\PurchasedDailies;
 
 final class DashboardController extends Controller
 {
@@ -471,34 +472,45 @@ final class DashboardController extends Controller
 			}
 		}
 
-		// Comprados: usar os valores informados (fonte externa ao histórico)
-		// - Diária: 51
-		// - Diárias Projeto: 210
-		// Ticket permanece vindo do histórico (se aplicável)
-		$ticketPurchased = 0;
-		try {
-			$ticketPurchased = (int) (\App\Models\CreditHistory::getGlobalSummary('ticket', 'user')['purchased'] ?? 0);
-		} catch (\Throwable $e) {
+		// Comprados: histórico de créditos (lançamentos positivos, pool de usuários finais)
+		// Consumidos: soma real de QTD nos chamados por categoria
+		$purchased = ['ticket' => 0, 'daily' => 0, 'project_dailies' => 0];
+		$spentHistory = ['ticket' => 0, 'daily' => 0, 'project_dailies' => 0];
+		foreach (array_keys($purchased) as $creditType) {
+			try {
+				$historySummary = \App\Models\CreditHistory::getGlobalSummary($creditType, 'user');
+				$purchased[$creditType] = (int) ($historySummary['purchased'] ?? 0);
+				$spentHistory[$creditType] = (int) ($historySummary['spent'] ?? 0);
+			} catch (\Throwable $e) {
+			}
 		}
-		$dailyPurchased = 51;
-		$projectPurchased = 210;
+
+		$importedPurchased = $this->loadPurchasedDailiesParsed();
+		if ($importedPurchased !== null) {
+			$purchased['daily'] = (int) ($importedPurchased['summary']['daily_purchased'] ?? $purchased['daily']);
+			$purchased['project_dailies'] = (int) ($importedPurchased['summary']['project_purchased'] ?? $purchased['project_dailies']);
+		}
 
 		$summary = [
 			'ticket' => [
-				'purchased' => $ticketPurchased,
-				'spent' => (int)$spent['ticket'],
-				'available' => $ticketPurchased - (int)$spent['ticket'],
+				'purchased' => $purchased['ticket'],
+				'spent' => (int) $spent['ticket'],
+				'available' => $purchased['ticket'] - (int) $spent['ticket'],
+				'spent_history' => $spentHistory['ticket'],
 			],
 			'daily' => [
-				'purchased' => $dailyPurchased,
-				'spent' => (int)$spent['daily'],
-				'available' => $dailyPurchased - (int)$spent['daily'],
+				'purchased' => $purchased['daily'],
+				'spent' => (int) $spent['daily'],
+				'available' => $purchased['daily'] - (int) $spent['daily'],
+				'spent_history' => $spentHistory['daily'],
 			],
 			'project_dailies' => [
-				'purchased' => $projectPurchased,
-				'spent' => (int)$spent['project_dailies'],
-				'available' => $projectPurchased - (int)$spent['project_dailies'],
+				'purchased' => $purchased['project_dailies'],
+				'spent' => (int) $spent['project_dailies'],
+				'available' => $purchased['project_dailies'] - (int) $spent['project_dailies'],
+				'spent_history' => $spentHistory['project_dailies'],
 			],
+			'total_used_dailies' => (int) $spent['daily'] + (int) $spent['project_dailies'],
 		];
 
 		$this->json(['success' => true, 'summary' => $summary]);
@@ -1046,6 +1058,183 @@ final class DashboardController extends Controller
 	{
 		$pointerPath = BASE_PATH . '/storage/uploads/inventory/current_path.txt';
 		@file_put_contents($pointerPath, $path);
+	}
+
+	public function purchasedDailiesStats(): void
+	{
+		$this->requireAuth(['support', 'admin']);
+
+		$parsed = $this->loadPurchasedDailiesParsed();
+		if ($parsed === null) {
+			$this->json([
+				'success' => true,
+				'rows' => [],
+				'summary' => [
+					'total_rows' => 0,
+					'daily_purchased' => 0,
+					'project_purchased' => 0,
+					'total_purchased' => 0,
+				],
+				'source' => null,
+			]);
+			return;
+		}
+
+		$path = PurchasedDailies::getCurrentFilePath();
+		$this->json([
+			'success' => true,
+			'rows' => $parsed['rows'],
+			'summary' => $parsed['summary'],
+			'source' => [
+				'file' => basename($path),
+				'imported_at' => date('d/m/Y H:i', (int) filemtime($path)),
+			],
+		]);
+	}
+
+	public function uploadPurchasedDailiesFile(): void
+	{
+		$this->requireAuth(['support', 'admin']);
+
+		if (!isset($_FILES['file'])) {
+			$this->json(['success' => false, 'message' => 'Arquivo não enviado'], 400);
+			return;
+		}
+
+		$file = $_FILES['file'];
+		if (!is_array($file) || (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK)) {
+			$this->json(['success' => false, 'message' => 'Falha no upload da planilha'], 400);
+			return;
+		}
+
+		$originalName = (string) ($file['name'] ?? 'diarias_compradas.xlsx');
+		$ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+		$allowed = ['xlsx', 'xlsm', 'xltx', 'xltm', 'csv'];
+		if (!in_array($ext, $allowed, true)) {
+			$this->json(['success' => false, 'message' => 'Formato inválido. Envie XLSX ou CSV.'], 400);
+			return;
+		}
+
+		$storageDir = PurchasedDailies::storageDir();
+		if (!is_dir($storageDir) && !mkdir($storageDir, 0775, true) && !is_dir($storageDir)) {
+			$this->json(['success' => false, 'message' => 'Não foi possível preparar a pasta de upload'], 500);
+			return;
+		}
+
+		$targetPath = $storageDir . '/purchased_dailies_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+		$tmpPath = (string) ($file['tmp_name'] ?? '');
+		if ($tmpPath === '' || !is_uploaded_file($tmpPath)) {
+			$this->json(['success' => false, 'message' => 'Arquivo temporário inválido'], 400);
+			return;
+		}
+
+		if (!move_uploaded_file($tmpPath, $targetPath)) {
+			$this->json(['success' => false, 'message' => 'Não foi possível salvar a planilha'], 500);
+			return;
+		}
+
+		try {
+			$parsed = $this->parsePurchasedDailiesFile($targetPath);
+		} catch (\Throwable $e) {
+			@unlink($targetPath);
+			$this->json(['success' => false, 'message' => 'Erro ao ler planilha: ' . $e->getMessage()], 422);
+			return;
+		}
+
+		if ((int) ($parsed['summary']['total_rows'] ?? 0) === 0) {
+			@unlink($targetPath);
+			$this->json([
+				'success' => false,
+				'message' => 'Nenhum registro válido encontrado. Verifique colunas Data, Loja e Quantidade.',
+			], 422);
+			return;
+		}
+
+		PurchasedDailies::setCurrentFilePath($targetPath);
+		$this->json([
+			'success' => true,
+			'message' => 'Planilha importada com sucesso',
+			'summary' => $parsed['summary'],
+			'source' => basename($targetPath),
+		]);
+	}
+
+	public function downloadPurchasedDailiesFile(): void
+	{
+		$this->requireAuth(['support', 'admin']);
+
+		$path = PurchasedDailies::getCurrentFilePath();
+		if ($path === '' || !is_file($path) || !is_readable($path)) {
+			http_response_code(404);
+			header('Content-Type: text/plain; charset=utf-8');
+			echo 'Planilha de diárias compradas não encontrada';
+			exit;
+		}
+
+		$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+		$contentType = $ext === 'csv'
+			? 'text/csv; charset=utf-8'
+			: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+		$downloadName = 'diarias_compradas.' . ($ext !== '' ? $ext : 'xlsx');
+
+		header('Content-Type: ' . $contentType);
+		header('Content-Disposition: attachment; filename="' . $downloadName . '"');
+		header('Content-Length: ' . (string) filesize($path));
+		header('Cache-Control: private, max-age=0, must-revalidate');
+		readfile($path);
+		exit;
+	}
+
+	/**
+	 * @return array{rows: array<int, array<string, mixed>>, summary: array<string, int>}|null
+	 */
+	private function loadPurchasedDailiesParsed(): ?array
+	{
+		$path = PurchasedDailies::getCurrentFilePath();
+		if ($path === '') {
+			return null;
+		}
+		try {
+			return $this->parsePurchasedDailiesFile($path);
+		} catch (\Throwable $e) {
+			error_log('loadPurchasedDailiesParsed: ' . $e->getMessage());
+			return null;
+		}
+	}
+
+	/**
+	 * @return array{rows: array<int, array<string, mixed>>, summary: array<string, int>}
+	 */
+	private function parsePurchasedDailiesFile(string $path): array
+	{
+		$ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+		if ($ext === 'csv') {
+			$rows = $this->readCsvRows($path);
+		} else {
+			$rows = $this->readXlsxRows($path);
+		}
+		return PurchasedDailies::parseRows($rows);
+	}
+
+	/**
+	 * @return array<int, array<int, string>>
+	 */
+	private function readCsvRows(string $csvPath): array
+	{
+		$handle = fopen($csvPath, 'rb');
+		if ($handle === false) {
+			throw new \RuntimeException('Não foi possível abrir o arquivo CSV.');
+		}
+
+		$rows = [];
+		while (($data = fgetcsv($handle, 0, ';')) !== false) {
+			if (count($data) === 1 && isset($data[0]) && str_contains((string) $data[0], ',')) {
+				$data = str_getcsv((string) $data[0], ',');
+			}
+			$rows[] = array_map(static fn($v) => trim((string) $v), $data);
+		}
+		fclose($handle);
+		return $rows;
 	}
 
 	public function storeAddresses(): void

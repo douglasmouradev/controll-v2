@@ -551,6 +551,76 @@ let inventoryLocationsByCategory = {};
 		return json;
 	}
 
+	async function uploadPurchasedDailiesFile(file) {
+		const formData = new FormData();
+		formData.append('file', file);
+		const res = await fetch('/dashboard/purchased-dailies-upload', {
+			method: 'POST',
+			body: formData,
+			headers: { 'X-Requested-With': 'XMLHttpRequest' }
+		});
+		const json = await res.json();
+		if (!json.success) {
+			throw new Error(json.message || 'Falha ao importar planilha');
+		}
+		return json;
+	}
+
+	function renderPurchasedDailiesTable(rows) {
+		const tbody = document.getElementById('purchased-dailies-table-body');
+		if (!tbody) return;
+		if (!Array.isArray(rows) || rows.length === 0) {
+			tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Nenhum registro encontrado na planilha.</td></tr>';
+			return;
+		}
+		const limited = rows.slice(0, 500);
+		tbody.innerHTML = limited.map((row) => `
+			<tr class="hover:bg-gray-50">
+				<td class="px-4 py-2">${escapeHtml(String(row.date || '-'))}</td>
+				<td class="px-4 py-2">${escapeHtml(String(row.store || '-'))}</td>
+				<td class="px-4 py-2">${escapeHtml(String(row.type_label || 'Diária'))}</td>
+				<td class="px-4 py-2 text-right font-semibold text-blue-900">${Number(row.quantity || 0)}</td>
+				<td class="px-4 py-2">${escapeHtml(String(row.description || '-'))}</td>
+			</tr>
+		`).join('');
+		if (rows.length > limited.length) {
+			tbody.innerHTML += `<tr><td colspan="5" class="px-4 py-3 text-center text-xs text-gray-500">Exibindo ${limited.length} de ${rows.length} registros.</td></tr>`;
+		}
+	}
+
+	function updatePurchasedDailiesSummary(summary, source) {
+		const totalRowsEl = document.getElementById('purchased-dailies-total-rows');
+		const dailyEl = document.getElementById('purchased-dailies-daily-total');
+		const projectEl = document.getElementById('purchased-dailies-project-total');
+		const grandEl = document.getElementById('purchased-dailies-grand-total');
+		const sourceEl = document.getElementById('purchased-dailies-source');
+
+		if (totalRowsEl) totalRowsEl.textContent = String(Number(summary?.total_rows || 0));
+		if (dailyEl) dailyEl.textContent = String(Number(summary?.daily_purchased || 0));
+		if (projectEl) projectEl.textContent = String(Number(summary?.project_purchased || 0));
+		if (grandEl) grandEl.textContent = String(Number(summary?.total_purchased || 0));
+		if (sourceEl) {
+			if (source && source.file) {
+				sourceEl.textContent = `Arquivo: ${source.file} — importado em ${source.imported_at || '-'}`;
+			} else {
+				sourceEl.textContent = 'Nenhuma planilha importada.';
+			}
+		}
+	}
+
+	async function loadPurchasedDailiesData() {
+		const res = await fetch('/dashboard/purchased-dailies', {
+			headers: { 'X-Requested-With': 'XMLHttpRequest' }
+		});
+		const data = await res.json();
+		if (!data.success) {
+			throw new Error(data.message || 'Falha ao carregar diárias compradas');
+		}
+		updatePurchasedDailiesSummary(data.summary || {}, data.source || null);
+		renderPurchasedDailiesTable(data.rows || []);
+		return data;
+	}
+
 	// Renderizar um gráfico de pizza de créditos
 	function renderCreditsPie(canvasId, summary, chartInstance) {
 		const canvas = document.getElementById(canvasId);
@@ -559,23 +629,26 @@ let inventoryLocationsByCategory = {};
 
 		const purchased = Number(summary.purchased || 0);
 		const spent = Number(summary.spent || 0);
-		// Para o gráfico, o "Disponível" é calculado como comprados - consumidos,
-		// evitando divergência de soma mesmo quando o saldo real estiver negativo.
 		const availableCalc = purchased - spent;
 		const availableForChart = availableCalc > 0 ? availableCalc : 0;
+		const deficit = availableCalc < 0 ? Math.abs(availableCalc) : 0;
 
-		const values = [
-			purchased,
-			spent,
-			availableForChart
-		];
+		const labels = deficit > 0
+			? ['Comprados', 'Consumidos', 'Disponível', 'Déficit']
+			: ['Comprados', 'Consumidos', 'Disponível'];
+		const values = deficit > 0
+			? [purchased, spent, availableForChart, deficit]
+			: [purchased, spent, availableForChart];
+		const colors = deficit > 0
+			? ['#1d4ed8', '#dc2626', '#059669', '#f97316']
+			: ['#1d4ed8', '#dc2626', '#059669'];
 		const total = values.reduce((a, b) => a + b, 0);
 		const data = {
-			labels: ['Comprados', 'Consumidos', 'Disponível'],
+			labels: labels,
 			datasets: [{
 				label: 'Créditos',
 				data: values,
-				backgroundColor: ['#1d4ed8', '#dc2626', '#059669'],
+				backgroundColor: colors,
 				borderColor: '#fff',
 				borderWidth: 2,
 			}],
@@ -893,7 +966,8 @@ let inventoryLocationsByCategory = {};
 						}
 						const dailyUsedEl = document.getElementById('daily-used');
 						if (dailyUsedEl) {
-							const totalUsedDailies = (Number(daily.spent) || 0) + (Number(project.spent) || 0);
+							const totalUsedDailies = Number(data2.summary.total_used_dailies)
+								|| ((Number(daily.spent) || 0) + (Number(project.spent) || 0));
 							dailyUsedEl.textContent = totalUsedDailies;
 						}
 
@@ -938,6 +1012,42 @@ let inventoryLocationsByCategory = {};
 		if (document.getElementById('daily-destination-chart')) {
 			loadDailyDestinationChart();
 			setInterval(loadDailyDestinationChart, 15000);
+		}
+		if (document.getElementById('purchased-dailies-table-body')) {
+			loadPurchasedDailiesData().catch((error) => {
+				console.error('Erro ao carregar diárias compradas:', error);
+			});
+			const importBtn = document.getElementById('btn-purchased-dailies-import');
+			const fileInput = document.getElementById('purchased-dailies-file-input');
+			importBtn?.addEventListener('click', () => fileInput?.click());
+			fileInput?.addEventListener('change', async () => {
+				const file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+				if (!file) return;
+				try {
+					importBtn.disabled = true;
+					importBtn.textContent = 'Importando...';
+					await uploadPurchasedDailiesFile(file);
+					if (typeof showToast === 'function') {
+						showToast('Planilha de diárias compradas importada');
+					}
+					await loadPurchasedDailiesData();
+					if (typeof loadCreditSummaries === 'function') {
+						await loadCreditSummaries();
+					}
+					if (typeof loadCreditPieCharts === 'function') {
+						await loadCreditPieCharts();
+					}
+				} catch (error) {
+					console.error('Erro ao importar diárias compradas:', error);
+					if (typeof showToast === 'function') {
+						showToast(error.message || 'Erro ao importar planilha');
+					}
+				} finally {
+					importBtn.disabled = false;
+					importBtn.textContent = 'Importar planilha';
+					fileInput.value = '';
+				}
+			});
 		}
 		if (document.getElementById('inventory-pie-chart')) {
 			loadInventoryPieChart();
@@ -2139,7 +2249,8 @@ let inventoryLocationsByCategory = {};
 
 			const dailyUsedEl = document.getElementById('daily-used');
 			if (dailyUsedEl) {
-				const totalUsedDailies = (Number(dailySummary.spent) || 0) + (Number(projectDailiesSummary.spent) || 0);
+				const totalUsedDailies = Number(data.summary.total_used_dailies)
+					|| ((Number(dailySummary.spent) || 0) + (Number(projectDailiesSummary.spent) || 0));
 				dailyUsedEl.textContent = totalUsedDailies;
 			}
 		} catch (err) {
