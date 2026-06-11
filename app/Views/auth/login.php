@@ -16,6 +16,7 @@
 				<div class="mb-4 bg-red-50 text-red-700 px-4 py-2.5 rounded border border-red-200"><?php echo htmlspecialchars($error); ?></div>
 			<?php endif; ?>
 			<form method="post" action="/login" class="space-y-4">
+				<?php echo \App\Services\Csrf::field(); ?>
 				<div>
 					<label class="block text-[11px] font-bold tracking-wider text-gray-600 mb-1">USUÁRIO:</label>
 					<input name="email" type="text" class="w-full h-11 border border-gray-300 rounded-xl px-3 shadow-inner focus:ring-2 focus:ring-blue-500 outline-none" required>

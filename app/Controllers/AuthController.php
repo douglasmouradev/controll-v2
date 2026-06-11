@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\User;
 use App\Services\Auth;
+use App\Services\RateLimiter;
 
 final class AuthController extends Controller
 {
@@ -18,15 +19,27 @@ final class AuthController extends Controller
 	{
 		$email = trim($_POST['email'] ?? '');
 		$password = (string) ($_POST['password'] ?? '');
+		$ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+		$rateKey = 'login:' . strtolower($email !== '' ? $email : $ip);
+
 		if ($email === '' || $password === '') {
 			$this->view('auth/login', ['error' => 'Informe e-mail e senha.']);
 			return;
 		}
+
+		if (RateLimiter::tooManyAttempts($rateKey, 5, 15)) {
+			$this->view('auth/login', ['error' => 'Muitas tentativas. Aguarde 15 minutos e tente novamente.']);
+			return;
+		}
+
 		$user = User::findByEmail($email);
 		if (!$user || !password_verify($password, $user['password'])) {
+			RateLimiter::hit($rateKey, $ip);
 			$this->view('auth/login', ['error' => 'Credenciais inválidas.']);
 			return;
 		}
+
+		RateLimiter::clear($rateKey);
 		Auth::instance()->login($user);
 		
 		// Verificar se é primeiro login (password_changed_at é NULL)

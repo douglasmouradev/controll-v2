@@ -12,6 +12,8 @@ session_start();
 // Composer autoload (for App\ namespace)
 require_once dirname(__DIR__) . '/vendor/autoload.php';
 
+\App\Services\Csrf::token();
+
 // Basic constants
 define('BASE_PATH', dirname(__DIR__));
 define('APP_PATH', BASE_PATH . '/app');

@@ -1,12 +1,42 @@
 <?php
 /** @var array|null $user */
+
+use App\Services\Csrf;
 ?>
 <!doctype html>
 <html lang="pt-br">
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="csrf-token" content="<?php echo htmlspecialchars(Csrf::token(), ENT_QUOTES, 'UTF-8'); ?>">
 	<title>Controll IT - Help Desk</title>
+	<script>
+	(function () {
+		var meta = document.querySelector('meta[name="csrf-token"]');
+		if (!meta) return;
+		var csrfToken = meta.getAttribute('content') || '';
+		if (!csrfToken) return;
+		var originalFetch = window.fetch;
+		window.fetch = function (input, init) {
+			init = init || {};
+			var method = String(init.method || 'GET').toUpperCase();
+			if (method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE') {
+				if (init.body instanceof FormData && !init.body.has('csrf_token')) {
+					init.body.append('csrf_token', csrfToken);
+				}
+				var headers = new Headers(init.headers || {});
+				if (!headers.has('X-CSRF-TOKEN')) {
+					headers.set('X-CSRF-TOKEN', csrfToken);
+				}
+				if (!headers.has('X-Requested-With')) {
+					headers.set('X-Requested-With', 'XMLHttpRequest');
+				}
+				init.headers = headers;
+			}
+			return originalFetch(input, init);
+		};
+	})();
+	</script>
 	<script src="https://cdn.tailwindcss.com"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 	<link rel="icon" href="/favicon.svg">

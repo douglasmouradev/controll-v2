@@ -44,6 +44,7 @@ $users = $users ?? [];
 	</div>
 	<div class="p-6">
 		<form id="new-ticket-form" class="grid grid-cols-2 gap-4" enctype="multipart/form-data">
+			<?php echo \App\Services\Csrf::field(); ?>
 			<input type="hidden" name="ticket_id" id="ticket_id">
 			<input type="hidden" name="original_qtd" id="original_qtd">
 			<input class="col-span-2 border rounded px-3 py-2" name="title" placeholder="Título do Problema" required>

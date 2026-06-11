@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Services\Csrf;
+
 final class Router
 {
 	/** @var array<string, array<string, array{0: class-string, 1: string}>> */
@@ -30,6 +32,11 @@ final class Router
 			return;
 		}
 		[$class, $action] = $handler;
+
+		if ($method === 'POST' && !$this->verifyCsrf()) {
+			return;
+		}
+
 		try {
 			$controller = new $class();
 			$controller->$action();
@@ -47,6 +54,29 @@ final class Router
 				echo $message;
 			}
 		}
+	}
+
+	private function verifyCsrf(): bool
+	{
+		$token = (string) ($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+		if (Csrf::verify($token)) {
+			return true;
+		}
+
+		$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+			&& strtolower((string) $_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+		http_response_code(403);
+		if ($isAjax) {
+			header('Content-Type: application/json; charset=utf-8');
+			echo json_encode([
+				'success' => false,
+				'message' => 'Sessão expirada. Recarregue a página e tente novamente.',
+			], JSON_UNESCAPED_UNICODE);
+		} else {
+			echo 'Sessão expirada. Recarregue a página e tente novamente.';
+		}
+		return false;
 	}
 }
 

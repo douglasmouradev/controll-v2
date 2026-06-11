@@ -18,6 +18,7 @@ final class Auth
 
 	public function login(array $user): void
 	{
+		session_regenerate_id(true);
 		$_SESSION[self::SESSION_KEY] = [
 			'id' => (int) $user['id'],
 			'name' => (string) $user['name'],

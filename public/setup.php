@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-// Setup rápido (apenas em ambiente de desenvolvimento)
-// Para ativar: export APP_DEBUG=1 e acesse /setup.php
+// Setup rápido (apenas desenvolvimento local)
+// Para ativar: APP_SETUP_ENABLED=1 no .env e acesse /setup.php
 
 // Carrega variáveis do arquivo .env (se existir) antes do gate de APP_DEBUG
 $basePath = dirname(__DIR__);
@@ -24,10 +24,14 @@ if (is_file($envFile) && is_readable($envFile)) {
     }
 }
 
-// Gate de debug
-if (!($dbg = getenv('APP_DEBUG')) || !in_array(strtolower((string)$dbg), ['1','true','yes','on'], true)) {
+// Bloqueado em produção — requer APP_SETUP_ENABLED=1 explicitamente
+$setupEnabled = getenv('APP_SETUP_ENABLED');
+if (
+	!$setupEnabled
+	|| !in_array(strtolower((string) $setupEnabled), ['1', 'true', 'yes', 'on'], true)
+) {
 	http_response_code(403);
-	echo 'Setup desabilitado. Defina APP_DEBUG=1 para executar.';
+	echo 'Setup desabilitado.';
 	exit;
 }
 

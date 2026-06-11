@@ -38,6 +38,7 @@
 			</div>
 
 			<form method="POST" action="/change-password-first-update" class="space-y-4">
+				<?php echo \App\Services\Csrf::field(); ?>
 				<div>
 					<label class="block text-sm font-medium text-gray-700 mb-2">Nova Senha</label>
 					<input type="password" name="password" required minlength="6" class="w-full border border-gray-300 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Digite sua nova senha">
