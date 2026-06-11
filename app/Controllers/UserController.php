@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\User;
 use App\Models\CreditHistory;
+use App\Services\AuditLog;
 use App\Services\Auth;
 use App\Services\TicketAccess;
 
@@ -454,6 +455,7 @@ final class UserController extends Controller
 			$stmtDel->execute([':type' => $type]);
 
 			$pdo->commit();
+			AuditLog::record('credits_reset', $type);
 			$this->json([
 				'success' => true,
 				'message' => 'Creditos e historico resetados para o tipo ' . $type,

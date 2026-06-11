@@ -7,6 +7,7 @@ use App\Controllers\TicketController;
 use App\Controllers\UserController;
 use App\Controllers\ReportController;
 use App\Controllers\SettingsController;
+use App\Controllers\HealthController;
 
 return [
 	'GET' => [
@@ -15,7 +16,9 @@ return [
 		'/auditoria' => [AuthController::class, 'auditoria'],
 		'/logout' => [AuthController::class, 'logout'],
 		'/change-password-first' => [AuthController::class, 'changePasswordFirst'],
+		'/health' => [HealthController::class, 'index'],
 		'/dashboard/dailies' => [DashboardController::class, 'dailyStats'],
+		'/dashboard/summary' => [DashboardController::class, 'summaryStats'],
 		'/dashboard/daily-destinations' => [DashboardController::class, 'dailyDestinationStats'],
 		'/dashboard/status-stats' => [DashboardController::class, 'statusStats'],
 		'/dashboard/credit-usage' => [DashboardController::class, 'creditUsageStats'],
@@ -35,6 +38,7 @@ return [
 		'/reports/xlsx' => [ReportController::class, 'xlsx'],
 		'/reports/csv' => [ReportController::class, 'csv'],
 		'/settings/maintenance' => [SettingsController::class, 'maintenanceStatus'],
+		'/settings' => [SettingsController::class, 'index'],
 	],
 	'POST' => [
 		'/login' => [AuthController::class, 'login'],
@@ -57,5 +61,6 @@ return [
 		'/dashboard/inventory-upload' => [DashboardController::class, 'uploadInventoryFile'],
 		'/dashboard/purchased-dailies-upload' => [DashboardController::class, 'uploadPurchasedDailiesFile'],
 		'/settings/maintenance' => [SettingsController::class, 'maintenanceToggle'],
+		'/settings/update' => [SettingsController::class, 'update'],
 	],
 ];

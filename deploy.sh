@@ -23,6 +23,10 @@ if command -v composer >/dev/null 2>&1; then
 	COMPOSER_ALLOW_SUPERUSER=1 composer dump-autoload --no-interaction
 fi
 
+if [ -f bin/migrate.php ]; then
+	php bin/migrate.php || echo "==> Aviso: migrations falharam (verifique o banco)"
+fi
+
 chown -R www:www storage public/uploads 2>/dev/null || true
 chmod -R 775 storage public/uploads 2>/dev/null || true
 

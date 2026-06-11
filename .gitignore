@@ -9,6 +9,8 @@ composer.lock
 
 # Uploads e arquivos gerados
 /public/uploads/
+/storage/cache/
+.phpunit.cache/
 *.log
 
 # Sistema operacional

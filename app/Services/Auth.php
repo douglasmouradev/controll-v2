@@ -13,7 +13,13 @@ final class Auth
 		if (!self::$instance) {
 			self::$instance = new self();
 		}
+
 		return self::$instance;
+	}
+
+	public static function normalizeRole(?string $role): string
+	{
+		return TicketAccess::normalizeRole((string) $role);
 	}
 
 	public function login(array $user): void
@@ -41,14 +47,50 @@ final class Auth
 		return $_SESSION[self::SESSION_KEY] ?? null;
 	}
 
+	public function role(): ?string
+	{
+		$user = $this->user();
+
+		return $user['role'] ?? null;
+	}
+
+	public function normalizedRole(): ?string
+	{
+		$role = $this->role();
+
+		return $role !== null ? self::normalizeRole($role) : null;
+	}
+
+	public function isAdmin(): bool
+	{
+		return $this->normalizedRole() === 'admin';
+	}
+
+	public function isSupport(): bool
+	{
+		return in_array($this->normalizedRole(), ['support', 'admin'], true);
+	}
+
+	public function isStaff(): bool
+	{
+		return TicketAccess::isStaff((string) ($this->role() ?? ''));
+	}
+
+	public function isEndUser(): bool
+	{
+		return $this->normalizedRole() === 'user';
+	}
+
 	public function hasAnyRole(array $roles): bool
 	{
 		$user = $this->user();
 		if (!$user) {
 			return false;
 		}
-		return in_array($user['role'], $roles, true);
+
+		$current = self::normalizeRole((string) $user['role']);
+		$allowed = array_map(static fn (string $role): string => self::normalizeRole($role), $roles);
+
+		return in_array($current, $allowed, true);
 	}
 }
-
-

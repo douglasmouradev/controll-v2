@@ -8,8 +8,12 @@ use App\Models\Ticket;
 use App\Models\User;
 use App\Services\AuditLock;
 use App\Services\Auth;
+use App\Services\Cache;
+use App\Services\DashboardStatsService;
 use App\Services\Database;
+use App\Services\DatabaseSchema;
 use App\Services\PurchasedDailies;
+use App\Services\TicketAccess;
 
 final class DashboardController extends Controller
 {
@@ -92,274 +96,24 @@ final class DashboardController extends Controller
 
 	private function getStats(array $user): array
 	{
-		$pdo = Database::pdo();
-		
-		// Detectar estrutura de status
-		$hasTicketStatuses = $this->tableExists($pdo, 'ticket_statuses');
-		$hasStatusesTable = !$hasTicketStatuses && $this->tableExists($pdo, 'statuses');
-		$hasStatusColumn = $this->columnExists($pdo, 'tickets', 'status');
-		
-		// Total de chamados (apenas 'user' vê só os seus, 'support' e 'admin' veem todos)
-		// Em alguns ambientes existe também a tabela `tickets_backup` com chamados legados.
-		// Para admin/suporte, somamos `tickets` + `tickets_backup` (se existir) para refletir o total real do sistema.
-		if ($user['role'] === 'user') {
-			$stmt = $pdo->prepare('SELECT COUNT(*) as cnt FROM tickets WHERE user_id = :user_id');
-			$stmt->execute([':user_id' => (int) $user['id']]);
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$totalTickets = $row ? (int)$row['cnt'] : 0;
-		} else {
-			$totalTickets = 0;
-			$stmt = $pdo->query('SELECT COUNT(*) as cnt FROM tickets');
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$totalTickets += $row ? (int)$row['cnt'] : 0;
-
-			// Contar também `tickets_backup` (se existir).
-			// Usar information_schema para não depender de SHOW TABLES (que pode falhar por permissão).
-			try {
-				$dbName = (string) ($pdo->query('SELECT DATABASE()')->fetchColumn() ?: '');
-				if ($dbName !== '') {
-					$stExists = $pdo->prepare('
-						SELECT COUNT(*) 
-						FROM information_schema.tables 
-						WHERE table_schema = :db AND table_name = :t
-					');
-					$stExists->execute([':db' => $dbName, ':t' => 'tickets_backup']);
-					$exists = (int) ($stExists->fetchColumn() ?: 0);
-					if ($exists > 0) {
-						$stmtB = $pdo->query('SELECT COUNT(*) as cnt FROM tickets_backup');
-						$rowB = $stmtB->fetch(\PDO::FETCH_ASSOC);
-						$totalTickets += $rowB ? (int)$rowB['cnt'] : 0;
-					}
-				}
-			} catch (\Throwable $e) {
-				// Sem acesso ao information_schema ou sem tabela: ignorar backup
-			}
-		}
-		
-		// Total de chamados fechados
-		$closedTickets = 0;
-		if ($hasTicketStatuses || $hasStatusesTable || $hasStatusColumn) {
-			$params = [];
-			$sql = 'SELECT COUNT(*) as cnt FROM tickets t';
-			if ($hasTicketStatuses) {
-				$sql .= ' LEFT JOIN ticket_statuses ts ON ts.id = t.status_id WHERE ts.name = :status';
-			} elseif ($hasStatusesTable) {
-				$sql .= ' LEFT JOIN statuses s ON s.id = t.status_id WHERE s.name = :status';
-			} elseif ($hasStatusColumn) {
-				$sql .= ' WHERE t.status = :status';
-			}
-			$params[':status'] = 'Fechado';
-			if ($user['role'] === 'user') {
-				// restringir por usuário logado
-				if (strpos($sql, 'WHERE') === false) {
-					$sql .= ' WHERE t.user_id = :user_id';
-				} else {
-					$sql .= ' AND t.user_id = :user_id';
-				}
-				$params[':user_id'] = (int)$user['id'];
-			}
-			$stmt = $pdo->prepare($sql);
-			$stmt->execute($params);
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$closedTickets = $row ? (int)$row['cnt'] : 0;
-		}
-
-		// Total de chamados abertos
-		$openTickets = 0;
-		if ($hasTicketStatuses || $hasStatusesTable || $hasStatusColumn) {
-			$params = [];
-			$sql = 'SELECT COUNT(*) as cnt FROM tickets t';
-			if ($hasTicketStatuses) {
-				$sql .= ' LEFT JOIN ticket_statuses ts ON ts.id = t.status_id WHERE ts.name = :status';
-			} elseif ($hasStatusesTable) {
-				$sql .= ' LEFT JOIN statuses s ON s.id = t.status_id WHERE s.name = :status';
-			} elseif ($hasStatusColumn) {
-				$sql .= ' WHERE t.status = :status';
-			}
-			$params[':status'] = 'Aberto';
-			if ($user['role'] === 'user') {
-				if (strpos($sql, 'WHERE') === false) {
-					$sql .= ' WHERE t.user_id = :user_id';
-				} else {
-					$sql .= ' AND t.user_id = :user_id';
-				}
-				$params[':user_id'] = (int)$user['id'];
-			}
-			$stmt = $pdo->prepare($sql);
-			$stmt->execute($params);
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$openTickets = $row ? (int)$row['cnt'] : 0;
-		}
-
-		// Total de chamados em andamento
-		$inProgressTickets = 0;
-		if ($hasTicketStatuses || $hasStatusesTable || $hasStatusColumn) {
-			$params = [];
-			$sql = 'SELECT COUNT(*) as cnt FROM tickets t';
-			if ($hasTicketStatuses) {
-				$sql .= ' LEFT JOIN ticket_statuses ts ON ts.id = t.status_id WHERE ts.name = :status';
-			} elseif ($hasStatusesTable) {
-				$sql .= ' LEFT JOIN statuses s ON s.id = t.status_id WHERE s.name = :status';
-			} elseif ($hasStatusColumn) {
-				$sql .= ' WHERE t.status = :status';
-			}
-			$params[':status'] = 'Em andamento';
-			if ($user['role'] === 'user') {
-				if (strpos($sql, 'WHERE') === false) {
-					$sql .= ' WHERE t.user_id = :user_id';
-				} else {
-					$sql .= ' AND t.user_id = :user_id';
-				}
-				$params[':user_id'] = (int)$user['id'];
-			}
-			$stmt = $pdo->prepare($sql);
-			$stmt->execute($params);
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$inProgressTickets = $row ? (int)$row['cnt'] : 0;
-		}
-
-		// Total de chamados agendados
-		$scheduledTickets = 0;
-		if ($hasTicketStatuses || $hasStatusesTable || $hasStatusColumn) {
-			$params = [];
-			$sql = 'SELECT COUNT(*) as cnt FROM tickets t';
-			if ($hasTicketStatuses) {
-				$sql .= ' LEFT JOIN ticket_statuses ts ON ts.id = t.status_id WHERE ts.name = :status';
-			} elseif ($hasStatusesTable) {
-				$sql .= ' LEFT JOIN statuses s ON s.id = t.status_id WHERE s.name = :status';
-			} elseif ($hasStatusColumn) {
-				$sql .= ' WHERE t.status = :status';
-			}
-			$params[':status'] = 'Agendado';
-			if ($user['role'] === 'user') {
-				if (strpos($sql, 'WHERE') === false) {
-					$sql .= ' WHERE t.user_id = :user_id';
-				} else {
-					$sql .= ' AND t.user_id = :user_id';
-				}
-				$params[':user_id'] = (int)$user['id'];
-			}
-			$stmt = $pdo->prepare($sql);
-			$stmt->execute($params);
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$scheduledTickets = $row ? (int)$row['cnt'] : 0;
-		}
-		
-		// Diárias de Projeto (tickets com categoria 'Projeto')
-		$projectDailies = 0;
-		if ($this->columnExists($pdo, 'tickets', 'category')) {
-			$params = [
-				':category' => 'Projeto',
-			];
-			$sql = 'SELECT COUNT(*) as cnt FROM tickets WHERE category = :category';
-			if (($user['role'] ?? null) === 'user') {
-				$sql .= ' AND user_id = :user_id';
-				$params[':user_id'] = (int) $user['id'];
-			}
-			$stmt = $pdo->prepare($sql);
-			$stmt->execute($params);
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$projectDailies = $row ? (int) $row['cnt'] : 0;
-		}
-		
-		// Total de usuários (só admin)
-		$totalUsers = 0;
-		if ($user['role'] === 'admin') {
-			$stmt = $pdo->query('SELECT COUNT(*) as cnt FROM users');
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$totalUsers = $row ? (int)$row['cnt'] : 0;
-		}
-		
-		// Agentes de suporte (user_type já é normalizado)
-		$stmt = $pdo->query("SELECT COUNT(*) as cnt FROM users WHERE user_type IN ('support', 'admin')");
-		$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-		$supportAgents = $row ? (int)$row['cnt'] : 0;
-		
-		// Tempo médio de resolução (em horas) apenas para fechados
-		$avgResolution = 0.0;
-		if ($hasTicketStatuses || $hasStatusesTable || $hasStatusColumn) {
-			$params = [];
-			$sql = 'SELECT AVG(TIMESTAMPDIFF(HOUR, t.created_at, t.updated_at)) as avg_hours FROM tickets t';
-			if ($hasTicketStatuses) {
-				$sql .= ' LEFT JOIN ticket_statuses ts ON ts.id = t.status_id WHERE ts.name = :status';
-			} elseif ($hasStatusesTable) {
-				$sql .= ' LEFT JOIN statuses s ON s.id = t.status_id WHERE s.name = :status';
-			} elseif ($hasStatusColumn) {
-				$sql .= ' WHERE t.status = :status';
-			}
-			$params[':status'] = 'Fechado';
-			$sql .= ' AND t.updated_at IS NOT NULL';
-			
-			$stmt = $pdo->prepare($sql);
-			$stmt->execute($params);
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$avgResolution = ($row && $row['avg_hours'] !== null) ? round((float)$row['avg_hours'], 1) : 0.0;
-		}
-
-		// Total de créditos de Ticket comprados (apenas admin)
-		$totalTicketCredits = 0;
-		if ($user['role'] === 'admin') {
-			$stmt = $pdo->query('SELECT COALESCE(SUM(credits), 0) as total FROM users');
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$totalTicketCredits = $row ? (int)$row['total'] : 0;
-		}
-
-		// Total de créditos de Diária comprados (apenas admin)
-		$totalDailyCredits = 0;
-		if ($user['role'] === 'admin') {
-			$stmt = $pdo->query('SELECT COALESCE(SUM(daily_credits), 0) as total FROM users');
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$totalDailyCredits = $row ? (int)$row['total'] : 0;
-		}
-
-		// Total de créditos de Diárias Projeto comprados (apenas admin)
-		$totalProjectDailiesCredits = 0;
-		if ($user['role'] === 'admin') {
-			$stmt = $pdo->query('SELECT COALESCE(SUM(project_dailies_credits), 0) as total FROM users');
-			$row = $stmt->fetch(\PDO::FETCH_ASSOC);
-			$totalProjectDailiesCredits = $row ? (int)$row['total'] : 0;
-		}
-
-		return [
-			'total_tickets' => $totalTickets,
-			'closed_tickets' => $closedTickets,
-			'open_tickets' => $openTickets,
-			'in_progress_tickets' => $inProgressTickets,
-			'scheduled_tickets' => $scheduledTickets,
-			'total_users' => $totalUsers,
-			'support_agents' => $supportAgents,
-			'avg_resolution_hours' => $avgResolution,
-			'project_dailies' => $projectDailies,
-			'total_ticket_credits' => $totalTicketCredits,
-			'total_daily_credits' => $totalDailyCredits,
-			'total_project_dailies_credits' => $totalProjectDailiesCredits,
-		];
-	}
-
-	/**
-	 * Helpers locais para evitar dependência de métodos privados do modelo Ticket
-	 */
-	private function tableExists(\PDO $pdo, string $table): bool
-	{
-		$stmt = $pdo->query("SHOW TABLES LIKE '" . str_replace("'", "''", $table) . "'");
-		return (bool)$stmt->rowCount();
-	}
-
-	private function columnExists(\PDO $pdo, string $table, string $column): bool
-	{
-		$stmt = $pdo->query("SHOW COLUMNS FROM `" . str_replace("`", "``", $table) . "` LIKE '" . str_replace("'", "''", $column) . "'");
-		return (bool)$stmt->rowCount();
+		return DashboardStatsService::getStats($user);
 	}
 
 	public function dailyStats(): void
 	{
 		$this->requireAuth([]);
 		$user = Auth::instance()->user();
+		$cacheKey = 'stats:dailies:' . (int) ($user['id'] ?? 0) . ':' . TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
+		$cached = Cache::get($cacheKey);
+		if (is_array($cached)) {
+			$this->json($cached);
+			return;
+		}
 
 		$pdo = Database::pdo();
-		$hasQtd = $this->columnExists($pdo, 'tickets', 'qtd');
-		$hasTicketCategories = $this->tableExists($pdo, 'ticket_categories');
-		$hasCategories = !$hasTicketCategories && $this->tableExists($pdo, 'categories');
+		$hasQtd = DatabaseSchema::columnExists($pdo, 'tickets', 'qtd');
+		$hasTicketCategories = DatabaseSchema::tableExists($pdo, 'ticket_categories');
+		$hasCategories = !$hasTicketCategories && DatabaseSchema::tableExists($pdo, 'categories');
 
 		$qtdExpr = $hasQtd
 			? 'CASE WHEN t.qtd IS NULL OR t.qtd = 0 THEN 1 ELSE t.qtd END'
@@ -384,7 +138,7 @@ final class DashboardController extends Controller
 			$sql .= " AND tc.name = 'Diária'";
 		} elseif ($hasCategories) {
 			$sql .= " AND c.name = 'Diária'";
-		} elseif ($this->columnExists($pdo, 'tickets', 'category')) {
+		} elseif (DatabaseSchema::columnExists($pdo, 'tickets', 'category')) {
 			$sql .= " AND t.category = 'Diária'";
 		}
 
@@ -405,17 +159,26 @@ final class DashboardController extends Controller
 			$labels[] = $r['dia'];
 			$data[] = (int) $r['total'];
 		}
-		$this->json([
+		$payload = [
 			'success' => true,
 			'labels' => $labels,
 			'data' => $data,
-		]);
+		];
+		Cache::set($cacheKey, $payload, 45);
+		$this->json($payload);
 	}
 
 	public function statusStats(): void
 	{
 		$this->requireAuth([]);
 		$user = Auth::instance()->user();
+		$cacheKey = 'stats:status:' . (int) ($user['id'] ?? 0) . ':' . TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
+		$cached = Cache::get($cacheKey);
+		if (is_array($cached)) {
+			$this->json($cached);
+			return;
+		}
+
 		$pdo = Database::pdo();
 		
 		// Buscar distribuição de chamados por status
@@ -444,12 +207,33 @@ final class DashboardController extends Controller
 				$data[] = (int) $r['total'];
 			}
 		}
-		
-		$this->json([
+
+		$payload = [
 			'success' => true,
 			'labels' => $labels,
 			'data' => $data,
-		]);
+		];
+		Cache::set($cacheKey, $payload, 45);
+		$this->json($payload);
+	}
+
+	public function summaryStats(): void
+	{
+		$this->requireAuth([]);
+		$user = Auth::instance()->user();
+		$cacheKey = 'dashboard:summary:' . (int) ($user['id'] ?? 0) . ':' . TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
+		$cached = Cache::get($cacheKey);
+		if (is_array($cached)) {
+			$this->json($cached);
+			return;
+		}
+
+		$payload = [
+			'success' => true,
+			'stats' => DashboardStatsService::getStats($user),
+		];
+		Cache::set($cacheKey, $payload, 30);
+		$this->json($payload);
 	}
 
 	public function creditUsageStats(): void
@@ -458,10 +242,10 @@ final class DashboardController extends Controller
 		$user = Auth::instance()->user();
 		$pdo = Database::pdo();
 
-		$hasQtd = $this->columnExists($pdo, 'tickets', 'qtd');
-		$hasTicketCategories = $this->tableExists($pdo, 'ticket_categories');
-		$hasCategories = !$hasTicketCategories && $this->tableExists($pdo, 'categories');
-		$hasCategoryColumn = $this->columnExists($pdo, 'tickets', 'category');
+		$hasQtd = DatabaseSchema::columnExists($pdo, 'tickets', 'qtd');
+		$hasTicketCategories = DatabaseSchema::tableExists($pdo, 'ticket_categories');
+		$hasCategories = !$hasTicketCategories && DatabaseSchema::tableExists($pdo, 'categories');
+		$hasCategoryColumn = DatabaseSchema::columnExists($pdo, 'tickets', 'category');
 
 		$qtdExpr = $hasQtd
 			? 'CASE WHEN t.qtd IS NULL OR t.qtd = 0 THEN 1 ELSE t.qtd END'

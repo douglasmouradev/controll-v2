@@ -3,13 +3,19 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\SystemSetting;
+
 final class TicketNotification
 {
 	private const DEFAULT_RECIPIENT = 'Grupotitanium@titaniumtelecom.com.br';
 
 	public static function notifyTicketOpened(int $ticketId, array $ticketData, array $openedByUser): void
 	{
-		$recipient = trim((string) (getenv('TICKET_NOTIFICATION_EMAIL') ?: self::DEFAULT_RECIPIENT));
+		$recipient = trim((string) (
+			SystemSetting::get('notification_email')
+			?: getenv('TICKET_NOTIFICATION_EMAIL')
+			?: self::DEFAULT_RECIPIENT
+		));
 		if ($recipient === '') {
 			return;
 		}

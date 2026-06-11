@@ -517,7 +517,9 @@ INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`) VA
 ('notification_email', 'suporte@controllit.com.br', 'E-mail para notificações'),
 ('sla_enabled', 'true', 'Habilitar regras de SLA'),
 ('default_priority', '2', 'Prioridade padrão para novos tickets'),
-('maintenance_mode', '0', 'Modo manutenção — bloqueia acesso de usuários finais');
+('maintenance_mode', '0', 'Modo manutenção — bloqueia acesso de usuários finais'),
+('audit_lock_enabled', '1', 'Bloqueio por auditoria até data configurada'),
+('audit_available_date', '2026-06-15', 'Data de liberação do acesso para usuários finais');
 
 -- Criar usuário administrador padrão
 -- Senha padrão: 'password' (DEVE SER ALTERADA EM PRODUÇÃO!)

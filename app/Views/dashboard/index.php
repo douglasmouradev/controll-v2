@@ -42,6 +42,9 @@ $users = $users ?? [];
 	<?php include __DIR__ . '/components/painel-tab.php'; ?>
 	<?php include __DIR__ . '/components/chamados-tab.php'; ?>
 	<?php include __DIR__ . '/components/chamados-fechados-tab.php'; ?>
+	<?php if (($user['role'] ?? '') === 'admin'): ?>
+		<?php include __DIR__ . '/components/configuracoes-tab.php'; ?>
+	<?php endif; ?>
 	<?php if (in_array($user['role'], ['support', 'admin'], true)): ?>
 		<?php include __DIR__ . '/components/usuarios-tab.php'; ?>
 		<?php include __DIR__ . '/components/relatorios-tab.php'; ?>
@@ -305,5 +308,8 @@ $users = $users ?? [];
 
 <!-- Scripts do Sidebar e Abas -->
 <?php include __DIR__ . '/components/sidebar-script.php'; ?>
+<?php if (($user['role'] ?? '') === 'admin'): ?>
+	<script src="/assets/js/dashboard/maintenance.js"></script>
+<?php endif; ?>
 <?php include __DIR__ . '/components/scripts.php'; ?>
 

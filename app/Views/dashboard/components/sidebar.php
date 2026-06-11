@@ -54,6 +54,12 @@ $roleLabel = $roleLabels[$user['role'] ?? ''] ?? ($user['role'] ?? 'Usuário');
 				<svg fill="currentColor" viewBox="0 0 20 20"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zm0 5v5a2 2 0 002 2h8a2 2 0 002-2V9H4zm3 2h2v3H7v-3z"/></svg>
 				Diárias compradas
 			</button>
+			<?php if (($user['role'] ?? '') === 'admin'): ?>
+				<button type="button" class="sidebar-menu-item sidebar-item" data-tab="configuracoes" data-title="Configurações">
+					<svg fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.19 2.042-.948 2.286-1.56.38-1.56 2.6 0 2.98a1.532 1.532 0 01.948 2.286c-.836 1.372.734 2.942 2.106 2.106.886-.54 2.042-.19 2.286.948.38 1.56 2.6 1.56 2.98 0a1.533 1.533 0 012.286-.948c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.948-2.286c1.56-.38 1.56-2.6 0-2.98a1.532 1.532 0 01-.948-2.286c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.286-.948zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/></svg>
+					Configurações
+				</button>
+			<?php endif; ?>
 		<?php endif; ?>
 
 		<div class="sidebar-section mt-2">Projetos</div>
