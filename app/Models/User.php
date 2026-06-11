@@ -39,7 +39,7 @@ final class User
 
 	public static function findById(int $id): ?array
 	{
-		$sql = 'SELECT id, name, email, user_type as role, username, active, credits, daily_credits, project_dailies_credits FROM users WHERE id = :id LIMIT 1';
+		$sql = 'SELECT id, name, email, user_type as role, username, active, credits, daily_credits, project_dailies_credits, password_changed_at FROM users WHERE id = :id LIMIT 1';
 		$stmt = Database::pdo()->prepare($sql);
 		$stmt->execute([':id' => $id]);
 		$user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -583,10 +583,12 @@ final class User
 	{
 		$sql = 'UPDATE users SET password_hash = :password_hash, password_changed_at = NOW() WHERE id = :id';
 		$stmt = Database::pdo()->prepare($sql);
-		return $stmt->execute([
+		$ok = $stmt->execute([
 			':password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
-			':id' => $id
+			':id' => $id,
 		]);
+
+		return $ok && $stmt->rowCount() > 0;
 	}
 }
 

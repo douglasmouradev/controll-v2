@@ -54,70 +54,83 @@ final class AuthController extends Controller
 	public function changePasswordFirst(): void
 	{
 		$this->requireAuth([]);
-		$user = Auth::instance()->user();
-		
-		// Verificar se já trocou a senha
-		if ($user && !empty($user['password_changed_at'])) {
+		$sessionUser = Auth::instance()->user();
+		$dbUser = $sessionUser && isset($sessionUser['id'])
+			? User::findById((int) $sessionUser['id'])
+			: null;
+
+		if ($dbUser && !empty($dbUser['password_changed_at'])) {
 			header('Location: /');
 			return;
 		}
-		
-		$this->view('auth/change-password-first', ['layout' => 'auth', 'user' => $user]);
+
+		$this->view('auth/change-password-first', [
+			'layout' => 'auth',
+			'user' => $dbUser ?: $sessionUser,
+		]);
 	}
 
 	public function updatePasswordFirst(): void
 	{
 		$this->requireAuth([]);
-		$user = Auth::instance()->user();
-		
-		// Verificar se já trocou a senha
-		if ($user && !empty($user['password_changed_at'])) {
+		$sessionUser = Auth::instance()->user();
+		if (!$sessionUser || !isset($sessionUser['id'])) {
+			header('Location: /login');
+			return;
+		}
+
+		$userId = (int) $sessionUser['id'];
+		$dbUser = User::findById($userId);
+
+		if ($dbUser && !empty($dbUser['password_changed_at'])) {
 			header('Location: /');
 			return;
 		}
-		
+
+		$displayUser = $dbUser ?: $sessionUser;
 		$newPassword = trim($_POST['password'] ?? '');
 		$confirmPassword = trim($_POST['password_confirm'] ?? '');
-		
+
 		if ($newPassword === '' || $confirmPassword === '') {
 			$this->view('auth/change-password-first', [
 				'layout' => 'auth',
-				'user' => $user,
-				'error' => 'Informe a nova senha e confirmação.'
+				'user' => $displayUser,
+				'error' => 'Informe a nova senha e confirmação.',
 			]);
 			return;
 		}
-		
+
 		if ($newPassword !== $confirmPassword) {
 			$this->view('auth/change-password-first', [
 				'layout' => 'auth',
-				'user' => $user,
-				'error' => 'As senhas não conferem.'
+				'user' => $displayUser,
+				'error' => 'As senhas não conferem.',
 			]);
 			return;
 		}
-		
+
 		if (strlen($newPassword) < 6) {
 			$this->view('auth/change-password-first', [
 				'layout' => 'auth',
-				'user' => $user,
-				'error' => 'A senha deve ter no mínimo 6 caracteres.'
+				'user' => $displayUser,
+				'error' => 'A senha deve ter no mínimo 6 caracteres.',
 			]);
 			return;
 		}
-		
-		// Atualizar senha e marcar como trocada
-		$updated = User::updatePasswordChanged((int) $user['id'], $newPassword);
-		
-		if ($updated) {
-			header('Location: /');
-		} else {
+
+		$updated = User::updatePasswordChanged($userId, $newPassword);
+
+		if (!$updated) {
 			$this->view('auth/change-password-first', [
 				'layout' => 'auth',
-				'user' => $user,
-				'error' => 'Erro ao atualizar senha. Tente novamente.'
+				'user' => $displayUser,
+				'error' => 'Erro ao atualizar senha. Tente novamente.',
 			]);
+			return;
 		}
+
+		header('Location: /');
+		exit;
 	}
 
 	public function logout(): void
