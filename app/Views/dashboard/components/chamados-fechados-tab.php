@@ -3,7 +3,9 @@
 /** @var array $closed_tickets */
 /** @var array $closed_filters */
 $closed_filters = $closed_filters ?? [];
+$closed_pagination = $closed_pagination ?? ['page' => 1, 'per_page' => 50, 'total' => 0, 'pages' => 1];
 require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
+require_once BASE_PATH . '/app/Views/helpers/auth.php';
 ?>
 <div id="tab-chamados-fechados" class="tab-content hidden">
 	<div class="ui-card ui-card-body">
@@ -26,7 +28,7 @@ require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 					<option value="90" <?php echo (string)($closed_filters['period'] ?? '') === '90' ? 'selected' : ''; ?>>Últimos 90 dias</option>
 				</select>
 			</div>
-			<?php if (in_array($user['role'], ['support','admin'], true)): ?>
+			<?php if (view_is_support_or_admin($user)): ?>
 				<div>
 					<label class="label">Usuário</label>
 					<input id="f-closed-user" class="input w-36" placeholder="ID ou nome" value="<?php echo htmlspecialchars((string)($closed_filters['user'] ?? '')); ?>">
@@ -79,5 +81,37 @@ require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 				</tbody>
 			</table>
 		</div>
+
+		<?php if (($closed_pagination['pages'] ?? 1) > 1): ?>
+			<div class="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm text-slate-600">
+				<p>
+					Página <strong><?php echo (int) $closed_pagination['page']; ?></strong>
+					de <strong><?php echo (int) $closed_pagination['pages']; ?></strong>
+					— <?php echo (int) $closed_pagination['total']; ?> chamado(s) fechado(s)
+				</p>
+				<div class="flex items-center gap-2">
+					<?php
+					$buildClosedPageUrl = static function (int $targetPage) use ($closed_filters): string {
+						$params = array_filter([
+							'closed_id' => $closed_filters['id'] ?? null,
+							'closed_period' => $closed_filters['period'] ?? null,
+							'closed_user' => $closed_filters['user'] ?? null,
+							'closed_page' => $targetPage > 1 ? $targetPage : null,
+							'tab' => 'chamados-fechados',
+						], static fn ($value) => $value !== null && $value !== '');
+						return '/?' . http_build_query($params);
+					};
+					$closedCurrentPage = (int) ($closed_pagination['page'] ?? 1);
+					$closedTotalPages = (int) ($closed_pagination['pages'] ?? 1);
+					?>
+					<?php if ($closedCurrentPage > 1): ?>
+						<a class="btn btn-secondary btn-sm" href="<?php echo htmlspecialchars($buildClosedPageUrl($closedCurrentPage - 1)); ?>">Anterior</a>
+					<?php endif; ?>
+					<?php if ($closedCurrentPage < $closedTotalPages): ?>
+						<a class="btn btn-secondary btn-sm" href="<?php echo htmlspecialchars($buildClosedPageUrl($closedCurrentPage + 1)); ?>">Próxima</a>
+					<?php endif; ?>
+				</div>
+			</div>
+		<?php endif; ?>
 	</div>
 </div>

@@ -564,6 +564,61 @@ final class Ticket
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
+	public static function countClosed(array $authUser, array $filters = []): int
+	{
+		$pdo = Database::pdo();
+		$hasTS = self::tableExists('ticket_statuses');
+		$hasS = !$hasTS && self::tableExists('statuses');
+
+		$joins = [
+			'LEFT JOIN users u ON u.id = t.user_id',
+		];
+		if ($hasTS) {
+			$joins[] = 'LEFT JOIN ticket_statuses ts ON ts.id = t.status_id';
+		} elseif ($hasS) {
+			$joins[] = 'LEFT JOIN statuses s ON s.id = t.status_id';
+		}
+
+		$where = [];
+		$params = [];
+
+		if ($hasTS) {
+			$where[] = 'ts.name = :status';
+		} elseif ($hasS) {
+			$where[] = 's.name = :status';
+		} elseif (self::columnExists('tickets', 'status')) {
+			$where[] = 't.status = :status';
+		}
+		$params[':status'] = 'Fechado';
+
+		if (!empty($filters['period'])) {
+			$days = (int) $filters['period'];
+			$where[] = 't.updated_at >= DATE_SUB(NOW(), INTERVAL ' . $days . ' DAY)';
+		}
+		if (!empty($filters['id'])) {
+			$where[] = 't.id = :id';
+			$params[':id'] = (int) $filters['id'];
+		}
+		if (!empty($filters['user'])) {
+			$userFilter = $filters['user'];
+			if (is_numeric($userFilter)) {
+				$where[] = 't.user_id = :user';
+				$params[':user'] = (int) $userFilter;
+			} else {
+				$where[] = 'u.name LIKE :user';
+				$params[':user'] = '%' . $userFilter . '%';
+			}
+		}
+
+		self::applyAuthScope($authUser, $where, $params);
+		$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+		$sql = 'SELECT COUNT(*) FROM tickets t ' . implode(' ', $joins) . ' ' . $whereSql;
+		$stmt = $pdo->prepare($sql);
+		$stmt->execute($params);
+
+		return (int) $stmt->fetchColumn();
+	}
+
 	public static function allowedStatuses(): array
 	{
 		return ['Aberto', 'Em andamento', 'Agendado', 'Fechado'];

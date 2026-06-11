@@ -10,6 +10,9 @@ use App\Models\User;
 use App\Models\CreditHistory;
 use App\Services\Auth;
 use App\Services\TicketAccess;
+use App\Services\InAppNotifier;
+use App\Services\TicketAttachmentService;
+use App\Services\TicketCreditService;
 use App\Services\TicketNotification;
 use App\Services\TicketService;
 
@@ -118,7 +121,7 @@ final class TicketController extends Controller
 			}
 
 			// Debitar créditos de acordo com a categoria/modalidade do chamado
-			$costs = $this->calculateCreditsCost($data);
+			$costs = TicketCreditService::calculateCost($data);
 			$this->logTicketCreateDebug('credits_cost_calculated', [
 				'user_id' => (int) ($user['id'] ?? 0),
 				'user_role' => (string) ($user['role'] ?? ''),
@@ -370,9 +373,10 @@ final class TicketController extends Controller
 				'remaining_project_dailies_credits' => $remainingProjectDailiesCredits,
 			]);
 			// Processar anexos enviados na abertura do chamado (attachments[])
-			$this->handleTicketAttachmentsUpload((int) $id, 'attachments');
+			TicketAttachmentService::handleUpload((int) $id, 'attachments', $user);
 			try {
 				TicketNotification::notifyTicketOpened((int) $id, $data, $user);
+				InAppNotifier::ticketOpened((int) $id, $data, $user);
 			} catch (\Throwable $e) {
 				error_log('Erro ao notificar abertura de chamado por e-mail: ' . $e->getMessage());
 			}
@@ -543,7 +547,7 @@ final class TicketController extends Controller
 				// Sempre que a QTD aumentar, independentemente do papel (inclusive admin),
 				// devemos debitar créditos proporcionais ao aumento.
 				if ($deltaQtd > 0) {
-					$costs = $this->calculateCreditsCost([
+					$costs = TicketCreditService::calculateCost([
 						'category' => $data['category'],
 						'qtd' => $deltaQtd,
 					]);
@@ -699,7 +703,7 @@ final class TicketController extends Controller
 				return;
 			}
 			// Processar anexos adicionais enviados na edição (attachments[])
-			$this->handleTicketAttachmentsUpload($ticketId, 'attachments');
+			TicketAttachmentService::handleUpload($ticketId, 'attachments', $user);
 
 			$this->json([
 				'success' => true,
@@ -784,7 +788,7 @@ final class TicketController extends Controller
 		try {
 			$newId = Ticket::create($data);
 
-			$costs = $this->calculateCreditsCost(['category' => 'Ticket', 'qtd' => $qtd]);
+			$costs = TicketCreditService::calculateCost(['category' => 'Ticket', 'qtd' => $qtd]);
 			$rolesPool = ['user', 'admin', 'support'];
 			$byUser = \App\Models\User::adjustCreditsForRolesAllowNegative($rolesPool, -$costs['ticket']);
 
@@ -1162,97 +1166,6 @@ final class TicketController extends Controller
 		}
 	}
 
-	/**
-	 * Processa upload de anexos de chamado (imagens/PDF) para um ticket específico.
-	 */
-	private function handleTicketAttachmentsUpload(int $ticketId, string $filesKey): void
-	{
-		if (empty($_FILES[$filesKey]) || !is_array($_FILES[$filesKey]['name'])) {
-			return;
-		}
-		$files = $_FILES[$filesKey];
-		$uploadDir = BASE_PATH . '/public/uploads/tickets/';
-		if (!is_dir($uploadDir)) {
-			@mkdir($uploadDir, 0755, true);
-		}
-		$user = Auth::instance()->user();
-		$maxFiles = 20;
-		$maxSize = 40 * 1024 * 1024; // 40MB
-		$fileCount = count($files['name']);
-		$processed = 0;
-		for ($i = 0; $i < $fileCount && $processed < $maxFiles; $i++) {
-			if ($files['error'][$i] !== UPLOAD_ERR_OK) {
-				continue;
-			}
-			$fileName = (string) $files['name'][$i];
-			$fileTmp = (string) $files['tmp_name'][$i];
-			$fileType = (string) ($files['type'][$i] ?? '');
-			$fileSize = (int) ($files['size'][$i] ?? 0);
-			if ($fileSize <= 0 || $fileSize > $maxSize) {
-				continue;
-			}
-			if (function_exists('finfo_open')) {
-				$finfo = finfo_open(FILEINFO_MIME_TYPE);
-				$detectedMime = $finfo ? (string) finfo_file($finfo, $fileTmp) : '';
-				if ($finfo) {
-					finfo_close($finfo);
-				}
-				$allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
-				if ($detectedMime !== '' && !in_array($detectedMime, $allowedMimes, true)) {
-					continue;
-				}
-			}
-			$ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
-			$imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-			$isImage = strpos($fileType, 'image/') === 0 || in_array($ext, $imageExts, true);
-			$isPdf = $fileType === 'application/pdf' || $ext === 'pdf';
-			if (!$isImage && !$isPdf) {
-				continue;
-			}
-			if ($ext === '') {
-				$ext = $isPdf ? 'pdf' : 'bin';
-			}
-			$resolvedType = $fileType;
-			if ($resolvedType === '') {
-				if ($isPdf) {
-					$resolvedType = 'application/pdf';
-				} elseif ($isImage) {
-					if (in_array($ext, ['jpg', 'jpeg'], true)) {
-						$resolvedType = 'image/jpeg';
-					} elseif ($ext === 'png') {
-						$resolvedType = 'image/png';
-					} elseif ($ext === 'gif') {
-						$resolvedType = 'image/gif';
-					} elseif ($ext === 'webp') {
-						$resolvedType = 'image/webp';
-					} else {
-						$resolvedType = 'image/*';
-					}
-				} else {
-					$resolvedType = 'application/octet-stream';
-				}
-			}
-			$newFileName = 'ticket_' . $ticketId . '_' . time() . '_' . $i . '.' . $ext;
-			$filePath = $uploadDir . $newFileName;
-			if (!@move_uploaded_file($fileTmp, $filePath)) {
-				continue;
-			}
-			try {
-				TicketAttachment::create([
-					'ticket_id' => $ticketId,
-					'file_path' => '/uploads/tickets/' . $newFileName,
-					'file_name' => $fileName,
-					'file_type' => $resolvedType,
-					'file_size' => $fileSize,
-					'uploaded_by' => (int) ($user['id'] ?? 0),
-				]);
-				$processed++;
-			} catch (\Throwable $e) {
-				error_log('Erro ao salvar anexo de ticket: ' . $e->getMessage());
-			}
-		}
-	}
-
 	private function findAuthorizedTicket(int $id, ?array $user): ?array
 	{
 		if ($id <= 0 || !$user) {
@@ -1264,37 +1177,6 @@ final class TicketController extends Controller
 		}
 
 		return $ticket;
-	}
-
-	private function calculateCreditsCost(array $data): array
-	{
-		$category = trim((string)($data['category'] ?? ''));
-		$quantity = isset($data['qtd']) ? (int) $data['qtd'] : 1;
-		if ($quantity < 0) {
-			$quantity = 0;
-		}
-		$costs = [
-			'ticket' => 0,
-			'daily' => 0,
-			'project_dailies' => 0,
-		];
-
-		if ($quantity === 0) {
-			return $costs;
-		}
-
-		if ($category === 'Diária' || $category === 'Uso Geral') {
-			// Chamados de Diária e Uso Geral debitam do saldo de diárias
-			$costs['daily'] = $quantity;
-		} elseif ($category === 'Projeto') {
-			// Chamados de projeto debitam do saldo de diárias projeto
-			$costs['project_dailies'] = $quantity;
-		} elseif ($category === 'Ticket') {
-			// Chamados de Ticket debitam do saldo de tickets
-			$costs['ticket'] = $quantity;
-		}
-
-		return $costs;
 	}
 }
 

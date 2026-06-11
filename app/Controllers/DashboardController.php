@@ -54,14 +54,22 @@ final class DashboardController extends Controller
 			$page = $ticketPages;
 		}
 
-		// Carregar chamados fechados
+		$closedPerPage = 50;
+		$closedPage = max(1, (int) ($_GET['closed_page'] ?? 1));
 		$closedFilters = [
 			'id' => $_GET['closed_id'] ?? null,
 			'status' => 'Fechado',
 			'period' => $_GET['closed_period'] ?? null,
 			'user' => $_GET['closed_user'] ?? null,
+			'limit' => $closedPerPage,
+			'offset' => ($closedPage - 1) * $closedPerPage,
 		];
 		$closedTickets = Ticket::listClosed($user, $closedFilters);
+		$closedTotal = Ticket::countClosed($user, $closedFilters);
+		$closedPages = max(1, (int) ceil($closedTotal / $closedPerPage));
+		if ($closedPage > $closedPages) {
+			$closedPage = $closedPages;
+		}
 
 		// Estatísticas para os cards
 		try {
@@ -108,6 +116,12 @@ final class DashboardController extends Controller
 				'per_page' => $perPage,
 				'total' => $ticketTotal,
 				'pages' => $ticketPages,
+			],
+			'closed_pagination' => [
+				'page' => $closedPage,
+				'per_page' => $closedPerPage,
+				'total' => $closedTotal,
+				'pages' => $closedPages,
 			],
 			'access_logs' => $accessLogs,
 		]);

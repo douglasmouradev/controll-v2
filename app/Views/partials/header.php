@@ -19,6 +19,7 @@ $bodyClass = $isDashboard ? 'layout-dashboard' : ($isAuth ? 'layout-auth' : '');
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="/assets/css/app.css">
+	<link rel="stylesheet" href="/assets/css/tw.css">
 	<script>
 	(function () {
 		var meta = document.querySelector('meta[name="csrf-token"]');
@@ -45,20 +46,6 @@ $bodyClass = $isDashboard ? 'layout-dashboard' : ($isAuth ? 'layout-auth' : '');
 			return originalFetch(input, init);
 		};
 	})();
-	</script>
-	<script src="/assets/js/vendor/tailwindcdn.js"></script>
-	<script>
-		tailwind.config = {
-			theme: {
-				extend: {
-					fontFamily: { sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'] },
-					colors: {
-						brand: { DEFAULT: '#1e3a8a', light: '#1d4ed8', dark: '#0f172a' },
-						accent: { DEFAULT: '#dc2626' },
-					},
-				},
-			},
-		};
 	</script>
 	<script src="/assets/js/vendor/chart.umd.min.js"></script>
 	<link rel="icon" href="/favicon.svg">

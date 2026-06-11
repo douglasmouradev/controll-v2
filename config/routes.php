@@ -8,11 +8,14 @@ use App\Controllers\UserController;
 use App\Controllers\ReportController;
 use App\Controllers\SettingsController;
 use App\Controllers\HealthController;
+use App\Controllers\NotificationController;
+use App\Controllers\SecurityController;
 
 return [
 	'GET' => [
 		'/' => [DashboardController::class, 'index'],
 		'/login' => [AuthController::class, 'loginForm'],
+		'/two-factor' => [AuthController::class, 'twoFactorForm'],
 		'/auditoria' => [AuthController::class, 'auditoria'],
 		'/logout' => [AuthController::class, 'logout'],
 		'/change-password-first' => [AuthController::class, 'changePasswordFirst'],
@@ -39,9 +42,12 @@ return [
 		'/reports/csv' => [ReportController::class, 'csv'],
 		'/settings/maintenance' => [SettingsController::class, 'maintenanceStatus'],
 		'/settings' => [SettingsController::class, 'index'],
+		'/notifications' => [NotificationController::class, 'index'],
+		'/security/two-factor' => [SecurityController::class, 'status'],
 	],
 	'POST' => [
 		'/login' => [AuthController::class, 'login'],
+		'/two-factor' => [AuthController::class, 'twoFactorVerify'],
 		'/change-password-first-update' => [AuthController::class, 'updatePasswordFirst'],
 		'/tickets/create' => [TicketController::class, 'create'],
 		'/tickets/update' => [TicketController::class, 'update'],
@@ -62,5 +68,10 @@ return [
 		'/dashboard/purchased-dailies-upload' => [DashboardController::class, 'uploadPurchasedDailiesFile'],
 		'/settings/maintenance' => [SettingsController::class, 'maintenanceToggle'],
 		'/settings/update' => [SettingsController::class, 'update'],
+		'/notifications/read' => [NotificationController::class, 'markRead'],
+		'/notifications/read-all' => [NotificationController::class, 'markAllRead'],
+		'/security/two-factor/setup' => [SecurityController::class, 'setup'],
+		'/security/two-factor/confirm' => [SecurityController::class, 'confirm'],
+		'/security/two-factor/disable' => [SecurityController::class, 'disable'],
 	],
 ];

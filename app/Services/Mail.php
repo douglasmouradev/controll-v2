@@ -5,6 +5,15 @@ namespace App\Services;
 
 final class Mail
 {
+	public static function queue(string $to, string $subject, string $htmlBody, ?string $textBody = null): bool
+	{
+		if (EmailQueue::isAvailable() && getenv('MAIL_SYNC') !== '1') {
+			return EmailQueue::enqueue($to, $subject, $htmlBody, $textBody);
+		}
+
+		return self::send($to, $subject, $htmlBody, $textBody);
+	}
+
 	public static function send(string $to, string $subject, string $htmlBody, ?string $textBody = null): bool
 	{
 		$to = trim($to);

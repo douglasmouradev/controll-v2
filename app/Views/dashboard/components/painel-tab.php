@@ -206,7 +206,8 @@
 			</div>
 		</div>
 		<!-- Card Usuários (apenas admin e support) -->
-		<?php if (in_array($user['role'] ?? null, ['admin', 'support'], true)): ?>
+		<?php require_once BASE_PATH . '/app/Views/helpers/auth.php'; ?>
+		<?php if (view_is_support_or_admin($user)): ?>
 		<div class="ui-card ui-card-body">
 			<div class="flex items-center justify-between">
 				<div>

@@ -4,10 +4,13 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Services\Database;
+use App\Services\DatabaseSchema;
 use PDO;
 
 final class User
 {
+	private static ?bool $hasTwoFactorColumns = null;
+
 	public const ROLES = ['superadmin', 'admin', 'suporte', 'gerente', 'usuario'];
 	private const ROLE_MAP = [
 		'superadmin' => 'admin',
@@ -20,7 +23,8 @@ final class User
 	public static function findByEmail(string $email): ?array
 	{
 		// Permite login tanto com "admin" quanto com "admin@local"
-		$sql = 'SELECT id, name, email, password_hash as password, user_type as role, username, active, password_changed_at 
+		$sql = 'SELECT id, name, email, password_hash as password, user_type as role, username, active, password_changed_at'
+			. self::twoFactorSelectColumns() . '
 		        FROM users 
 		        WHERE email = ? 
 		           OR email = CONCAT(?, \'@local\')
@@ -39,7 +43,9 @@ final class User
 
 	public static function findById(int $id): ?array
 	{
-		$sql = 'SELECT id, name, email, user_type as role, username, active, credits, daily_credits, project_dailies_credits, password_changed_at FROM users WHERE id = :id LIMIT 1';
+		$sql = 'SELECT id, name, email, user_type as role, username, active, credits, daily_credits, project_dailies_credits,
+		               password_changed_at' . self::twoFactorSelectColumns() . '
+		        FROM users WHERE id = :id LIMIT 1';
 		$stmt = Database::pdo()->prepare($sql);
 		$stmt->execute([':id' => $id]);
 		$user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -589,6 +595,42 @@ final class User
 		]);
 
 		return $ok && $stmt->rowCount() > 0;
+	}
+
+	public static function updateTwoFactor(int $id, ?string $secret, bool $enabled): bool
+	{
+		if (!self::hasTwoFactorColumns()) {
+			return false;
+		}
+
+		$sql = 'UPDATE users SET two_factor_secret = :secret, two_factor_enabled = :enabled WHERE id = :id';
+		$stmt = Database::pdo()->prepare($sql);
+
+		return $stmt->execute([
+			':secret' => $secret,
+			':enabled' => $enabled ? 1 : 0,
+			':id' => $id,
+		]);
+	}
+
+	private static function hasTwoFactorColumns(): bool
+	{
+		if (self::$hasTwoFactorColumns !== null) {
+			return self::$hasTwoFactorColumns;
+		}
+
+		try {
+			self::$hasTwoFactorColumns = DatabaseSchema::columnExists(Database::pdo(), 'users', 'two_factor_secret');
+		} catch (\Throwable $e) {
+			self::$hasTwoFactorColumns = false;
+		}
+
+		return self::$hasTwoFactorColumns;
+	}
+
+	private static function twoFactorSelectColumns(): string
+	{
+		return self::hasTwoFactorColumns() ? ', two_factor_secret, two_factor_enabled' : '';
 	}
 }
 

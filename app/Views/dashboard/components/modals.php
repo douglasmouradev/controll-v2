@@ -1,5 +1,6 @@
 <?php
 /** @var array $user */
+require_once BASE_PATH . '/app/Views/helpers/auth.php';
 ?>
 <!-- Modal de Abrir Chamado -->
 <dialog id="modal-abrir-chamado" class="rounded-lg w-11/12 max-w-3xl p-0">
@@ -79,7 +80,7 @@
 <dialog id="ticket-modal" class="rounded-lg w-11/12 max-w-2xl p-0">
 	<div class="bg-blue-700 text-white px-4 py-3 rounded-t-lg">Detalhes do Chamado</div>
 	<div class="p-4 space-y-2" id="ticket-modal-body"></div>
-	<?php if (in_array($user['role'], ['suporte','admin','superadmin'], true)): ?>
+	<?php if (view_is_support_or_admin($user)): ?>
 		<div class="p-4 border-t space-y-4">
 			<div class="grid grid-cols-3 gap-3 text-sm" id="technician-fields-container">
 				<div>
@@ -110,7 +111,7 @@
 		</div>
 	<?php endif; ?>
 	<div class="p-4 pt-0 flex gap-2 justify-end">
-		<?php if (in_array($user['role'], ['suporte','admin','superadmin'], true)): ?>
+		<?php if (view_is_support_or_admin($user)): ?>
 			<button data-status="Aberto" class="status-btn bg-gray-100 px-3 py-1 rounded hover:bg-gray-200">Aberto</button>
 			<button data-status="Em andamento" class="status-btn bg-yellow-100 px-3 py-1 rounded hover:bg-yellow-200">Em andamento</button>
 			<button data-status="Fechado" class="status-btn bg-green-100 px-3 py-1 rounded hover:bg-green-200">Fechado</button>

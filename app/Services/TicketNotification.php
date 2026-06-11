@@ -99,7 +99,7 @@ final class TicketNotification
 			$textLines[] = 'Acessar: ' . $dashboardLink;
 		}
 
-		$sent = Mail::send($recipient, $subject, $htmlBody, implode("\n", $textLines));
+		$sent = Mail::queue($recipient, $subject, $htmlBody, implode("\n", $textLines));
 		if (!$sent) {
 			error_log(sprintf('Falha ao enviar notificação do chamado #%d para %s', $ticketId, $recipient));
 		}
@@ -126,7 +126,7 @@ final class TicketNotification
 			]
 		);
 		$textBody = "Status do chamado #{$ticketId} alterado para {$newStatus} por {$actorName}.";
-		Mail::send($recipient, $subject, $htmlBody, $textBody);
+		Mail::queue($recipient, $subject, $htmlBody, $textBody);
 	}
 
 	public static function notifySupportResponse(int $ticketId, array $ticket, string $response, array $actor): void
@@ -150,7 +150,7 @@ final class TicketNotification
 			$response
 		);
 		$textBody = "Resposta no chamado #{$ticketId}:\n\n{$response}";
-		Mail::send($recipient, $subject, $htmlBody, $textBody);
+		Mail::queue($recipient, $subject, $htmlBody, $textBody);
 	}
 
 	/** @param array<string, string> $rows */

@@ -25,6 +25,7 @@ final class TicketService
 		if ($previousStatus !== $status) {
 			AuditLog::record('ticket_status_update', 'ticket:' . $id . ':' . $status);
 			TicketNotification::notifyStatusChanged($id, $ticket, $status, $actor);
+			InAppNotifier::ticketStatusChanged($id, $ticket, $status, $actor);
 		}
 
 		return ['success' => true, 'message' => 'Status atualizado'];
@@ -46,6 +47,7 @@ final class TicketService
 		if ($response !== '') {
 			AuditLog::record('ticket_support_response', 'ticket:' . $id);
 			TicketNotification::notifySupportResponse($id, $ticket, $response, $actor);
+			InAppNotifier::ticketSupportResponse($id, $ticket, $actor);
 		}
 
 		return ['success' => true, 'message' => 'Resposta salva'];

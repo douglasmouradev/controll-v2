@@ -12,6 +12,7 @@ Aplicação de CRM/Help Desk em PHP 8+, MySQL, CSS próprio e Vanilla JS, com se
 
 ```bash
 composer install
+npm install && npm run build:css
 cp .env.example .env
 # Configure DB_* no .env
 composer migrate
@@ -28,6 +29,16 @@ cd /www/wwwroot/cea.controllit.com.br
 ```
 
 O `deploy.sh` executa `git pull`, `composer dump-autoload` e **migrations automáticas** (`php bin/migrate.php`).
+
+**Erro `could not find driver` na VPS (aaPanel):** o PHP da linha de comando não tem `pdo_mysql`. No painel: **App Store → PHP → Extensões → pdo_mysql**. Depois rode:
+
+```bash
+PHP_BIN=/www/server/php/81/bin/php bash deploy.sh
+# ou só as migrations:
+/www/server/php/81/bin/php bin/migrate.php
+```
+
+(Ajuste `81` para a versão PHP do site.)
 
 ## Migrations
 
@@ -72,6 +83,30 @@ Também disponível pelo menu **Administração** → Modo manutenção (toggle 
 | `GET /health` | Saúde da aplicação (monitoramento) |
 | `GET /settings` | Configurações (admin, JSON) |
 | `POST /settings/update` | Salvar configurações (admin) |
+| `GET /notifications` | Notificações in-app do usuário |
+| `GET /security/two-factor` | Status 2FA (admin/suporte) |
+
+Documentação OpenAPI: `docs/openapi.yaml`
+
+## Fila de e-mails
+
+Com a migration `002_email_queue.sql`, os e-mails de chamados entram na fila. Processe via cron:
+
+```bash
+*/5 * * * * php /caminho/bin/process-mail-queue.php >> /caminho/storage/logs/mail-queue.log 2>&1
+```
+
+Use `MAIL_SYNC=1` no `.env` para envio síncrono (sem fila).
+
+## Backup (VPS)
+
+```bash
+bash bin/backup.sh
+```
+
+## 2FA (admin/suporte)
+
+Menu **Segurança** no sidebar: ative TOTP (Google Authenticator, Authy, etc.).
 
 ## Variáveis de ambiente (.env)
 
@@ -93,8 +128,9 @@ app/
   Views/         # Templates PHP
 public/assets/
   css/app.css    # Estilos principais
-  js/vendor/     # Chart.js e Tailwind (local, sem CDN)
-  js/dashboard/  # utils.js, charts.js, maintenance.js
+  css/tw.css     # Tailwind compilado (npm run build:css)
+  js/vendor/     # Chart.js (local)
+  js/dashboard/  # utils, charts, tickets, notifications, security
 bin/migrate.php  # Runner de migrations
 database/
   schema.sql     # Schema inicial

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\AuditLock;
 use App\Services\Auth;
 use App\Services\RateLimiter;
+use App\Services\TwoFactor;
 
 final class AuthController extends Controller
 {
@@ -41,6 +42,56 @@ final class AuthController extends Controller
 		}
 
 		RateLimiter::clear($rateKey);
+
+		if (TwoFactor::isEnabledForUser($user)) {
+			$_SESSION['pending_2fa_user_id'] = (int) $user['id'];
+			header('Location: /two-factor');
+			return;
+		}
+
+		$this->completeLogin($user);
+	}
+
+	public function twoFactorForm(): void
+	{
+		if (empty($_SESSION['pending_2fa_user_id'])) {
+			header('Location: /login');
+			return;
+		}
+
+		$this->view('auth/two-factor', ['layout' => 'auth']);
+	}
+
+	public function twoFactorVerify(): void
+	{
+		$userId = (int) ($_SESSION['pending_2fa_user_id'] ?? 0);
+		if ($userId <= 0) {
+			header('Location: /login');
+			return;
+		}
+
+		$code = trim((string) ($_POST['code'] ?? ''));
+		$user = User::findById($userId);
+		if (!$user || !TwoFactor::isEnabledForUser($user)) {
+			unset($_SESSION['pending_2fa_user_id']);
+			header('Location: /login');
+			return;
+		}
+
+		if ($code === '' || !TwoFactor::verify((string) $user['two_factor_secret'], $code)) {
+			$this->view('auth/two-factor', [
+				'layout' => 'auth',
+				'error' => 'Código inválido ou expirado.',
+			]);
+			return;
+		}
+
+		unset($_SESSION['pending_2fa_user_id']);
+		$this->completeLogin($user);
+	}
+
+	private function completeLogin(array $user): void
+	{
 		Auth::instance()->login($user);
 
 		if (AuditLock::shouldBlock($user)) {
@@ -48,8 +99,7 @@ final class AuthController extends Controller
 			return;
 		}
 
-		// Verificar se é primeiro login (password_changed_at é NULL)
-		if ($user && empty($user['password_changed_at'])) {
+		if (empty($user['password_changed_at'])) {
 			header('Location: /change-password-first');
 			return;
 		}
