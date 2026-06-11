@@ -1,0 +1,35 @@
+# Composer
+/vendor/
+composer.lock
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Uploads e arquivos gerados
+/public/uploads/
+*.log
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Arquivos temporários
+*.tmp
+*.cache
+__MACOSX/
+
+# Arquivos de backup
+*.zip
+*.tar.gz
+!vendor/*.zip
