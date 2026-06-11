@@ -67,7 +67,10 @@ final class PurchasedDailies
 			?? self::findColumnIndexLike($indexByHeader, ['TIPO', 'CATEGORIA', 'MODALIDADE', 'CREDITO']);
 		$descIdx = self::findColumnIndex($indexByHeader, ['DESCRICAO', 'DESCRIÇÃO', 'OBS', 'OBSERVACAO', 'OBSERVAÇÃO'])
 			?? self::findColumnIndexLike($indexByHeader, ['DESCRICAO', 'OBSERVACAO', 'OBS']);
+		$activityIdx = self::findColumnIndex($indexByHeader, ['ATIVIDADE', 'ACTIVITY', 'NOME ATIVIDADE', 'NOME DA ATIVIDADE'])
+			?? self::findColumnIndexLike($indexByHeader, ['ATIVIDADE', 'ACTIVITY']);
 
+		$sheetActivity = self::detectSheetActivity($rows, $headerRowIndex);
 		$qtdIdx = self::resolveQuantityColumnIndex($indexByHeader);
 
 		$parsedRows = [];
@@ -82,7 +85,7 @@ final class PurchasedDailies
 
 			$qtd = $qtdIdx !== null
 				? self::parseQuantity((string) ($row[$qtdIdx] ?? ''))
-				: self::findQuantityInRow($row, [$dateIdx, $storeIdx, $typeIdx, $descIdx]);
+				: self::findQuantityInRow($row, [$dateIdx, $storeIdx, $typeIdx, $descIdx, $activityIdx]);
 			if ($qtd <= 0) {
 				continue;
 			}
@@ -98,9 +101,15 @@ final class PurchasedDailies
 			}
 			$creditType = self::detectCreditType($typeRaw);
 
+			$activityRaw = $activityIdx !== null ? trim((string) ($row[$activityIdx] ?? '')) : '';
+			if ($activityRaw === '' || $activityRaw === '-') {
+				$activityRaw = $sheetActivity;
+			}
+
 			$parsedRows[] = [
 				'date' => $dateIdx !== null ? trim((string) ($row[$dateIdx] ?? '')) : '',
 				'store' => $storeRaw,
+				'activity' => $activityRaw,
 				'quantity' => $qtd,
 				'type' => $creditType,
 				'type_label' => $creditType === 'project_dailies' ? 'Projeto' : 'Diária',
@@ -122,8 +131,38 @@ final class PurchasedDailies
 				'project_purchased' => $projectTotal,
 				'total_purchased' => $dailyTotal + $projectTotal,
 				'detected_headers' => $detectedHeaders,
+				'sheet_activity' => $sheetActivity,
 			],
 		];
+	}
+
+	/**
+	 * Lê atividade definida no topo da planilha (ex.: célula ATIVIDADE + valor ao lado).
+	 *
+	 * @param array<int, array<int, string>> $rows
+	 */
+	private static function detectSheetActivity(array $rows, int $headerRowIndex): string
+	{
+		$limit = min($headerRowIndex, 20);
+		for ($i = 0; $i < $limit; $i++) {
+			$row = $rows[$i];
+			if (!is_array($row)) {
+				continue;
+			}
+			foreach ($row as $idx => $cell) {
+				$key = self::normalizeHeaderKey((string) $cell);
+				if ($key !== 'ATIVIDADE' && !str_contains($key, 'ATIVIDADE')) {
+					continue;
+				}
+				for ($j = $idx + 1; $j < count($row); $j++) {
+					$value = trim((string) ($row[$j] ?? ''));
+					if ($value !== '' && $value !== '-' && self::normalizeHeaderKey($value) !== 'ATIVIDADE') {
+						return $value;
+					}
+				}
+			}
+		}
+		return '';
 	}
 
 	/**
@@ -226,7 +265,7 @@ final class PurchasedDailies
 	{
 		$keywords = [
 			'DATA', 'LOJA', 'UNIDADE', 'SIGLA', 'QTD', 'QUANTIDADE', 'DIARIAS', 'DIARIA',
-			'COMPRADAS', 'PREVISTO', 'TIPO', 'COMPRA',
+			'COMPRADAS', 'PREVISTO', 'TIPO', 'COMPRA', 'ATIVIDADE',
 		];
 		$bestIndex = 0;
 		$bestScore = -1;

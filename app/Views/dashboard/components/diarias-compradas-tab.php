@@ -35,7 +35,7 @@
 
 	<div class="bg-white rounded-lg shadow p-4 mb-4">
 		<p class="text-sm text-gray-600 mb-2">
-			<strong>Formato esperado:</strong> colunas como Data, Loja/Unidade/Sigla e Quantidade (Qtd, Diárias compradas, Previsto ou similar). Opcional: Tipo (Diária ou Projeto) e Descrição.
+			<strong>Formato esperado:</strong> colunas como Data, Loja/Unidade/Sigla, Atividade e Quantidade (Qtd, Diárias compradas, Previsto ou similar). Opcional: Tipo (Diária ou Projeto) e Descrição. A atividade também pode vir no topo da planilha (campo ATIVIDADE).
 		</p>
 		<p class="text-xs text-gray-500" id="purchased-dailies-source">Nenhuma planilha importada.</p>
 	</div>
@@ -47,6 +47,7 @@
 					<tr>
 						<th class="px-4 py-3 text-left font-semibold">Data</th>
 						<th class="px-4 py-3 text-left font-semibold">Loja / Unidade</th>
+						<th class="px-4 py-3 text-left font-semibold">Atividade</th>
 						<th class="px-4 py-3 text-left font-semibold">Tipo</th>
 						<th class="px-4 py-3 text-right font-semibold">Quantidade</th>
 						<th class="px-4 py-3 text-left font-semibold">Descrição</th>
@@ -54,7 +55,7 @@
 				</thead>
 				<tbody id="purchased-dailies-table-body" class="divide-y divide-gray-100">
 					<tr>
-						<td colspan="5" class="px-4 py-8 text-center text-gray-500">Importe uma planilha para visualizar os registros.</td>
+						<td colspan="6" class="px-4 py-8 text-center text-gray-500">Importe uma planilha para visualizar os registros.</td>
 					</tr>
 				</tbody>
 			</table>

@@ -570,7 +570,7 @@ let inventoryLocationsByCategory = {};
 		const tbody = document.getElementById('purchased-dailies-table-body');
 		if (!tbody) return;
 		if (!Array.isArray(rows) || rows.length === 0) {
-			tbody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">Nenhum registro encontrado na planilha.</td></tr>';
+			tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Nenhum registro encontrado na planilha.</td></tr>';
 			return;
 		}
 		const limited = rows.slice(0, 500);
@@ -578,13 +578,14 @@ let inventoryLocationsByCategory = {};
 			<tr class="hover:bg-gray-50">
 				<td class="px-4 py-2">${escapeHtml(String(row.date || '-'))}</td>
 				<td class="px-4 py-2">${escapeHtml(String(row.store || '-'))}</td>
+				<td class="px-4 py-2">${escapeHtml(String(row.activity || '-'))}</td>
 				<td class="px-4 py-2">${escapeHtml(String(row.type_label || 'Diária'))}</td>
 				<td class="px-4 py-2 text-right font-semibold text-blue-900">${Number(row.quantity || 0)}</td>
 				<td class="px-4 py-2">${escapeHtml(String(row.description || '-'))}</td>
 			</tr>
 		`).join('');
 		if (rows.length > limited.length) {
-			tbody.innerHTML += `<tr><td colspan="5" class="px-4 py-3 text-center text-xs text-gray-500">Exibindo ${limited.length} de ${rows.length} registros.</td></tr>`;
+			tbody.innerHTML += `<tr><td colspan="6" class="px-4 py-3 text-center text-xs text-gray-500">Exibindo ${limited.length} de ${rows.length} registros.</td></tr>`;
 		}
 	}
 
@@ -601,7 +602,8 @@ let inventoryLocationsByCategory = {};
 		if (grandEl) grandEl.textContent = String(Number(summary?.total_purchased || 0));
 		if (sourceEl) {
 			if (source && source.file) {
-				sourceEl.textContent = `Arquivo: ${source.file} — importado em ${source.imported_at || '-'}`;
+				const activityHint = summary?.sheet_activity ? ` — Atividade: ${summary.sheet_activity}` : '';
+				sourceEl.textContent = `Arquivo: ${source.file} — importado em ${source.imported_at || '-'}${activityHint}`;
 			} else {
 				sourceEl.textContent = 'Nenhuma planilha importada.';
 			}
