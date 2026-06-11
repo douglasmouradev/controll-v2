@@ -1,20 +1,31 @@
 <?php
 /** @var array|null $user */
+/** @var string $lock_reason */
 use App\Services\AuditLock;
+
+$isMaintenance = ($lock_reason ?? AuditLock::lockReason()) === 'maintenance';
+$title = $isMaintenance ? 'Sistema em manutenção' : 'Sistema em auditoria';
 ?>
 <div class="auth-card">
 	<div class="auth-card-header">
 		<?php $variant = 'auth'; include BASE_PATH . '/app/Views/components/brand-logos.php'; ?>
-		<h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-4">Sistema em auditoria</h1>
+		<h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-4"><?php echo htmlspecialchars($title); ?></h1>
 		<p class="text-slate-500 mt-2 text-sm">Controll IT Help Desk</p>
 	</div>
 	<div class="px-8 pb-8">
 		<div class="mb-6 p-5 bg-amber-50 border border-amber-200 rounded-xl text-amber-950 text-center">
 			<p class="text-base font-semibold mb-2">O sistema está temporariamente indisponível para usuários finais.</p>
-			<p class="text-sm leading-relaxed">
-				Estamos realizando uma auditoria e melhorias na plataforma.<br>
-				O acesso será liberado em <strong><?php echo htmlspecialchars(AuditLock::availableDateFormatted()); ?></strong>.
-			</p>
+			<?php if ($isMaintenance): ?>
+				<p class="text-sm leading-relaxed">
+					Estamos realizando manutenção na plataforma.<br>
+					Por favor, tente novamente mais tarde.
+				</p>
+			<?php else: ?>
+				<p class="text-sm leading-relaxed">
+					Estamos realizando uma auditoria e melhorias na plataforma.<br>
+					O acesso será liberado em <strong><?php echo htmlspecialchars(AuditLock::availableDateFormatted()); ?></strong>.
+				</p>
+			<?php endif; ?>
 		</div>
 		<?php if (!empty($user['name'])): ?>
 			<p class="text-center text-sm text-slate-500 mb-5">

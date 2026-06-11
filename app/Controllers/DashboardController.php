@@ -6,6 +6,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\Ticket;
 use App\Models\User;
+use App\Services\AuditLock;
 use App\Services\Auth;
 use App\Services\Database;
 use App\Services\PurchasedDailies;
@@ -85,6 +86,7 @@ final class DashboardController extends Controller
 			'closed_filters' => $closedFilters,
 			'stats' => $stats,
 			'users' => $users,
+			'maintenance_mode' => AuditLock::isMaintenanceEnabled(),
 		]);
 	}
 

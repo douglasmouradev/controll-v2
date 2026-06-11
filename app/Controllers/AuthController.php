@@ -70,6 +70,7 @@ final class AuthController extends Controller
 		$this->view('auth/auditoria', [
 			'layout' => 'auth',
 			'user' => $user,
+			'lock_reason' => AuditLock::lockReason(),
 		]);
 	}
 

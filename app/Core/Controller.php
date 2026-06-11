@@ -84,7 +84,7 @@ abstract class Controller
 					header('Content-Type: application/json; charset=utf-8');
 					echo json_encode([
 						'success' => false,
-						'message' => 'Sistema em auditoria. Disponível em ' . AuditLock::availableDateFormatted() . '.',
+						'message' => AuditLock::blockMessage(),
 					], JSON_UNESCAPED_UNICODE);
 					exit;
 				}

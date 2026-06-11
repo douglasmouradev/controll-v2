@@ -6,6 +6,7 @@ use App\Controllers\DashboardController;
 use App\Controllers\TicketController;
 use App\Controllers\UserController;
 use App\Controllers\ReportController;
+use App\Controllers\SettingsController;
 
 return [
 	'GET' => [
@@ -33,6 +34,7 @@ return [
 		'/reports/pdf' => [ReportController::class, 'pdf'],
 		'/reports/xlsx' => [ReportController::class, 'xlsx'],
 		'/reports/csv' => [ReportController::class, 'csv'],
+		'/settings/maintenance' => [SettingsController::class, 'maintenanceStatus'],
 	],
 	'POST' => [
 		'/login' => [AuthController::class, 'login'],
@@ -54,5 +56,6 @@ return [
 		'/users/credit-history/clear' => [UserController::class, 'clearCreditHistory'],
 		'/dashboard/inventory-upload' => [DashboardController::class, 'uploadInventoryFile'],
 		'/dashboard/purchased-dailies-upload' => [DashboardController::class, 'uploadPurchasedDailiesFile'],
+		'/settings/maintenance' => [SettingsController::class, 'maintenanceToggle'],
 	],
 ];

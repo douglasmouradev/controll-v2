@@ -24,6 +24,13 @@ $users = $users ?? [];
 			</div>
 		</div>
 		<div class="flex items-center gap-3">
+			<?php if (($user['role'] ?? '') === 'admin' && !empty($maintenance_mode)): ?>
+				<span id="maintenance-topbar-badge" class="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200 px-3 py-1 text-xs font-semibold">
+					Manutenção ativa
+				</span>
+			<?php else: ?>
+				<span id="maintenance-topbar-badge" class="hidden"></span>
+			<?php endif; ?>
 			<?php $variant = 'topbar'; include BASE_PATH . '/app/Views/components/brand-logos.php'; ?>
 			<span class="hidden md:inline text-sm text-slate-500"><?php echo htmlspecialchars($user['name'] ?? ''); ?></span>
 			<button type="button" id="btn-abrir-chamado-top" class="btn btn-primary btn-sm">+ Chamado</button>

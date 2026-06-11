@@ -21,6 +21,10 @@
 						<button type="button" id="btn-reset-credits-ticket" class="danger">Zerar Ticket</button>
 						<button type="button" id="btn-reset-credits-daily" class="danger">Zerar Diária</button>
 						<button type="button" id="btn-reset-credits-project" class="danger">Zerar Projeto</button>
+						<hr class="my-1 border-slate-200">
+						<button type="button" id="btn-toggle-maintenance" data-enabled="<?php echo !empty($maintenance_mode) ? '1' : '0'; ?>">
+							Modo manutenção: <strong id="maintenance-status-label"><?php echo !empty($maintenance_mode) ? 'Ativo' : 'Inativo'; ?></strong>
+						</button>
 					</div>
 				</div>
 			<?php endif; ?>

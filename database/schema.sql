@@ -516,7 +516,8 @@ INSERT INTO `system_settings` (`setting_key`, `setting_value`, `description`) VA
 ('auto_assign_tickets', 'false', 'Atribuição automática de chamados'),
 ('notification_email', 'suporte@controllit.com.br', 'E-mail para notificações'),
 ('sla_enabled', 'true', 'Habilitar regras de SLA'),
-('default_priority', '2', 'Prioridade padrão para novos tickets');
+('default_priority', '2', 'Prioridade padrão para novos tickets'),
+('maintenance_mode', '0', 'Modo manutenção — bloqueia acesso de usuários finais');
 
 -- Criar usuário administrador padrão
 -- Senha padrão: 'password' (DEVE SER ALTERADA EM PRODUÇÃO!)
