@@ -13,7 +13,7 @@ $roleLabel = $roleLabels[$user['role'] ?? ''] ?? ($user['role'] ?? 'Usuário');
 	<div class="sidebar-brand">
 		<div class="flex items-center justify-between gap-2">
 			<div class="flex items-center gap-2.5 min-w-0">
-				<img src="/logo-controll-it.svg" alt="Controll IT" class="h-8 w-8 object-contain brightness-0 invert flex-shrink-0">
+				<?php $variant = 'sidebar'; include BASE_PATH . '/app/Views/components/brand-logos.php'; ?>
 				<div class="min-w-0">
 					<div class="sidebar-brand-title truncate">Controll IT</div>
 					<div class="sidebar-brand-sub">Help Desk C&amp;A</div>

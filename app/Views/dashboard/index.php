@@ -23,7 +23,8 @@ $users = $users ?? [];
 				<p class="topbar-breadcrumb hidden sm:block">Controll IT Help Desk</p>
 			</div>
 		</div>
-		<div class="flex items-center gap-2">
+		<div class="flex items-center gap-3">
+			<?php $variant = 'topbar'; include BASE_PATH . '/app/Views/components/brand-logos.php'; ?>
 			<span class="hidden md:inline text-sm text-slate-500"><?php echo htmlspecialchars($user['name'] ?? ''); ?></span>
 			<button type="button" id="btn-abrir-chamado-top" class="btn btn-primary btn-sm">+ Chamado</button>
 		</div>

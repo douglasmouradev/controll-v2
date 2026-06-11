@@ -1,7 +1,7 @@
 <div class="auth-card">
 	<div class="auth-card-header">
-		<img src="/logo-controll-it.svg" alt="Controll IT" class="auth-logo">
-		<h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Controll IT</h1>
+		<?php $variant = 'auth'; include BASE_PATH . '/app/Views/components/brand-logos.php'; ?>
+		<h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-4">Controll IT</h1>
 		<p class="text-slate-500 mt-2 text-sm">Sistema de gestão de chamados técnicos</p>
 	</div>
 	<div class="px-8 pb-8">

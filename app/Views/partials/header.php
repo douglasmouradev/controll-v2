@@ -68,7 +68,7 @@ $bodyClass = $isDashboard ? 'layout-dashboard' : ($isAuth ? 'layout-auth' : '');
 	<header class="bg-white border-b border-slate-200">
 		<div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
 			<div class="flex items-center gap-3">
-				<img src="/logo-controll-it.svg" class="h-12 object-contain" alt="Controll IT">
+				<?php $variant = 'header'; include BASE_PATH . '/app/Views/components/brand-logos.php'; ?>
 				<div class="leading-tight">
 					<div class="text-brand font-bold text-lg">Controll IT</div>
 					<div class="text-xs text-slate-500">Help Desk Corporativo</div>

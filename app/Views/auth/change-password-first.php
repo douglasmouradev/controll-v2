@@ -1,7 +1,7 @@
 <div class="auth-card">
 	<div class="auth-card-header">
-		<img src="/logo-controll-it.svg" alt="Controll IT" class="auth-logo">
-		<h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">Primeira troca de senha</h1>
+		<?php $variant = 'auth'; include BASE_PATH . '/app/Views/components/brand-logos.php'; ?>
+		<h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-4">Primeira troca de senha</h1>
 		<p class="text-slate-500 mt-2 text-sm">Controll IT Help Desk</p>
 	</div>
 	<div class="px-8 pb-8">
