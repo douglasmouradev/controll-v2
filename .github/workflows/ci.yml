@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: helpdesk
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, pdo_mysql
+
+      - name: Install Composer autoload
+        run: composer install --no-interaction 2>/dev/null || composer dump-autoload
+
+      - name: Import schema
+        run: mysql -h 127.0.0.1 -uroot -proot helpdesk < database/schema.sql
+
+      - name: PHP syntax check
+        run: find app public -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Smoke test (login)
+        run: |
+          php -S 127.0.0.1:8000 -t public &
+          sleep 2
+          curl -sf -o /dev/null http://127.0.0.1:8000/login
