@@ -570,7 +570,7 @@ let inventoryLocationsByCategory = {};
 		const tbody = document.getElementById('purchased-dailies-table-body');
 		if (!tbody) return;
 		if (!Array.isArray(rows) || rows.length === 0) {
-			tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Nenhum registro encontrado na planilha.</td></tr>';
+			tbody.innerHTML = '<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">Nenhum registro encontrado na planilha.</td></tr>';
 			return;
 		}
 		const limited = rows.slice(0, 500);
@@ -579,13 +579,15 @@ let inventoryLocationsByCategory = {};
 				<td class="px-4 py-2">${escapeHtml(String(row.date || '-'))}</td>
 				<td class="px-4 py-2">${escapeHtml(String(row.store || '-'))}</td>
 				<td class="px-4 py-2">${escapeHtml(String(row.activity || '-'))}</td>
+				<td class="px-4 py-2">${escapeHtml(String(row.order || '-'))}</td>
+				<td class="px-4 py-2">${escapeHtml(String(row.number || '-'))}</td>
 				<td class="px-4 py-2">${escapeHtml(String(row.type_label || 'Diária'))}</td>
 				<td class="px-4 py-2 text-right font-semibold text-blue-900">${Number(row.quantity || 0)}</td>
 				<td class="px-4 py-2">${escapeHtml(String(row.description || '-'))}</td>
 			</tr>
 		`).join('');
 		if (rows.length > limited.length) {
-			tbody.innerHTML += `<tr><td colspan="6" class="px-4 py-3 text-center text-xs text-gray-500">Exibindo ${limited.length} de ${rows.length} registros.</td></tr>`;
+			tbody.innerHTML += `<tr><td colspan="8" class="px-4 py-3 text-center text-xs text-gray-500">Exibindo ${limited.length} de ${rows.length} registros.</td></tr>`;
 		}
 	}
 

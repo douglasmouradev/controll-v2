@@ -48,6 +48,8 @@
 						<th class="px-4 py-3 text-left font-semibold">Data</th>
 						<th class="px-4 py-3 text-left font-semibold">Loja / Unidade</th>
 						<th class="px-4 py-3 text-left font-semibold">Atividade</th>
+						<th class="px-4 py-3 text-left font-semibold">Pedido</th>
+						<th class="px-4 py-3 text-left font-semibold">Número</th>
 						<th class="px-4 py-3 text-left font-semibold">Tipo</th>
 						<th class="px-4 py-3 text-right font-semibold">Quantidade</th>
 						<th class="px-4 py-3 text-left font-semibold">Descrição</th>
@@ -55,7 +57,7 @@
 				</thead>
 				<tbody id="purchased-dailies-table-body" class="divide-y divide-gray-100">
 					<tr>
-						<td colspan="6" class="px-4 py-8 text-center text-gray-500">Importe uma planilha para visualizar os registros.</td>
+						<td colspan="8" class="px-4 py-8 text-center text-gray-500">Importe uma planilha para visualizar os registros.</td>
 					</tr>
 				</tbody>
 			</table>

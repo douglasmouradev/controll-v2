@@ -1216,7 +1216,7 @@ final class DashboardController extends Controller
 			$rows = $this->readCsvRows($path);
 		} else {
 			$rows = $this->readXlsxRows($path, [
-				'DATA', 'LOJA', 'COMPRAD', 'QUANT', 'QTD', 'DIARIA', 'TIPO', 'PREVISTO', 'UNIDADE', 'SIGLA', 'ATIVIDADE',
+				'DATA', 'LOJA', 'COMPRAD', 'QUANT', 'QTD', 'DIARIA', 'TIPO', 'PREVISTO', 'UNIDADE', 'SIGLA', 'ATIVIDADE', 'PEDIDO', 'NUMERO',
 			]);
 		}
 		return PurchasedDailies::parseRows($rows);

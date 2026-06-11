@@ -50,7 +50,7 @@ final class PurchasedDailies
 		}
 
 		$headerRowIndex = self::detectHeaderRowIndex($rows);
-		$header = array_map(static fn($v) => self::normalizeHeader((string) $v), $rows[$headerRowIndex]);
+		[$header, $dataStartRow] = self::resolveHeaderAndDataStart($rows, $headerRowIndex);
 		$indexByHeader = [];
 		foreach ($header as $idx => $name) {
 			if ($name !== '') {
@@ -69,6 +69,13 @@ final class PurchasedDailies
 			?? self::findColumnIndexLike($indexByHeader, ['DESCRICAO', 'OBSERVACAO', 'OBS']);
 		$activityIdx = self::findColumnIndex($indexByHeader, ['ATIVIDADE', 'ACTIVITY', 'NOME ATIVIDADE', 'NOME DA ATIVIDADE'])
 			?? self::findColumnIndexLike($indexByHeader, ['ATIVIDADE', 'ACTIVITY']);
+		$orderIdx = self::findColumnIndex($indexByHeader, ['PEDIDO', 'NR PEDIDO', 'N PEDIDO', 'NUMERO PEDIDO', 'Nº PEDIDO', 'N° PEDIDO'])
+			?? self::findColumnIndexLike($indexByHeader, ['PEDIDO'], ['NOTA', 'FISCAL']);
+		$numberIdx = self::findInvoiceNumberIndex($header);
+		$cnpjIdx = self::findColumnIndex($indexByHeader, ['CNPJ/CPF', 'CNPJ', 'CPF'])
+			?? self::findColumnIndexLike($indexByHeader, ['CNPJ', 'CPF']);
+		$invoiceDateIdx = self::findColumnIndex($indexByHeader, ['EMISSÃO', 'EMISSAO'])
+			?? self::findColumnIndexLike($indexByHeader, ['EMISSAO']);
 
 		$sheetActivity = self::detectSheetActivity($rows, $headerRowIndex);
 		$qtdIdx = self::resolveQuantityColumnIndex($indexByHeader);
@@ -77,7 +84,7 @@ final class PurchasedDailies
 		$dailyTotal = 0;
 		$projectTotal = 0;
 
-		for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
+		for ($i = $dataStartRow; $i < count($rows); $i++) {
 			$row = $rows[$i];
 			if (!is_array($row)) {
 				continue;
@@ -85,7 +92,7 @@ final class PurchasedDailies
 
 			$qtd = $qtdIdx !== null
 				? self::parseQuantity((string) ($row[$qtdIdx] ?? ''))
-				: self::findQuantityInRow($row, [$dateIdx, $storeIdx, $typeIdx, $descIdx, $activityIdx]);
+				: self::findQuantityInRow($row, [$dateIdx, $storeIdx, $typeIdx, $descIdx, $activityIdx, $orderIdx, $numberIdx, $cnpjIdx, $invoiceDateIdx]);
 			if ($qtd <= 0) {
 				continue;
 			}
@@ -110,6 +117,8 @@ final class PurchasedDailies
 				'date' => $dateIdx !== null ? trim((string) ($row[$dateIdx] ?? '')) : '',
 				'store' => $storeRaw,
 				'activity' => $activityRaw,
+				'order' => $orderIdx !== null ? trim((string) ($row[$orderIdx] ?? '')) : '',
+				'number' => $numberIdx !== null ? trim((string) ($row[$numberIdx] ?? '')) : '',
 				'quantity' => $qtd,
 				'type' => $creditType,
 				'type_label' => $creditType === 'project_dailies' ? 'Projeto' : 'Diária',
@@ -134,6 +143,71 @@ final class PurchasedDailies
 				'sheet_activity' => $sheetActivity,
 			],
 		];
+	}
+
+	/**
+	 * @param array<int, array<int, string>> $rows
+	 * @return array{0: array<int, string>, 1: int}
+	 */
+	private static function resolveHeaderAndDataStart(array $rows, int $headerRowIndex): array
+	{
+		$primary = array_map(static fn($v) => self::normalizeHeader((string) $v), $rows[$headerRowIndex]);
+		$dataStartRow = $headerRowIndex + 1;
+
+		if ($headerRowIndex + 1 >= count($rows)) {
+			return [$primary, $dataStartRow];
+		}
+
+		$secondary = $rows[$headerRowIndex + 1];
+		$merged = $primary;
+		$hasSubHeader = false;
+		foreach ($secondary as $idx => $cell) {
+			$sub = self::normalizeHeader((string) $cell);
+			if ($sub === '') {
+				continue;
+			}
+			$parent = $merged[$idx] ?? '';
+			$parentKey = self::normalizeHeaderKey($parent);
+			$subKey = self::normalizeHeaderKey($sub);
+			$isInvoiceSub = in_array($sub, ['Nº', 'N°', 'N'], true)
+				|| in_array($subKey, ['N', 'NUMERO', 'EMISSAO'], true)
+				|| str_contains($parentKey, 'NOTAFISCAL')
+				|| str_contains($parentKey, 'FISCAL');
+			if (!$isInvoiceSub) {
+				continue;
+			}
+			$hasSubHeader = true;
+			if ($parent === '' || str_contains($parent, 'FISCAL')) {
+				$merged[$idx] = $sub;
+			}
+		}
+
+		if ($hasSubHeader) {
+			return [$merged, $headerRowIndex + 2];
+		}
+
+		return [$primary, $dataStartRow];
+	}
+
+	/**
+	 * @param array<int, string> $header
+	 */
+	private static function findInvoiceNumberIndex(array $header): ?int
+	{
+		foreach ($header as $idx => $name) {
+			$raw = trim((string) $name);
+			if ($raw === 'Nº' || $raw === 'N°' || $raw === 'N') {
+				return (int) $idx;
+			}
+			$key = self::normalizeHeaderKey($raw);
+			if ($key === 'NUMERO' || $key === 'NUMERONF' || str_contains($key, 'NUMERONF')) {
+				return (int) $idx;
+			}
+			if (str_contains($key, 'NUMERO') && !str_contains($key, 'PEDIDO')) {
+				return (int) $idx;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -265,7 +339,7 @@ final class PurchasedDailies
 	{
 		$keywords = [
 			'DATA', 'LOJA', 'UNIDADE', 'SIGLA', 'QTD', 'QUANTIDADE', 'DIARIAS', 'DIARIA',
-			'COMPRADAS', 'PREVISTO', 'TIPO', 'COMPRA', 'ATIVIDADE',
+			'COMPRADAS', 'PREVISTO', 'TIPO', 'COMPRA', 'ATIVIDADE', 'PEDIDO',
 		];
 		$bestIndex = 0;
 		$bestScore = -1;
@@ -384,7 +458,11 @@ final class PurchasedDailies
 		if ($float >= 40000 && $float <= 60000) {
 			return 0;
 		}
-		return max(0, (int) round($float));
+		$int = (int) round($float);
+		if ($int >= 1000000000) {
+			return 0;
+		}
+		return max(0, $int);
 	}
 
 	private static function detectCreditType(string $typeRaw): string
