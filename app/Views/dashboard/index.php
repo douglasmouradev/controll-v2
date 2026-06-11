@@ -59,14 +59,14 @@ $users = $users ?? [];
 				<p class="form-section-title">Chamado</p>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div class="md:col-span-2">
-						<label class="label">TÃ­tulo</label>
+						<label class="label">Título</label>
 						<input class="input" name="title" placeholder="Descreva o problema" required>
 					</div>
 					<div>
 						<label class="label">Prioridade</label>
 						<select class="select" name="priority" required>
 							<option value="">Selecione</option>
-							<option>Baixa</option><option>MÃ©dia</option><option>Alta</option>
+							<option>Baixa</option><option>Média</option><option>Alta</option>
 						</select>
 					</div>
 					<div>
@@ -74,7 +74,7 @@ $users = $users ?? [];
 						<select class="select" name="category" required>
 							<option value="">Selecione</option>
 							<option>Ticket</option>
-							<option>DiÃ¡ria</option>
+							<option>Diária</option>
 							<option>Uso Geral</option>
 							<option>Projeto</option>
 						</select>
@@ -84,7 +84,7 @@ $users = $users ?? [];
 						<input class="input" name="project_name" id="project_name" placeholder="Nome do projeto">
 					</div>
 					<div class="md:col-span-2">
-						<label class="label">DescriÃ§Ã£o</label>
+						<label class="label">Descrição</label>
 						<textarea class="textarea" name="description" placeholder="Detalhes do atendimento" rows="4" required></textarea>
 					</div>
 				</div>
@@ -98,8 +98,8 @@ $users = $users ?? [];
 						<input class="input" name="name" placeholder="Nome completo" required>
 					</div>
 					<div>
-						<label class="label">MatrÃ­cula</label>
-						<input class="input" name="registration" placeholder="MatrÃ­cula">
+						<label class="label">Matrícula</label>
+						<input class="input" name="registration" placeholder="Matrícula">
 					</div>
 					<div>
 						<label class="label">Sigla da loja</label>
@@ -116,12 +116,12 @@ $users = $users ?? [];
 						<input class="input" name="cep" id="cep" placeholder="00000-000" required>
 					</div>
 					<div class="md:col-span-2">
-						<label class="label">EndereÃ§o</label>
+						<label class="label">Endereço</label>
 						<input class="input" name="address" id="address" placeholder="Rua, avenida..." required>
 					</div>
 					<div>
-						<label class="label">NÃºmero</label>
-						<input class="input" name="address_number" id="address_number" placeholder="NÂº">
+						<label class="label">Número</label>
+						<input class="input" name="address_number" id="address_number" placeholder="Nº">
 					</div>
 					<div>
 						<label class="label">Cidade</label>
@@ -138,15 +138,15 @@ $users = $users ?? [];
 				<p class="form-section-title">Atendimento</p>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<div>
-						<label class="label">TÃ©cnico (opcional)</label>
-						<input class="input" name="technician_name" placeholder="Nome do tÃ©cnico">
+						<label class="label">Técnico (opcional)</label>
+						<input class="input" name="technician_name" placeholder="Nome do técnico">
 					</div>
 					<div>
-						<label class="label">RG do tÃ©cnico</label>
+						<label class="label">RG do técnico</label>
 						<input class="input" name="technician_rg" placeholder="RG">
 					</div>
 					<div>
-						<label class="label">CPF do tÃ©cnico</label>
+						<label class="label">CPF do técnico</label>
 						<input class="input" name="technician_cpf" placeholder="CPF">
 					</div>
 					<div>
@@ -159,20 +159,20 @@ $users = $users ?? [];
 					</div>
 					<div>
 						<label class="label">Pedido interno</label>
-						<input class="input" name="internal_order" placeholder="NÂº pedido">
+						<input class="input" name="internal_order" placeholder="Nº pedido">
 					</div>
 					<div>
 						<label class="label">Nota fiscal</label>
 						<input class="input" name="invoice" placeholder="NF">
 					</div>
 					<div>
-						<label class="label">Destino da diÃ¡ria</label>
+						<label class="label">Destino da diária</label>
 						<input class="input" name="daily_destination" placeholder="Destino">
 					</div>
 					<div>
 						<label class="label">Quantidade</label>
 						<div class="flex items-center gap-2">
-							<button type="button" id="qtd-minus" class="btn btn-secondary btn-sm px-3">âˆ’</button>
+							<button type="button" id="qtd-minus" class="btn btn-secondary btn-sm px-3">−</button>
 							<input type="number" name="qtd" id="qtd" class="input w-20 text-center" min="0" step="1" value="1">
 							<button type="button" id="qtd-plus" class="btn btn-secondary btn-sm px-3">+</button>
 						</div>
@@ -182,7 +182,7 @@ $users = $users ?? [];
 
 			<div class="form-section">
 				<p class="form-section-title">Anexos</p>
-				<label class="label">Arquivos (PDF ou imagem, atÃ© 20 arquivos)</label>
+				<label class="label">Arquivos (PDF ou imagem, até 20 arquivos)</label>
 				<input type="file" id="ticket-attachments" name="attachments[]" multiple accept=".pdf,image/*" class="input">
 				<div id="ticket-attachments-list" class="mt-2 space-y-1 text-sm text-slate-600"></div>
 				<div id="ticket-existing-attachments" class="mt-4 space-y-2 text-sm text-slate-600"></div>
@@ -195,10 +195,10 @@ $users = $users ?? [];
 	</div>
 </dialog>
 
-<!-- Modal de Criar/Editar UsuÃ¡rio -->
+<!-- Modal de Criar/Editar Usuário -->
 <dialog id="modal-usuario" class="ui-modal">
 	<div class="ui-modal-header">
-		<h2 class="text-lg font-semibold" id="modal-usuario-title">Criar usuÃ¡rio</h2>
+		<h2 class="text-lg font-semibold" id="modal-usuario-title">Criar usuário</h2>
 	</div>
 	<div class="ui-modal-body">
 		<form id="user-form" class="space-y-4">
@@ -219,7 +219,7 @@ $users = $users ?? [];
 			<div>
 				<label class="label">Perfil</label>
 				<select id="user-role" name="role" class="select" required>
-					<option value="usuario">UsuÃ¡rio</option>
+					<option value="usuario">Usuário</option>
 					<option value="suporte">Suporte</option>
 					<option value="admin">Admin</option>
 				</select>
@@ -234,7 +234,7 @@ $users = $users ?? [];
 
 <dialog id="modal-credits" class="ui-modal" style="max-width: 28rem;">
 	<div class="ui-modal-header">
-		<h2 class="text-lg font-semibold">Ajustar crÃ©ditos</h2>
+		<h2 class="text-lg font-semibold">Ajustar créditos</h2>
 		<p class="text-sm text-blue-100 mt-1" id="credits-modal-user-name"></p>
 		<p class="text-xs text-blue-100 opacity-90" id="credits-type-label"></p>
 	</div>
@@ -246,14 +246,14 @@ $users = $users ?? [];
 		<div>
 			<label class="label">Ajuste</label>
 			<div class="flex items-center gap-2">
-				<button type="button" id="credits-minus" class="btn btn-secondary btn-sm px-3">âˆ’</button>
+				<button type="button" id="credits-minus" class="btn btn-secondary btn-sm px-3">−</button>
 				<input type="number" id="credits-delta" class="input w-24 text-center" value="0" step="1">
 				<button type="button" id="credits-plus" class="btn btn-secondary btn-sm px-3">+</button>
 			</div>
-			<p class="text-xs text-slate-500 mt-1">Positivo adiciona; negativo remove crÃ©ditos.</p>
+			<p class="text-xs text-slate-500 mt-1">Positivo adiciona; negativo remove créditos.</p>
 		</div>
 		<div>
-			<p class="text-sm text-slate-500">Saldo apÃ³s ajuste</p>
+			<p class="text-sm text-slate-500">Saldo após ajuste</p>
 			<p class="text-lg font-semibold text-slate-900"><span id="credits-preview"></span></p>
 		</div>
 		<input type="hidden" id="credits-user-id">
@@ -274,7 +274,7 @@ $users = $users ?? [];
 	<?php if (in_array($user['role'], ['support','admin'], true)): ?>
 		<div class="ui-modal-body border-t border-slate-100 pt-4">
 			<label class="label">Resposta do suporte</label>
-			<textarea id="support-response" rows="4" class="textarea" placeholder="Digite sua resposta para o usuÃ¡rio..."></textarea>
+			<textarea id="support-response" rows="4" class="textarea" placeholder="Digite sua resposta para o usuário..."></textarea>
 			<div class="mt-3">
 				<label class="label">Anexar imagens</label>
 				<input type="file" id="support-images" accept="image/*" multiple class="input">
