@@ -14,11 +14,10 @@
 				<p>Layout pronto para impressão com resumo de chamados e cabeçalho corporativo.</p>
 				<button type="button" id="btn-export-pdf" class="btn btn-primary btn-block">Exportar PDF</button>
 			</div>
-			<div class="ui-card export-card opacity-75">
+			<div class="ui-card export-card">
 				<h3>Planilha Excel</h3>
 				<p>Dados completos para análise e filtros avançados em planilha.</p>
-				<button type="button" id="btn-export-xlsx" class="btn btn-secondary btn-block" disabled>Em breve</button>
-				<p class="text-xs text-slate-400 mt-3 mb-0">Funcionalidade indisponível no momento.</p>
+				<button type="button" id="btn-export-xlsx" class="btn btn-primary btn-block">Exportar Excel</button>
 			</div>
 			<div class="ui-card export-card">
 				<h3>Exportação CSV</h3>

@@ -15,7 +15,8 @@ $isAuth = $layout === 'auth';
 			if (!el) return;
 			type = type || 'info';
 			const icons = { success: '✓', error: '✕', info: 'ℹ' };
-			el.innerHTML = '<span class="toast-icon" aria-hidden="true">' + (icons[type] || icons.info) + '</span><span>' + msg + '</span>';
+			const safeMsg = String(msg).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+			el.innerHTML = '<span class="toast-icon" aria-hidden="true">' + (icons[type] || icons.info) + '</span><span>' + safeMsg + '</span>';
 			el.className = 'show toast-' + type;
 			clearTimeout(el._toastTimer);
 			el._toastTimer = setTimeout(function () {

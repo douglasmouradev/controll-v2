@@ -7,6 +7,7 @@ use App\Core\Controller;
 use App\Models\User;
 use App\Models\CreditHistory;
 use App\Services\Auth;
+use App\Services\TicketAccess;
 
 final class UserController extends Controller
 {
@@ -38,6 +39,11 @@ final class UserController extends Controller
 		$email = trim($_POST['email'] ?? '');
 		$password = $_POST['password'] ?? '';
 		$role = $_POST['role'] ?? 'usuario';
+		$actor = Auth::instance()->user();
+		if (!$this->canAssignRole($actor, (string) $role)) {
+			$this->json(['success' => false, 'message' => 'Você não pode atribuir este perfil'], 403);
+			return;
+		}
 
 		$this->logUserCreateDebug('request_received', [
 			'name' => $name,
@@ -115,7 +121,14 @@ final class UserController extends Controller
 		if (isset($_POST['name'])) $data['name'] = trim($_POST['name']);
 		if (isset($_POST['email'])) $data['email'] = trim($_POST['email']);
 		if (isset($_POST['password']) && !empty($_POST['password'])) $data['password'] = $_POST['password'];
-		if (isset($_POST['role'])) $data['role'] = $_POST['role'];
+		if (isset($_POST['role'])) {
+			$actor = Auth::instance()->user();
+			if (!$this->canAssignRole($actor, (string) $_POST['role'])) {
+				$this->json(['success' => false, 'message' => 'Você não pode atribuir este perfil'], 403);
+				return;
+			}
+			$data['role'] = $_POST['role'];
+		}
 		
 		if (empty($data)) {
 			$this->json(['success' => false, 'message' => 'Nenhum dado para atualizar'], 422);
@@ -325,8 +338,12 @@ final class UserController extends Controller
 		$userId = (int) ($_GET['user_id'] ?? $_GET['id'] ?? 0);
 		$type = isset($_GET['type']) ? (string) $_GET['type'] : null;
 
-		        // id=0 => modo GLOBAL (todos veem o mesmo resumo/histórico TOTAL para o pool de usuários finais)
-        if ($userId === 0) {
+		if ($userId === 0) {
+			$currentUser = Auth::instance()->user();
+			if (!$currentUser || TicketAccess::normalizeRole((string) ($currentUser['role'] ?? '')) !== 'admin') {
+				$this->json(['success' => false, 'message' => 'Acesso negado'], 403);
+				return;
+			}
             try {
                 if ($type) {
                     // Histórico global normalizado (um registro por operação, não multiplicado por número de usuários)
@@ -483,5 +500,22 @@ final class UserController extends Controller
 			error_log('Erro ao apagar histórico de créditos: ' . $e->getMessage());
 			$this->json(['success' => false, 'message' => 'Erro ao apagar histórico'], 500);
 		}
+	}
+
+	private function canAssignRole(?array $actor, string $requestedRole): bool
+	{
+		if (!$actor) {
+			return false;
+		}
+		$actorRole = TicketAccess::normalizeRole((string) ($actor['role'] ?? ''));
+		$targetRole = TicketAccess::normalizeRole($requestedRole);
+		if ($actorRole === 'admin') {
+			return true;
+		}
+		if ($actorRole === 'support') {
+			return $targetRole !== 'admin';
+		}
+
+		return false;
 	}
 }

@@ -7,7 +7,18 @@ if (ob_get_level() > 0) {
 }
 ob_start();
 
+session_set_cookie_params([
+	'lifetime' => 0,
+	'path' => '/',
+	'secure' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
+	'httponly' => true,
+	'samesite' => 'Lax',
+]);
 session_start();
+
+header('X-Frame-Options: SAMEORIGIN');
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: strict-origin-when-cross-origin');
 
 // Composer autoload (for App\ namespace)
 require_once dirname(__DIR__) . '/vendor/autoload.php';

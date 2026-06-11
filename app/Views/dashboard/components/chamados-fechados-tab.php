@@ -1,7 +1,8 @@
 <?php
 /** @var array $user */
 /** @var array $closed_tickets */
-/** @var array $filters */
+/** @var array $closed_filters */
+$closed_filters = $closed_filters ?? [];
 require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 ?>
 <div id="tab-chamados-fechados" class="tab-content hidden">
@@ -14,21 +15,21 @@ require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 		<div class="filter-bar">
 			<div>
 				<label class="label">ID</label>
-				<input id="f-closed-id" class="input w-24" placeholder="ID" value="<?php echo htmlspecialchars((string)($filters['id'] ?? '')); ?>">
+				<input id="f-closed-id" class="input w-24" placeholder="ID" value="<?php echo htmlspecialchars((string)($closed_filters['id'] ?? '')); ?>">
 			</div>
 			<div>
 				<label class="label">Período</label>
 				<select id="f-closed-period" class="select">
-					<option value="">Todos</option>
-					<option value="7">Últimos 7 dias</option>
-					<option value="30">Últimos 30 dias</option>
-					<option value="90">Últimos 90 dias</option>
+					<option value="" <?php echo empty($closed_filters['period']) ? 'selected' : ''; ?>>Todos</option>
+					<option value="7" <?php echo (string)($closed_filters['period'] ?? '') === '7' ? 'selected' : ''; ?>>Últimos 7 dias</option>
+					<option value="30" <?php echo (string)($closed_filters['period'] ?? '') === '30' ? 'selected' : ''; ?>>Últimos 30 dias</option>
+					<option value="90" <?php echo (string)($closed_filters['period'] ?? '') === '90' ? 'selected' : ''; ?>>Últimos 90 dias</option>
 				</select>
 			</div>
 			<?php if (in_array($user['role'], ['support','admin'], true)): ?>
 				<div>
 					<label class="label">Usuário</label>
-					<input id="f-closed-user" class="input w-36" placeholder="ID ou nome">
+					<input id="f-closed-user" class="input w-36" placeholder="ID ou nome" value="<?php echo htmlspecialchars((string)($closed_filters['user'] ?? '')); ?>">
 				</div>
 			<?php endif; ?>
 			<button type="button" id="f-closed-apply" class="btn btn-primary">Aplicar</button>

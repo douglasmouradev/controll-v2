@@ -34,9 +34,9 @@ require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 						<th>Nome</th>
 						<th>Email</th>
 						<th>Perfil</th>
-						<th class="hide-mobile credits-ticket-cell hidden">Créd. Ticket</th>
-						<th class="hide-mobile credits-daily-cell hidden">Créd. Diária</th>
-						<th class="hide-mobile credits-project-dailies-cell hidden">Créd. Projeto</th>
+						<th class="hide-mobile credits-ticket-cell">Créd. Ticket</th>
+						<th class="hide-mobile credits-daily-cell">Créd. Diária</th>
+						<th class="hide-mobile credits-project-dailies-cell">Créd. Projeto</th>
 						<th>Criação</th>
 						<th>Ações</th>
 					</tr>
@@ -57,9 +57,9 @@ require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 										<?php echo htmlspecialchars($u['role']); ?>
 									</span>
 								</td>
-								<td class="hide-mobile credits-ticket-cell hidden"><?php echo isset($u['credits']) ? (int) $u['credits'] : 0; ?></td>
-								<td class="hide-mobile credits-daily-cell hidden"><?php echo isset($u['daily_credits']) ? (int) $u['daily_credits'] : 0; ?></td>
-								<td class="hide-mobile credits-project-dailies-cell hidden"><?php echo isset($u['project_dailies_credits']) ? (int) $u['project_dailies_credits'] : 0; ?></td>
+								<td class="hide-mobile credits-ticket-cell"><?php echo isset($u['credits']) ? (int) $u['credits'] : 0; ?></td>
+								<td class="hide-mobile credits-daily-cell"><?php echo isset($u['daily_credits']) ? (int) $u['daily_credits'] : 0; ?></td>
+								<td class="hide-mobile credits-project-dailies-cell"><?php echo isset($u['project_dailies_credits']) ? (int) $u['project_dailies_credits'] : 0; ?></td>
 								<td><?php echo date('d/m/Y H:i', strtotime($u['created_at'])); ?></td>
 								<td class="whitespace-nowrap">
 									<button type="button" class="btn-link btn-edit-user">Editar</button>

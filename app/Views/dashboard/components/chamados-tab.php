@@ -64,7 +64,7 @@ $countFechado = (int)($stats['closed_tickets'] ?? 0);
 					</div>
 				<?php endif; ?>
 				<button type="button" id="f-apply" class="btn btn-primary">Aplicar</button>
-				<button type="button" id="btn-abrir-chamado" class="btn btn-secondary ml-auto">Abrir Chamado</button>
+				<button type="button" id="btn-abrir-chamado-list" class="btn btn-secondary ml-auto">Abrir Chamado</button>
 		</div>
 
 		<div class="overflow-x-auto rounded-xl border border-slate-100">
@@ -133,7 +133,7 @@ $countFechado = (int)($stats['closed_tickets'] ?? 0);
 								<td class="px-3 py-2 whitespace-nowrap">
 									<button type="button" class="btn-link btn-view">Ver</button>
 							<?php if (in_array($user['role'], ['support','admin'], true)): ?>
-								<a class="btn-link ml-2" href="/tickets/clone?id=<?php echo (int) $t['id']; ?>">Clonar</a>
+								<button type="button" class="btn-link ml-2 btn-clone-ticket" data-id="<?php echo (int) $t['id']; ?>">Clonar</button>
 							<?php endif; ?>
 							<?php if ((int)($t['user_id'] ?? 0) === (int)($user['id'] ?? 0) || in_array($user['role'], ['support','admin'], true)): ?>
 								<button type="button" class="btn-link ml-2 btn-edit-ticket">Editar</button>

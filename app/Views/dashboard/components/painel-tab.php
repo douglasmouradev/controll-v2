@@ -9,7 +9,7 @@
 			<p class="page-subtitle">Gestão completa de chamados e diárias</p>
 		</div>
 		<div class="flex flex-wrap items-center gap-2">
-			<button type="button" id="btn-abrir-chamado" class="btn btn-primary">Abrir Chamado</button>
+			<button type="button" id="btn-abrir-chamado-painel" class="btn btn-primary">Abrir Chamado</button>
 			<?php if ($user['role'] === 'admin'): ?>
 				<div class="relative">
 					<button type="button" id="admin-actions-toggle" class="btn btn-secondary">Administração ▾</button>

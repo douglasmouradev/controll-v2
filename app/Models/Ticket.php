@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Services\Database;
+use App\Services\TicketAccess;
 use PDO;
 
 final class Ticket
@@ -387,19 +388,25 @@ final class Ticket
 			$where[] = 'UPPER(TRIM(t.uf)) LIKE :estado';
 			$params[':estado'] = '%' . strtoupper(trim((string) $filters['estado'])) . '%';
 		}
+		self::applyAuthScope($authUser, $where, $params);
 		$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+		$limitSql = self::buildLimitClause($filters);
 
-		$sql = 'SELECT ' . implode(', ', $select) . ' FROM tickets t ' . implode(' ', $joins) . ' ' . $whereSql . ' ORDER BY t.created_at DESC';
+		$sql = 'SELECT ' . implode(', ', $select) . ' FROM tickets t ' . implode(' ', $joins) . ' ' . $whereSql . ' ORDER BY t.created_at DESC' . $limitSql;
 		$stmt = $pdo->prepare($sql);
 		$stmt->execute($params);
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 
-	public static function find(int $id): ?array
+	public static function find(int $id, ?array $authUser = null): ?array
 	{
-		$rows = self::listForUser(['role' => 'admin', 'id' => 0], []);
-		foreach ($rows as $r) { if ((int)$r['id'] === (int)$id) { return $r; } }
-		return null;
+		if ($id <= 0) {
+			return null;
+		}
+		$scopeUser = $authUser ?? ['role' => 'admin', 'id' => 0];
+		$rows = self::listForUser($scopeUser, ['id' => $id, 'limit' => 1]);
+
+		return $rows[0] ?? null;
 	}
 
 	public static function listClosed(array $authUser, array $filters = []): array
@@ -467,9 +474,11 @@ final class Ticket
 				$params[':user'] = '%' . $userFilter . '%';
 			}
 		}
+		self::applyAuthScope($authUser, $where, $params);
 		
 		$whereSql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
-		$sql = 'SELECT ' . implode(', ', $select) . ' FROM tickets t ' . implode(' ', $joins) . ' ' . $whereSql . ' ORDER BY t.updated_at DESC';
+		$limitSql = self::buildLimitClause($filters);
+		$sql = 'SELECT ' . implode(', ', $select) . ' FROM tickets t ' . implode(' ', $joins) . ' ' . $whereSql . ' ORDER BY t.updated_at DESC' . $limitSql;
 		$stmt = $pdo->prepare($sql);
 		$stmt->execute($params);
 		return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -566,6 +575,23 @@ final class Ticket
 		$stmt->execute([$name]);
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 		return $row ? (int)$row['id'] : null;
+	}
+
+	private static function applyAuthScope(array $authUser, array &$where, array &$params): void
+	{
+		if (!TicketAccess::isStaff((string) ($authUser['role'] ?? ''))) {
+			$where[] = 't.user_id = :auth_scope_user_id';
+			$params[':auth_scope_user_id'] = (int) ($authUser['id'] ?? 0);
+		}
+	}
+
+	private static function buildLimitClause(array $filters): string
+	{
+		$limit = isset($filters['limit']) ? (int) $filters['limit'] : 200;
+		$limit = max(1, min($limit, 500));
+		$offset = isset($filters['offset']) ? max(0, (int) $filters['offset']) : 0;
+
+		return ' LIMIT ' . $limit . ' OFFSET ' . $offset;
 	}
 }
 

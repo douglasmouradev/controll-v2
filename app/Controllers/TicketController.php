@@ -9,6 +9,7 @@ use App\Models\TicketAttachment;
 use App\Models\User;
 use App\Models\CreditHistory;
 use App\Services\Auth;
+use App\Services\TicketAccess;
 use App\Services\TicketNotification;
 
 final class TicketController extends Controller
@@ -22,9 +23,9 @@ final class TicketController extends Controller
 	public function show(): void
 	{
 		$this->requireAuth([]);
-		// ID pode vir tanto por GET (?id=123) quanto por POST (form/Fetch)
+		$user = Auth::instance()->user();
 		$id = (int) ($_GET['id'] ?? $_POST['id'] ?? 0);
-		$ticket = $id > 0 ? Ticket::find($id) : null;
+		$ticket = $this->findAuthorizedTicket($id, $user);
 		if (!$ticket) {
 			$this->json(['success' => false, 'message' => 'Chamado não encontrado'], 404);
 			return;
@@ -427,7 +428,7 @@ final class TicketController extends Controller
 				return;
 			}
 			
-			$existing = Ticket::find($ticketId);
+			$existing = $this->findAuthorizedTicket($ticketId, $user);
 			if (!$existing) {
 				$this->logTicketUpdateDebug('ticket_not_found', [
 					'ticket_id' => $ticketId,
@@ -438,7 +439,7 @@ final class TicketController extends Controller
 				return;
 			}
 
-			$role = (string) ($user['role'] ?? 'user');
+			$role = TicketAccess::normalizeRole((string) ($user['role'] ?? 'user'));
 			$isOwner = (int)($existing['user_id'] ?? 0) === (int)$user['id'];
 			if ($role === 'user' && !$isOwner) {
 				$this->logTicketUpdateDebug('permission_denied', [
@@ -722,7 +723,7 @@ final class TicketController extends Controller
 	 */
 	public function cloneTicket(): void
 	{
-		$this->requireAuth([]);
+		$this->requireAuth(['support', 'admin']);
 		$user = Auth::instance()->user();
 		if (!$user) {
 			$this->json(['success' => false, 'message' => 'Usuário não autenticado'], 401);
@@ -735,7 +736,7 @@ final class TicketController extends Controller
 			return;
 		}
 
-		$existing = Ticket::find($id);
+		$existing = $this->findAuthorizedTicket($id, $user);
 		if (!$existing) {
 			$this->json(['success' => false, 'message' => 'Chamado não encontrado'], 404);
 			return;
@@ -953,7 +954,8 @@ final class TicketController extends Controller
 			return;
 		}
 
-		$ticket = Ticket::find($id);
+		$user = Auth::instance()->user();
+		$ticket = $this->findAuthorizedTicket($id, $user);
 		if (!$ticket) {
 			$this->json(['success' => false, 'message' => 'Chamado não encontrado'], 404);
 			return;
@@ -981,14 +983,73 @@ final class TicketController extends Controller
 	public function attachments(): void
 	{
 		$this->requireAuth([]);
+		$user = Auth::instance()->user();
 		$id = (int) ($_GET['id'] ?? 0);
 		if (!$id) {
 			$this->json(['success' => false, 'message' => 'ID inválido'], 422);
 			return;
 		}
-		
+		if (!$this->findAuthorizedTicket($id, $user)) {
+			$this->json(['success' => false, 'message' => 'Chamado não encontrado'], 404);
+			return;
+		}
+
 		$attachments = TicketAttachment::findByTicket($id);
+		foreach ($attachments as &$att) {
+			$att['download_url'] = '/tickets/attachment-download?id=' . (int) ($att['id'] ?? 0);
+		}
+		unset($att);
 		$this->json(['success' => true, 'attachments' => $attachments]);
+	}
+
+	public function downloadAttachment(): void
+	{
+		$this->requireAuth([]);
+		$user = Auth::instance()->user();
+		$attachmentId = (int) ($_GET['id'] ?? 0);
+		if ($attachmentId <= 0) {
+			http_response_code(422);
+			echo 'Anexo inválido';
+			return;
+		}
+
+		$attachment = TicketAttachment::find($attachmentId);
+		if (!$attachment) {
+			http_response_code(404);
+			echo 'Anexo não encontrado';
+			return;
+		}
+
+		$ticketId = (int) ($attachment['ticket_id'] ?? 0);
+		if (!$this->findAuthorizedTicket($ticketId, $user)) {
+			http_response_code(403);
+			echo 'Acesso negado';
+			return;
+		}
+
+		$webPath = (string) ($attachment['file_path'] ?? '');
+		$basePath = BASE_PATH . '/public';
+		$fsPath = $webPath !== '' && $webPath[0] === '/'
+			? $basePath . $webPath
+			: $basePath . '/' . ltrim($webPath, '/');
+
+		if (!is_file($fsPath) || !is_readable($fsPath)) {
+			http_response_code(404);
+			echo 'Arquivo não encontrado';
+			return;
+		}
+
+		$mime = (string) ($attachment['file_type'] ?? '');
+		if ($mime === '' || $mime === 'application/octet-stream') {
+			$mime = mime_content_type($fsPath) ?: 'application/octet-stream';
+		}
+
+		header('Content-Type: ' . $mime);
+		header('Content-Disposition: inline; filename="' . basename((string) ($attachment['file_name'] ?? 'anexo')) . '"');
+		header('Content-Length: ' . (string) filesize($fsPath));
+		header('Cache-Control: private, no-store');
+		readfile($fsPath);
+		exit;
 	}
 
 	public function deleteAttachment(): void
@@ -1014,13 +1075,12 @@ final class TicketController extends Controller
 			$this->json(['success' => false, 'message' => 'Chamado associado ao anexo não encontrado'], 404);
 			return;
 		}
-		$ticket = Ticket::find($ticketId);
+		$ticket = $this->findAuthorizedTicket($ticketId, $user);
 		if (!$ticket) {
 			$this->json(['success' => false, 'message' => 'Chamado associado ao anexo não encontrado'], 404);
 			return;
 		}
-		$role = (string) ($user['role'] ?? '');
-		$normalizedRole = $role === 'usuario' ? 'user' : ($role === 'suporte' || $role === 'gerente' ? 'support' : $role);
+		$normalizedRole = TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
 		$isOwner = (int) ($ticket['user_id'] ?? 0) === (int) ($user['id'] ?? 0);
 		if (!$isOwner && !in_array($normalizedRole, ['support', 'admin'], true)) {
 			$this->json(['success' => false, 'message' => 'Você não tem permissão para excluir este anexo'], 403);
@@ -1124,6 +1184,17 @@ final class TicketController extends Controller
 			if ($fileSize <= 0 || $fileSize > $maxSize) {
 				continue;
 			}
+			if (function_exists('finfo_open')) {
+				$finfo = finfo_open(FILEINFO_MIME_TYPE);
+				$detectedMime = $finfo ? (string) finfo_file($finfo, $fileTmp) : '';
+				if ($finfo) {
+					finfo_close($finfo);
+				}
+				$allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
+				if ($detectedMime !== '' && !in_array($detectedMime, $allowedMimes, true)) {
+					continue;
+				}
+			}
 			$ext = strtolower(pathinfo($fileName, PATHINFO_EXTENSION));
 			$imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
 			$isImage = strpos($fileType, 'image/') === 0 || in_array($ext, $imageExts, true);
@@ -1173,6 +1244,19 @@ final class TicketController extends Controller
 				error_log('Erro ao salvar anexo de ticket: ' . $e->getMessage());
 			}
 		}
+	}
+
+	private function findAuthorizedTicket(int $id, ?array $user): ?array
+	{
+		if ($id <= 0 || !$user) {
+			return null;
+		}
+		$ticket = Ticket::find($id, $user);
+		if (!$ticket || !TicketAccess::canAccess($user, $ticket)) {
+			return null;
+		}
+
+		return $ticket;
 	}
 
 	private function calculateCreditsCost(array $data): array

@@ -22,6 +22,11 @@ final class DashboardController extends Controller
 			: null;
 		$user = $fullUser ?: $sessionUser;
 
+		if ($fullUser && empty($fullUser['password_changed_at'])) {
+			header('Location: /change-password-first');
+			return;
+		}
+
 		$filters = [
 			'id' => $_GET['id'] ?? null,
 			'status' => $_GET['status'] ?? null,
@@ -75,6 +80,7 @@ final class DashboardController extends Controller
 			'tickets' => $tickets,
 			'closed_tickets' => $closedTickets,
 			'filters' => $filters,
+			'closed_filters' => $closedFilters,
 			'stats' => $stats,
 			'users' => $users,
 		]);
@@ -955,7 +961,7 @@ final class DashboardController extends Controller
 
 	public function uploadInventoryFile(): void
 	{
-		$this->requireAuth([]);
+		$this->requireAuth(['support', 'admin']);
 
 		if (!isset($_FILES['file'])) {
 			$this->json([
@@ -1011,13 +1017,12 @@ final class DashboardController extends Controller
 		$this->json([
 			'success' => true,
 			'message' => 'Planilha importada com sucesso',
-			'source' => $targetPath,
 		]);
 	}
 
 	public function downloadInventoryFile(): void
 	{
-		$this->requireAuth([]);
+		$this->requireAuth(['support', 'admin']);
 
 		$xlsxPath = $this->getGlobalInventoryXlsxPath();
 		if ($xlsxPath === '') {
@@ -1200,7 +1205,21 @@ final class DashboardController extends Controller
 			return null;
 		}
 		try {
-			return $this->parsePurchasedDailiesFile($path);
+			$cacheDir = BASE_PATH . '/storage/cache/purchased_dailies';
+			if (!is_dir($cacheDir)) {
+				@mkdir($cacheDir, 0775, true);
+			}
+			$mtime = (int) @filemtime($path);
+			$cacheFile = $cacheDir . '/' . md5($path . '|' . $mtime) . '.json';
+			if (is_file($cacheFile) && is_readable($cacheFile)) {
+				$cached = json_decode((string) file_get_contents($cacheFile), true);
+				if (is_array($cached) && isset($cached['rows'], $cached['summary'])) {
+					return $cached;
+				}
+			}
+			$parsed = $this->parsePurchasedDailiesFile($path);
+			@file_put_contents($cacheFile, json_encode($parsed, JSON_UNESCAPED_UNICODE));
+			return $parsed;
 		} catch (\Throwable $e) {
 			error_log('loadPurchasedDailiesParsed: ' . $e->getMessage());
 			return null;

@@ -92,6 +92,10 @@
 	});
 
 	document.getElementById('btn-abrir-chamado-top')?.addEventListener('click', () => {
-		document.getElementById('btn-abrir-chamado')?.click();
+		if (typeof openNewTicketModal === 'function') {
+			openNewTicketModal();
+		} else {
+			document.getElementById('btn-abrir-chamado-painel')?.click();
+		}
 	});
 </script>
