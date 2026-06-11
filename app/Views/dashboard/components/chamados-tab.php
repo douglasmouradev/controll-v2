@@ -3,6 +3,7 @@
 /** @var array $tickets */
 /** @var array $filters */
 /** @var array $stats */
+require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 $countTotal   = (int)($stats['total_tickets'] ?? 0);
 $countAberto  = (int)($stats['open_tickets'] ?? 0);
 $countAndamento = (int)($stats['in_progress_tickets'] ?? 0);
@@ -90,11 +91,11 @@ $countFechado = (int)($stats['closed_tickets'] ?? 0);
 				<tbody id="tickets-tbody">
 					<?php if (empty($tickets)): ?>
 						<tr>
-							<td colspan="15" class="px-3 py-4 text-center text-gray-500">Nenhum chamado encontrado.</td>
+							<td colspan="15" class="empty-state">Nenhum chamado encontrado.</td>
 						</tr>
 					<?php else: ?>
 						<?php foreach ($tickets as $t): ?>
-							<tr data-id="<?php echo (int) $t['id']; ?>" class="border-b hover:bg-gray-50">
+							<tr data-id="<?php echo (int) $t['id']; ?>">
 								<td class="px-3 py-2"><?php echo (int) $t['id']; ?></td>
 								<td class="px-3 py-2"><?php echo htmlspecialchars($t['title']); ?></td>
 								<td class="px-3 py-2"><?php echo htmlspecialchars((string)($t['category'] ?? '')); ?></td>
@@ -105,14 +106,14 @@ $countFechado = (int)($stats['closed_tickets'] ?? 0);
 								<td class="px-3 py-2"><?php echo htmlspecialchars((string)($t['address_number'] ?? '')); ?></td>
 								<td class="px-3 py-2"><?php echo htmlspecialchars((string)($t['city'] ?? '')); ?>/<?php echo htmlspecialchars((string)($t['uf'] ?? '')); ?></td>
 								<td class="px-3 py-2 status-cell">
-									<span class="px-2 py-1 rounded text-xs <?php 
-										$statusVal = (string)($t['status'] ?? '');
-										echo $statusVal === 'Fechado' ? 'bg-green-100 text-green-800' : 
-											($statusVal === 'Em andamento' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'); 
-									?>"><?php echo htmlspecialchars((string)($t['status'] ?? '')); ?></span>
+									<span class="<?php echo ui_status_badge_class((string)($t['status'] ?? '')); ?>">
+										<?php echo htmlspecialchars((string)($t['status'] ?? '')); ?>
+									</span>
 								</td>
 								<td class="px-3 py-2">
-									<span class="px-2 py-1 rounded text-xs bg-gray-100"><?php echo htmlspecialchars((string)($t['priority'] ?? '')); ?></span>
+									<span class="<?php echo ui_priority_badge_class((string)($t['priority'] ?? '')); ?>">
+										<?php echo htmlspecialchars((string)($t['priority'] ?? '')); ?>
+									</span>
 								</td>
 								<td class="px-3 py-2 assign-cell"><?php echo htmlspecialchars($t['assigned_name'] ?? '-'); ?></td>
 								<td class="px-3 py-2"><?php echo date('d/m/Y', strtotime($t['created_at'])); ?></td>
@@ -129,17 +130,17 @@ $countFechado = (int)($stats['closed_tickets'] ?? 0);
 										}
 									?>
 								</td>
-								<td class="px-3 py-2">
-									<button class="text-blue-700 underline btn-view hover:text-blue-900">Ver</button>
+								<td class="px-3 py-2 whitespace-nowrap">
+									<button type="button" class="btn-link btn-view">Ver</button>
 							<?php if (in_array($user['role'], ['support','admin'], true)): ?>
-								<a class="ml-2 text-indigo-700 underline hover:text-indigo-900" href="/tickets/clone?id=<?php echo (int) $t['id']; ?>">Clonar</a>
+								<a class="btn-link ml-2" href="/tickets/clone?id=<?php echo (int) $t['id']; ?>">Clonar</a>
 							<?php endif; ?>
 							<?php if ((int)($t['user_id'] ?? 0) === (int)($user['id'] ?? 0) || in_array($user['role'], ['support','admin'], true)): ?>
-								<button class="ml-2 text-indigo-700 underline btn-edit-ticket hover:text-indigo-900">Editar</button>
+								<button type="button" class="btn-link ml-2 btn-edit-ticket">Editar</button>
 							<?php endif; ?>
 							<?php if (in_array($user['role'], ['support','admin'], true)): ?>
-								<button class="ml-2 text-green-700 underline btn-assign hover:text-green-900">Atribuir p/ mim</button>
-								<button class="ml-2 text-red-700 underline btn-delete-ticket hover:text-red-900">Excluir</button>
+								<button type="button" class="btn-link ml-2 btn-assign">Atribuir</button>
+								<button type="button" class="btn-link danger btn-delete-ticket ml-2">Excluir</button>
 							<?php endif; ?>
 								</td>
 							</tr>

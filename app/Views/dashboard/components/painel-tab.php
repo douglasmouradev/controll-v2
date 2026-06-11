@@ -44,7 +44,7 @@
 				</div>
 			</div>
 			<div class="flex-1">
-				<p class="ui-stat-value text-blue-900" id="ticket-available">0</p>
+				<p class="ui-stat-value text-blue-900 skeleton skeleton-stat" id="ticket-available">—</p>
 			</div>
 			<div class="mt-4 pt-4 border-t border-gray-200">
 				<p class="text-xs text-gray-600 mb-3" id="ticket-summary">Comprados 0 / Consumidos 0 / Disponível 0</p>
@@ -66,7 +66,7 @@
 				</div>
 			</div>
 			<div class="flex-1">
-				<p class="ui-stat-value text-purple-700" id="daily-available">0</p>
+				<p class="ui-stat-value text-purple-700 skeleton skeleton-stat" id="daily-available">—</p>
 			</div>
 			<div class="mt-4 pt-4 border-t border-gray-200">
 				<p class="text-xs text-gray-600 mb-3" id="daily-summary">Comprados 0 / Consumidos 0 / Disponível 0</p>
@@ -88,7 +88,7 @@
 				</div>
 			</div>
 			<div class="flex-1">
-				<p class="ui-stat-value text-orange-600" id="project-dailies-available">0</p>
+				<p class="ui-stat-value text-orange-600 skeleton skeleton-stat" id="project-dailies-available">—</p>
 			</div>
 			<div class="mt-4 pt-4 border-t border-gray-200">
 				<p class="text-xs text-gray-600 mb-3" id="project-dailies-summary">Comprados 0 / Consumidos 0 / Disponível 0</p>
@@ -111,7 +111,7 @@
 				</div>
 			</div>
 			<div class="flex-1">
-				<p class="ui-stat-value text-red-600" id="daily-used">0</p>
+				<p class="ui-stat-value text-red-600 skeleton skeleton-stat" id="daily-used">—</p>
 			</div>
 			<div class="mt-4 pt-4 border-t border-gray-200">
 				<p class="text-xs text-gray-600 mb-3">Total de diárias já utilizadas no período</p>
@@ -304,73 +304,67 @@
 </div>
 
 <!-- Modal de Extrato de Créditos -->
-<dialog id="credit-extract-modal" class="rounded-lg w-11/12 max-w-2xl p-0">
-	<div class="bg-blue-700 text-white px-6 py-4 rounded-t-lg">
-		<h2 class="text-lg font-semibold">Extrato de Créditos</h2>
-		<p class="text-sm mt-1" id="extract-title"></p>
+<dialog id="credit-extract-modal" class="ui-modal">
+	<div class="ui-modal-header">
+		<h2 class="text-lg font-semibold">Extrato de créditos</h2>
+		<p class="text-sm text-blue-100 mt-1" id="extract-title"></p>
 	</div>
-	<div class="p-6 max-h-96 overflow-y-auto">
-		<!-- Resumo -->
-		<div class="grid grid-cols-3 gap-4 mb-6">
-			<div class="bg-blue-50 p-4 rounded">
-				<p class="text-gray-600 text-xs font-semibold uppercase mb-1">Comprados</p>
-				<p class="text-2xl font-bold text-blue-700" id="extract-purchased">0</p>
+	<div class="ui-modal-body max-h-96 overflow-y-auto">
+		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+			<div class="ui-stat-card">
+				<p class="ui-stat-label">Comprados</p>
+				<p class="ui-stat-value text-blue-700" id="extract-purchased">0</p>
 			</div>
-			<div class="bg-red-50 p-4 rounded">
-				<p class="text-gray-600 text-xs font-semibold uppercase mb-1">Consumidos</p>
-				<p class="text-2xl font-bold text-red-700" id="extract-spent">0</p>
+			<div class="ui-stat-card">
+				<p class="ui-stat-label">Consumidos</p>
+				<p class="ui-stat-value text-red-600" id="extract-spent">0</p>
 			</div>
-			<div class="bg-green-50 p-4 rounded">
-				<p class="text-gray-600 text-xs font-semibold uppercase mb-1">Disponível</p>
-				<p class="text-2xl font-bold text-green-700" id="extract-available">0</p>
+			<div class="ui-stat-card">
+				<p class="ui-stat-label">Disponível</p>
+				<p class="ui-stat-value text-emerald-700" id="extract-available">0</p>
 			</div>
 		</div>
 	</div>
-	<div class="p-4 border-t flex justify-end gap-2">
-		<button type="button" onclick="document.getElementById('credit-extract-modal').close()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Fechar</button>
+	<div class="ui-modal-footer">
+		<button type="button" onclick="document.getElementById('credit-extract-modal').close()" class="btn btn-secondary">Fechar</button>
 	</div>
 </dialog>
 
 <!-- Modal de Histórico Completo de Créditos (para Admin) -->
-<dialog id="credit-history-modal" class="rounded-lg w-11/12 max-w-4xl p-0">
-	<div class="bg-gray-800 text-white px-6 py-4 rounded-t-lg">
-		<h2 class="text-lg font-semibold">Histórico de Créditos</h2>
-		<p class="text-sm mt-1" id="history-modal-user-name"></p>
+<dialog id="credit-history-modal" class="ui-modal" style="max-width: 56rem;">
+	<div class="ui-modal-header">
+		<h2 class="text-lg font-semibold">Histórico de créditos</h2>
+		<p class="text-sm text-blue-100 mt-1" id="history-modal-user-name"></p>
 	</div>
-	<div class="p-6 max-h-96 overflow-y-auto">
-		<!-- Abas para cada tipo de crédito -->
-		<div class="flex gap-2 mb-6 border-b">
-			<button class="px-4 py-2 border-b-2 border-blue-700 text-blue-700 font-semibold" onclick="switchCreditTab('ticket')">Ticket</button>
-			<button class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" onclick="switchCreditTab('daily')">Diária</button>
-			<button class="px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" onclick="switchCreditTab('project_dailies')">Projeto</button>
+	<div class="ui-modal-body max-h-96 overflow-y-auto">
+		<div class="flex gap-2 mb-6 border-b border-slate-200">
+			<button type="button" class="px-4 py-2 border-b-2 border-blue-700 text-blue-700 font-semibold" onclick="switchCreditTab('ticket')">Ticket</button>
+			<button type="button" class="px-4 py-2 border-b-2 border-transparent text-slate-600 hover:text-slate-800" onclick="switchCreditTab('daily')">Diária</button>
+			<button type="button" class="px-4 py-2 border-b-2 border-transparent text-slate-600 hover:text-slate-800" onclick="switchCreditTab('project_dailies')">Projeto</button>
 		</div>
-
-		<!-- Resumo -->
-		<div class="grid grid-cols-3 gap-4 mb-6">
-			<div class="bg-blue-50 p-4 rounded">
-				<p class="text-gray-600 text-xs font-semibold uppercase mb-1">Comprados</p>
-				<p class="text-2xl font-bold text-blue-700" id="history-purchased">0</p>
+		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+			<div class="ui-stat-card">
+				<p class="ui-stat-label">Comprados</p>
+				<p class="ui-stat-value text-blue-700" id="history-purchased">0</p>
 			</div>
-			<div class="bg-red-50 p-4 rounded">
-				<p class="text-gray-600 text-xs font-semibold uppercase mb-1">Consumidos</p>
-				<p class="text-2xl font-bold text-red-700" id="history-spent">0</p>
+			<div class="ui-stat-card">
+				<p class="ui-stat-label">Consumidos</p>
+				<p class="ui-stat-value text-red-600" id="history-spent">0</p>
 			</div>
-			<div class="bg-green-50 p-4 rounded">
-				<p class="text-gray-600 text-xs font-semibold uppercase mb-1">Disponível</p>
-				<p class="text-2xl font-bold text-green-700" id="history-available">0</p>
+			<div class="ui-stat-card">
+				<p class="ui-stat-label">Disponível</p>
+				<p class="ui-stat-value text-emerald-700" id="history-available">0</p>
 			</div>
 		</div>
-
-		<!-- Histórico -->
 		<div>
-			<h3 class="font-semibold text-gray-700 mb-3">Transações</h3>
+			<h3 class="font-semibold text-slate-700 mb-3">Transações</h3>
 			<div id="history-list" class="space-y-2">
-				<p class="text-gray-500 text-sm">Carregando...</p>
+				<p class="text-slate-500 text-sm">Carregando...</p>
 			</div>
 		</div>
 	</div>
-	<div class="p-4 border-t flex justify-end gap-2">
-		<button type="button" id="btn-clear-credit-history" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Apagar Histórico</button>
-		<button type="button" onclick="document.getElementById('credit-history-modal').close()" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Fechar</button>
+	<div class="ui-modal-footer">
+		<button type="button" id="btn-clear-credit-history" class="btn btn-danger">Apagar histórico</button>
+		<button type="button" onclick="document.getElementById('credit-history-modal').close()" class="btn btn-secondary">Fechar</button>
 	</div>
 </dialog>

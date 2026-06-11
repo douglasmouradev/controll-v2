@@ -7,6 +7,27 @@
 		return div.innerHTML;
 	}
 
+	function uiStatusBadgeClass(status) {
+		const map = {
+			'Fechado': 'badge badge-green',
+			'Em andamento': 'badge badge-yellow',
+			'Aberto': 'badge badge-blue',
+		};
+		return map[status] || 'badge badge-gray';
+	}
+
+	function statusBadgeHtml(status) {
+		return `<span class="${uiStatusBadgeClass(status)}">${escapeHtml(status)}</span>`;
+	}
+
+	function getTicketSubmitBtn() {
+		return document.getElementById('ticket-form-submit');
+	}
+
+	function getUserSubmitBtn() {
+		return document.getElementById('user-form-submit');
+	}
+
 	// Função para converter data/hora UTC para fuso horário de Brasília
 	function convertToSaoPauloTime(dateTimeStr) {
 		if (!dateTimeStr) {
@@ -764,10 +785,10 @@ let inventoryLocationsByCategory = {};
 					if (originalQtdInput) {
 						originalQtdInput.value = '0';
 					}
-					const submitBtn = form.querySelector('button[type="submit"]');
+					const submitBtn = getTicketSubmitBtn();
 					if (submitBtn) {
 						submitBtn.disabled = false;
-						submitBtn.textContent = 'Abrir Chamado';
+						submitBtn.textContent = 'Abrir chamado';
 					}
 					// Limpar lista de anexos existentes exibidos em edições anteriores
 					const existingAtt = document.getElementById('ticket-existing-attachments');
@@ -1003,16 +1024,29 @@ let inventoryLocationsByCategory = {};
 		}
 	}
 
-	document.addEventListener('DOMContentLoaded', function() {
-		const adminToggle = document.getElementById('admin-actions-toggle');
-		const adminMenu = document.getElementById('admin-actions-menu');
-		adminToggle?.addEventListener('click', function (e) {
+	function clearStatSkeleton(...ids) {
+		ids.forEach((id) => {
+			const el = document.getElementById(id);
+			if (el) el.classList.remove('skeleton', 'skeleton-stat');
+		});
+	}
+
+	function bindDropdown(toggleId, menuId) {
+		const toggle = document.getElementById(toggleId);
+		const menu = document.getElementById(menuId);
+		if (!toggle || !menu) return;
+		toggle.addEventListener('click', function (e) {
 			e.stopPropagation();
-			adminMenu?.classList.toggle('hidden');
+			menu.classList.toggle('hidden');
 		});
 		document.addEventListener('click', function () {
-			adminMenu?.classList.add('hidden');
+			menu.classList.add('hidden');
 		});
+	}
+
+	document.addEventListener('DOMContentLoaded', function() {
+		bindDropdown('admin-actions-toggle', 'admin-actions-menu');
+		bindDropdown('users-credits-toggle', 'users-credits-menu');
 
 		// Inicializar gráficos
 		if (document.getElementById('dailies-chart')) {
@@ -1042,7 +1076,7 @@ let inventoryLocationsByCategory = {};
 					importBtn.textContent = 'Importando...';
 					await uploadPurchasedDailiesFile(file);
 					if (typeof showToast === 'function') {
-						showToast('Planilha de diárias compradas importada');
+						showToast('Planilha de diárias compradas importada', 'success');
 					}
 					await loadPurchasedDailiesData();
 					if (typeof loadCreditSummaries === 'function') {
@@ -1082,7 +1116,7 @@ let inventoryLocationsByCategory = {};
 					importBtn.textContent = 'Importando...';
 					await uploadInventoryFile(file);
 					if (typeof showToast === 'function') {
-						showToast('Planilha importada com sucesso');
+						showToast('Planilha importada com sucesso', 'success');
 					}
 					await loadInventoryPieChart();
 				} catch (error) {
@@ -1165,7 +1199,7 @@ let inventoryLocationsByCategory = {};
 			formEl.addEventListener('submit', async (e) => {
 				e.preventDefault();
 				const form = e.target;
-				const submitBtn = form.querySelector('button[type="submit"]');
+				const submitBtn = getTicketSubmitBtn();
 				const ticketIdInput = form.querySelector('#ticket_id');
 				const ticketId = ticketIdInput ? (ticketIdInput.value || '').trim() : '';
 				const isEdit = ticketId !== '';
@@ -1196,7 +1230,7 @@ let inventoryLocationsByCategory = {};
 						throw new Error(`Servidor retornou ${contentType || 'texto'} em vez de JSON.`);
 					}
 					if (data && data.success) {
-						showToast(isEdit ? 'Chamado atualizado' : 'Chamado aberto');
+						showToast(isEdit ? 'Chamado atualizado' : 'Chamado aberto', 'success');
 						form.reset();
 						if (ticketIdInput) {
 							ticketIdInput.value = '';
@@ -1207,12 +1241,12 @@ let inventoryLocationsByCategory = {};
 						}
 						if (submitBtn) {
 							submitBtn.disabled = false;
-							submitBtn.textContent = 'Abrir Chamado';
+							submitBtn.textContent = 'Abrir chamado';
 						}
 						setTimeout(() => location.reload(), 500);
 					} else {
 						const msg = data && data.message ? data.message : `Erro ao ${isEdit ? 'atualizar' : 'abrir'} chamado${res.ok ? '' : ` (HTTP ${res.status})`}`;
-						showToast(msg);
+						showToast(msg, 'error');
 						if (submitBtn) {
 							submitBtn.disabled = false;
 							submitBtn.textContent = originalText || (isEdit ? 'Salvar Alterações' : 'Abrir Chamado');
@@ -1412,10 +1446,11 @@ let inventoryLocationsByCategory = {};
 						const r2 = await fetch('/tickets/status', { method: 'POST', body: fd });
 						const j2 = await r2.json();
 						if (j2.success) {
-							document.querySelector(`tr[data-id="${id}"] .status-cell`).innerHTML = `<span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">${status}</span>`;
-							showToast('Status atualizado');
+							const statusCell = document.querySelector(`tr[data-id="${id}"] .status-cell`);
+							if (statusCell) statusCell.innerHTML = statusBadgeHtml(status);
+							showToast('Status atualizado', 'success');
 						} else {
-							showToast('Falha ao atualizar');
+							showToast('Falha ao atualizar', 'error');
 						}
 					};
 				});
@@ -1510,7 +1545,7 @@ let inventoryLocationsByCategory = {};
 							const data = await res.json();
 							
 							if (data.success) {
-								showToast('Resposta salva com sucesso');
+								showToast('Resposta salva com sucesso', 'success');
 								// Limpar preview
 								const currentPreview = document.getElementById('image-preview');
 								const currentInput = document.getElementById('support-images');
@@ -1629,7 +1664,7 @@ let inventoryLocationsByCategory = {};
 						originalQtdInput.value = String(currentQtd);
 					}
 
-					const submitBtn = form.querySelector('button[type="submit"]');
+					const submitBtn = getTicketSubmitBtn();
 					if (submitBtn) {
 						submitBtn.disabled = false;
 						submitBtn.textContent = 'Salvar Alterações';
@@ -1692,10 +1727,11 @@ let inventoryLocationsByCategory = {};
 				const data = await res.json();
 				if (data.success) {
 					tr.querySelector('.assign-cell').textContent = 'Você';
-					tr.querySelector('.status-cell').innerHTML = `<span class="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">Em andamento</span>`;
-					showToast('Chamado atribuído');
+					const statusCell = tr.querySelector('.status-cell');
+					if (statusCell) statusCell.innerHTML = statusBadgeHtml('Em andamento');
+					showToast('Chamado atribuído', 'success');
 				} else {
-					showToast('Falha ao atribuir');
+					showToast('Falha ao atribuir', 'error');
 				}
 			});
 		});
@@ -1762,7 +1798,7 @@ let inventoryLocationsByCategory = {};
 				formData.delete('password');
 			}
 			
-			const submitBtn = userForm.querySelector('button[type="submit"]');
+			const submitBtn = getUserSubmitBtn();
 			
 			if (submitBtn) {
 				submitBtn.disabled = true;
@@ -1779,7 +1815,7 @@ let inventoryLocationsByCategory = {};
 				const data = await res.json();
 				
 				if (data.success) {
-					showToast(data.message || 'Usuário salvo com sucesso');
+					showToast(data.message || 'Usuário salvo com sucesso', 'success');
 					modalUsuario.close();
 					userForm.reset();
 					editingUserId = null;
@@ -1850,7 +1886,7 @@ let inventoryLocationsByCategory = {};
 					const data = await res.json();
 					
 					if (data.success) {
-						showToast('Usuário excluído com sucesso');
+						showToast('Usuário excluído com sucesso', 'success');
 						setTimeout(() => location.reload(), 500);
 					} else {
 						showToast(data.message || 'Erro ao excluir usuário');
@@ -2239,7 +2275,6 @@ let inventoryLocationsByCategory = {};
 			if (ticketAvailEl) {
 				ticketAvailEl.textContent = ticketSummary.available;
 			}
-
 			// Atualizar card Diária
 			const dailySummary = data.summary.daily || { purchased: 0, spent: 0, available: 0 };
 			const dailyEl = document.getElementById('daily-summary');
@@ -2269,6 +2304,8 @@ let inventoryLocationsByCategory = {};
 			}
 		} catch (err) {
 			console.error('Erro ao carregar resumo de créditos:', err);
+		} finally {
+			clearStatSkeleton('ticket-available', 'daily-available', 'project-dailies-available', 'daily-used');
 		}
 	}
 

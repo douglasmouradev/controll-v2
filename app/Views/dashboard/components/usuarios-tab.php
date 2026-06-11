@@ -2,68 +2,72 @@
 /** @var array $user */
 /** @var array $users */
 $users = $users ?? [];
+require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 ?>
-<div id="tab-usuarios" class="tab-content hidden px-4 md:px-0">
-	<div class="bg-white rounded-lg shadow p-6">
-		<div class="mb-6">
-			<h2 class="text-blue-700 font-semibold text-lg mb-2">Gerenciamento de Usuários</h2>
-			<p class="text-gray-600 text-sm mb-4">Crie e gerencie usuários do sistema</p>
-			<div class="flex gap-2">
-				<button id="btn-criar-usuario" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Criar Usuário</button>
+<div id="tab-usuarios" class="tab-content hidden">
+	<div class="ui-card ui-card-body">
+		<div class="page-header !mb-5 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+			<div>
+				<h2 class="page-title text-xl">Gerenciamento de Usuários</h2>
+				<p class="page-subtitle">Crie e gerencie usuários do sistema</p>
+			</div>
+			<div class="flex flex-wrap gap-2">
+				<button type="button" id="btn-criar-usuario" class="btn btn-primary">Criar usuário</button>
 				<?php if ($user['role'] === 'admin'): ?>
-					<button id="btn-global-credits-ticket-users" class="bg-purple-700 text-white px-4 py-2 rounded hover:bg-purple-800 text-sm" title="Ajustar Créditos Ticket para todos os usuários">Créditos Ticket</button>
-					<button id="btn-global-credits-daily-users" class="bg-indigo-700 text-white px-4 py-2 rounded hover:bg-indigo-800 text-sm" title="Ajustar Créditos Diária para todos os usuários">Créditos Diária</button>
-					<button id="btn-global-credits-project-users" class="bg-orange-700 text-white px-4 py-2 rounded hover:bg-orange-800 text-sm" title="Ajustar Créditos Projeto para todos os usuários">Créditos Projeto</button>
+					<div class="relative">
+						<button type="button" id="users-credits-toggle" class="btn btn-secondary">Créditos ▾</button>
+						<div id="users-credits-menu" class="hidden absolute right-0 mt-2 w-52 ui-dropdown z-10">
+							<button type="button" id="btn-global-credits-ticket-users">Ajustar Ticket</button>
+							<button type="button" id="btn-global-credits-daily-users">Ajustar Diária</button>
+							<button type="button" id="btn-global-credits-project-users">Ajustar Projeto</button>
+						</div>
+					</div>
 				<?php endif; ?>
 			</div>
 		</div>
 
-		<!-- Tabela de Usuários -->
-		<div class="overflow-x-auto">
-			<table class="min-w-full text-sm">
+		<div class="overflow-x-auto rounded-xl border border-slate-100">
+			<table class="data-table">
 				<thead>
-					<tr class="text-left text-gray-600 border-b">
-						<th class="px-3 py-2">ID</th>
-						<th class="px-3 py-2">Nome</th>
-						<th class="px-3 py-2">Email</th>
-						<th class="px-3 py-2">Perfil</th>
-					<!--	<th class="px-3 py-2">Créd. Ticket</th>
-						<th class="px-3 py-2">Créd. Diária</th>
-						<th class="px-3 py-2">Créd. Projeto</th> -->
-						<th class="px-3 py-2">Data de Criação</th>
-						<th class="px-3 py-2">Ações</th>
+					<tr>
+						<th>ID</th>
+						<th>Nome</th>
+						<th>Email</th>
+						<th>Perfil</th>
+						<th class="hide-mobile credits-ticket-cell hidden">Créd. Ticket</th>
+						<th class="hide-mobile credits-daily-cell hidden">Créd. Diária</th>
+						<th class="hide-mobile credits-project-dailies-cell hidden">Créd. Projeto</th>
+						<th>Criação</th>
+						<th>Ações</th>
 					</tr>
 				</thead>
 				<tbody id="users-tbody">
 					<?php if (empty($users)): ?>
 						<tr>
-							<td colspan="8" class="px-3 py-4 text-center text-gray-500">Nenhum usuário encontrado.</td>
+							<td colspan="9" class="empty-state">Nenhum usuário encontrado.</td>
 						</tr>
 					<?php else: ?>
 						<?php foreach ($users as $u): ?>
-							<tr data-id="<?php echo (int) $u['id']; ?>" class="border-b hover:bg-gray-50">
-								<td class="px-3 py-2"><?php echo (int) $u['id']; ?></td>
-								<td class="px-3 py-2"><?php echo htmlspecialchars($u['name']); ?></td>
-								<td class="px-3 py-2"><?php echo htmlspecialchars($u['email']); ?></td>
-								<td class="px-3 py-2">
-									<span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
+							<tr data-id="<?php echo (int) $u['id']; ?>">
+								<td><?php echo (int) $u['id']; ?></td>
+								<td class="font-medium text-slate-800"><?php echo htmlspecialchars($u['name']); ?></td>
+								<td><?php echo htmlspecialchars($u['email']); ?></td>
+								<td>
+									<span class="<?php echo ui_role_badge_class((string) ($u['role'] ?? '')); ?>">
 										<?php echo htmlspecialchars($u['role']); ?>
 									</span>
 								</td>
-								<td class="px-3 py-2 credits-ticket-cell"><?php echo isset($u['credits']) ? (int) $u['credits'] : 0; ?></td>
-								<td class="px-3 py-2 credits-daily-cell"><?php echo isset($u['daily_credits']) ? (int) $u['daily_credits'] : 0; ?></td>
-								<td class="px-3 py-2 credits-project-dailies-cell"><?php echo isset($u['project_dailies_credits']) ? (int) $u['project_dailies_credits'] : 0; ?></td>
-								<td class="px-3 py-2"><?php echo date('d/m/Y H:i', strtotime($u['created_at'])); ?></td>
-								<td class="px-3 py-2">
-									<button class="text-blue-700 underline btn-edit-user hover:text-blue-900">Editar</button>
+								<td class="hide-mobile credits-ticket-cell hidden"><?php echo isset($u['credits']) ? (int) $u['credits'] : 0; ?></td>
+								<td class="hide-mobile credits-daily-cell hidden"><?php echo isset($u['daily_credits']) ? (int) $u['daily_credits'] : 0; ?></td>
+								<td class="hide-mobile credits-project-dailies-cell hidden"><?php echo isset($u['project_dailies_credits']) ? (int) $u['project_dailies_credits'] : 0; ?></td>
+								<td><?php echo date('d/m/Y H:i', strtotime($u['created_at'])); ?></td>
+								<td class="whitespace-nowrap">
+									<button type="button" class="btn-link btn-edit-user">Editar</button>
 									<?php if ($user['role'] === 'admin' && (int) $u['id'] !== (int) $user['id']): ?>
-									<!--	<button class="ml-2 text-purple-700 underline btn-credits-ticket hover:text-purple-900">Créd. Ticket</button>
-										<button class="ml-2 text-indigo-700 underline btn-credits-daily hover:text-indigo-900">Créd. Diária</button>
-										<button class="ml-2 text-orange-700 underline btn-credits-project-dailies hover:text-orange-900">Créd. Projeto</button> -->
-										<button class="ml-2 text-red-700 underline btn-delete-user hover:text-red-900">Excluir</button>
+										<button type="button" class="btn-link danger btn-delete-user ml-2">Excluir</button>
 									<?php endif; ?>
 									<?php if ($user['role'] === 'admin'): ?>
-										<button class="ml-2 text-gray-700 underline btn-view-credit-history hover:text-gray-900 text-xs" data-user-id="<?php echo (int) $u['id']; ?>" data-user-name="<?php echo htmlspecialchars($u['name']); ?>">Ver Histórico</button>
+										<button type="button" class="btn-link muted btn-view-credit-history ml-2" data-user-id="<?php echo (int) $u['id']; ?>" data-user-name="<?php echo htmlspecialchars($u['name']); ?>">Histórico</button>
 									<?php endif; ?>
 								</td>
 							</tr>

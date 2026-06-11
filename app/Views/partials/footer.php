@@ -14,7 +14,8 @@ $isAuth = $layout === 'auth';
 			const el = document.getElementById('toast');
 			if (!el) return;
 			type = type || 'info';
-			el.textContent = msg;
+			const icons = { success: '✓', error: '✕', info: 'ℹ' };
+			el.innerHTML = '<span class="toast-icon" aria-hidden="true">' + (icons[type] || icons.info) + '</span><span>' + msg + '</span>';
 			el.className = 'show toast-' + type;
 			clearTimeout(el._toastTimer);
 			el._toastTimer = setTimeout(function () {

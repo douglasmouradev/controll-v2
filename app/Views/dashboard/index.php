@@ -54,163 +54,244 @@ $users = $users ?? [];
 			<?php echo \App\Services\Csrf::field(); ?>
 			<input type="hidden" name="ticket_id" id="ticket_id">
 			<input type="hidden" name="original_qtd" id="original_qtd">
-			<input class="col-span-2 input" name="title" placeholder="Título do Problema" required>
-			<select class="select" name="priority" required>
-				<option value="">Prioridade</option>
-				<option>Baixa</option><option>Média</option><option>Alta</option>
-			</select>
-			<select class="select" name="category" required>
-				<option value="">Categoria</option>
-				<option>Ticket</option>
-				<option>Diária</option>
-				<option>Uso Geral</option>
-				<option>Projeto</option>
-			</select>
-			<div id="project-name-field" class="col-span-2 hidden">
-				<input class="input w-full" name="project_name" id="project_name" placeholder="Nome do Projeto">
-			</div>
-			<input class="input" name="name" placeholder="Nome do Solicitante" required>
-			<input class="input" name="registration" placeholder="Matrícula">
-			<input class="input w-full" name="unit" placeholder="Sigla da Loja" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();" required>
-			<div class="col-span-2">
-				<input class="input w-full" name="cep" id="cep" placeholder="CEP" required>
-			</div>
-			<input class="col-span-2 input" name="address" id="address" placeholder="Endereço" required>
-			<input class="input" name="address_number" id="address_number" placeholder="Número">
-			<input class="input" name="city" id="city" placeholder="Cidade">
-			<input class="input" name="uf" id="uf" placeholder="UF">
-			<textarea class="col-span-2 textarea" name="description" placeholder="Descrição do Problema" rows="4" required></textarea>
-			<input class="input" name="technician_name" placeholder="Nome do técnico (opcional)">
-			<input class="input" name="technician_rg" placeholder="RG do técnico (opcional)">
-			<input class="input" name="technician_cpf" placeholder="CPF do técnico (opcional)">
-			<div>
-				<label class="block text-sm text-gray-600 mb-1">Data para atendimento (opcional)</label>
-				<input class="input w-full" type="date" name="service_date" placeholder="Data para atendimento">
-			</div>
-			<div>
-				<label class="block text-sm text-gray-600 mb-1">Hora para atendimento (opcional)</label>
-				<input class="input w-full" type="time" name="service_time" placeholder="Hora para atendimento">
-			</div>
-			<input class="input" name="internal_order" placeholder="Pedido (interno)">
-			<div>
-				<label class="block text-sm text-gray-600 mb-1">QTD</label>
-				<div class="flex items-center gap-2">
-					<button type="button" id="qtd-minus" class="px-3 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">-</button>
-					<input type="number" name="qtd" id="qtd" class="input w-20 text-center" min="0" step="1" value="1">
-					<button type="button" id="qtd-plus" class="px-3 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">+</button>
+
+			<div class="form-section">
+				<p class="form-section-title">Chamado</p>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div class="md:col-span-2">
+						<label class="label">Título</label>
+						<input class="input" name="title" placeholder="Descreva o problema" required>
+					</div>
+					<div>
+						<label class="label">Prioridade</label>
+						<select class="select" name="priority" required>
+							<option value="">Selecione</option>
+							<option>Baixa</option><option>Média</option><option>Alta</option>
+						</select>
+					</div>
+					<div>
+						<label class="label">Categoria</label>
+						<select class="select" name="category" required>
+							<option value="">Selecione</option>
+							<option>Ticket</option>
+							<option>Diária</option>
+							<option>Uso Geral</option>
+							<option>Projeto</option>
+						</select>
+					</div>
+					<div id="project-name-field" class="md:col-span-2 hidden">
+						<label class="label">Nome do projeto</label>
+						<input class="input" name="project_name" id="project_name" placeholder="Nome do projeto">
+					</div>
+					<div class="md:col-span-2">
+						<label class="label">Descrição</label>
+						<textarea class="textarea" name="description" placeholder="Detalhes do atendimento" rows="4" required></textarea>
+					</div>
 				</div>
 			</div>
-			<input class="input" name="invoice" placeholder="NF">
-			<input class="input" name="daily_destination" placeholder="Destino da diária">
-			<div class="col-span-2">
-				<label class="block text-sm text-gray-600 mb-1">Anexos (PDF, PNG, JPG, JPEG) - até 20 arquivos, 40MB cada</label>
-				<input type="file" id="ticket-attachments" name="attachments[]" multiple accept=".pdf,image/*" class="w-full border rounded px-3 py-2">
-				<div id="ticket-attachments-list" class="mt-2 space-y-1 text-sm text-gray-700"></div>
-				<div id="ticket-existing-attachments" class="mt-4 space-y-2 text-sm text-gray-700"></div>
+
+			<div class="form-section">
+				<p class="form-section-title">Solicitante</p>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="label">Nome</label>
+						<input class="input" name="name" placeholder="Nome completo" required>
+					</div>
+					<div>
+						<label class="label">Matrícula</label>
+						<input class="input" name="registration" placeholder="Matrícula">
+					</div>
+					<div>
+						<label class="label">Sigla da loja</label>
+						<input class="input" name="unit" placeholder="Ex: SP01" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();" required>
+					</div>
+				</div>
 			</div>
-			<div class="col-span-2 flex gap-2 justify-end">
-				<button type="button" id="cancelar-chamado" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Cancelar</button>
-				<button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Abrir Chamado</button>
+
+			<div class="form-section">
+				<p class="form-section-title">Local</p>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div class="md:col-span-2">
+						<label class="label">CEP</label>
+						<input class="input" name="cep" id="cep" placeholder="00000-000" required>
+					</div>
+					<div class="md:col-span-2">
+						<label class="label">Endereço</label>
+						<input class="input" name="address" id="address" placeholder="Rua, avenida..." required>
+					</div>
+					<div>
+						<label class="label">Número</label>
+						<input class="input" name="address_number" id="address_number" placeholder="Nº">
+					</div>
+					<div>
+						<label class="label">Cidade</label>
+						<input class="input" name="city" id="city" placeholder="Cidade">
+					</div>
+					<div>
+						<label class="label">UF</label>
+						<input class="input" name="uf" id="uf" placeholder="UF" maxlength="2">
+					</div>
+				</div>
+			</div>
+
+			<div class="form-section">
+				<p class="form-section-title">Atendimento</p>
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="label">Técnico (opcional)</label>
+						<input class="input" name="technician_name" placeholder="Nome do técnico">
+					</div>
+					<div>
+						<label class="label">RG do técnico</label>
+						<input class="input" name="technician_rg" placeholder="RG">
+					</div>
+					<div>
+						<label class="label">CPF do técnico</label>
+						<input class="input" name="technician_cpf" placeholder="CPF">
+					</div>
+					<div>
+						<label class="label">Data de atendimento</label>
+						<input class="input" type="date" name="service_date">
+					</div>
+					<div>
+						<label class="label">Hora de atendimento</label>
+						<input class="input" type="time" name="service_time">
+					</div>
+					<div>
+						<label class="label">Pedido interno</label>
+						<input class="input" name="internal_order" placeholder="Nº pedido">
+					</div>
+					<div>
+						<label class="label">Nota fiscal</label>
+						<input class="input" name="invoice" placeholder="NF">
+					</div>
+					<div>
+						<label class="label">Destino da diária</label>
+						<input class="input" name="daily_destination" placeholder="Destino">
+					</div>
+					<div>
+						<label class="label">Quantidade</label>
+						<div class="flex items-center gap-2">
+							<button type="button" id="qtd-minus" class="btn btn-secondary btn-sm px-3">−</button>
+							<input type="number" name="qtd" id="qtd" class="input w-20 text-center" min="0" step="1" value="1">
+							<button type="button" id="qtd-plus" class="btn btn-secondary btn-sm px-3">+</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="form-section">
+				<p class="form-section-title">Anexos</p>
+				<label class="label">Arquivos (PDF ou imagem, até 20 arquivos)</label>
+				<input type="file" id="ticket-attachments" name="attachments[]" multiple accept=".pdf,image/*" class="input">
+				<div id="ticket-attachments-list" class="mt-2 space-y-1 text-sm text-slate-600"></div>
+				<div id="ticket-existing-attachments" class="mt-4 space-y-2 text-sm text-slate-600"></div>
 			</div>
 		</form>
+	</div>
+	<div class="ui-modal-footer">
+		<button type="button" id="cancelar-chamado" class="btn btn-secondary">Cancelar</button>
+		<button type="submit" form="new-ticket-form" id="ticket-form-submit" class="btn btn-primary">Abrir chamado</button>
 	</div>
 </dialog>
 
 <!-- Modal de Criar/Editar Usuário -->
-<dialog id="modal-usuario" class="rounded-lg w-11/12 max-w-2xl p-0">
-	<div class="bg-blue-700 text-white px-6 py-4 rounded-t-lg">
-		<h2 class="text-lg font-semibold" id="modal-usuario-title">Criar Usuário</h2>
+<dialog id="modal-usuario" class="ui-modal">
+	<div class="ui-modal-header">
+		<h2 class="text-lg font-semibold" id="modal-usuario-title">Criar usuário</h2>
 	</div>
-	<div class="p-6">
+	<div class="ui-modal-body">
 		<form id="user-form" class="space-y-4">
 			<input type="hidden" id="user-id" name="id">
 			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
-				<input type="text" id="user-name" name="name" class="w-full border rounded px-3 py-2" required>
+				<label class="label">Nome</label>
+				<input type="text" id="user-name" name="name" class="input" required>
 			</div>
 			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-				<input type="email" id="user-email" name="email" class="w-full border rounded px-3 py-2" required>
+				<label class="label">E-mail</label>
+				<input type="email" id="user-email" name="email" class="input" required>
 			</div>
 			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
-				<input type="password" id="user-password" name="password" class="w-full border rounded px-3 py-2">
-				<p class="text-xs text-gray-500 mt-1 hidden" id="password-hint">Deixe em branco para manter a senha atual ao editar</p>
+				<label class="label">Senha</label>
+				<input type="password" id="user-password" name="password" class="input">
+				<p class="text-xs text-slate-500 mt-1 hidden" id="password-hint">Deixe em branco para manter a senha atual ao editar</p>
 			</div>
 			<div>
-				<label class="block text-sm font-medium text-gray-700 mb-1">Perfil</label>
-				<select id="user-role" name="role" class="w-full border rounded px-3 py-2" required>
+				<label class="label">Perfil</label>
+				<select id="user-role" name="role" class="select" required>
 					<option value="usuario">Usuário</option>
 					<option value="suporte">Suporte</option>
 					<option value="admin">Admin</option>
-					</select>
-			</div>
-			<div class="flex gap-2 justify-end">
-				<button type="button" id="cancelar-usuario" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Cancelar</button>
-				<button type="submit" class="bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Salvar</button>
+				</select>
 			</div>
 		</form>
 	</div>
+	<div class="ui-modal-footer">
+		<button type="button" id="cancelar-usuario" class="btn btn-secondary">Cancelar</button>
+		<button type="submit" form="user-form" id="user-form-submit" class="btn btn-primary">Salvar</button>
+	</div>
 </dialog>
 
-<dialog id="modal-credits" class="rounded-lg w-11/12 max-w-md p-0">
-	<div class="bg-purple-700 text-white px-6 py-4 rounded-t-lg">
-		<h2 class="text-lg font-semibold">Ajustar Créditos</h2>
-		<p class="text-sm mt-1" id="credits-modal-user-name"></p>
-		<p class="text-xs text-purple-100" id="credits-type-label"></p>
+<dialog id="modal-credits" class="ui-modal" style="max-width: 28rem;">
+	<div class="ui-modal-header">
+		<h2 class="text-lg font-semibold">Ajustar créditos</h2>
+		<p class="text-sm text-blue-100 mt-1" id="credits-modal-user-name"></p>
+		<p class="text-xs text-blue-100 opacity-90" id="credits-type-label"></p>
 	</div>
-	<div class="p-6 space-y-4">
+	<div class="ui-modal-body space-y-4">
 		<div>
-			<p class="text-sm text-gray-600">Saldo atual:</p>
-			<p class="text-2xl font-bold text-gray-900"><span id="credits-current"></span></p>
+			<p class="text-sm text-slate-500">Saldo atual</p>
+			<p class="text-2xl font-bold text-slate-900"><span id="credits-current"></span></p>
 		</div>
 		<div>
-			<label class="block text-sm font-medium text-gray-700 mb-1">Ajuste de créditos</label>
+			<label class="label">Ajuste</label>
 			<div class="flex items-center gap-2">
-				<button type="button" id="credits-minus" class="px-3 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">-</button>
-				<input type="number" id="credits-delta" class="w-24 border rounded px-3 py-2 text-center" value="0" step="1">
-				<button type="button" id="credits-plus" class="px-3 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300">+</button>
+				<button type="button" id="credits-minus" class="btn btn-secondary btn-sm px-3">−</button>
+				<input type="number" id="credits-delta" class="input w-24 text-center" value="0" step="1">
+				<button type="button" id="credits-plus" class="btn btn-secondary btn-sm px-3">+</button>
 			</div>
-			<p class="text-xs text-gray-500 mt-1">Valores positivos adicionam créditos; negativos removem.</p>
+			<p class="text-xs text-slate-500 mt-1">Positivo adiciona; negativo remove créditos.</p>
 		</div>
 		<div>
-			<p class="text-sm text-gray-600">Saldo após ajuste:</p>
-			<p class="text-lg font-semibold text-gray-900"><span id="credits-preview"></span></p>
+			<p class="text-sm text-slate-500">Saldo após ajuste</p>
+			<p class="text-lg font-semibold text-slate-900"><span id="credits-preview"></span></p>
 		</div>
 		<input type="hidden" id="credits-user-id">
 		<input type="hidden" id="credits-type">
-		<div class="flex justify-end gap-2 mt-4">
-			<button type="button" id="credits-cancel" class="bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300">Cancelar</button>
-			<button type="button" id="credits-apply" class="bg-purple-700 text-white px-4 py-2 rounded hover:bg-purple-800">Aplicar</button>
-		</div>
+	</div>
+	<div class="ui-modal-footer">
+		<button type="button" id="credits-cancel" class="btn btn-secondary">Cancelar</button>
+		<button type="button" id="credits-apply" class="btn btn-primary">Aplicar</button>
 	</div>
 </dialog>
 
 <!-- Modal de Detalhes do Chamado -->
-<dialog id="ticket-modal" class="rounded-lg w-11/12 max-w-2xl p-0">
-	<div class="bg-blue-700 text-white px-4 py-3 rounded-t-lg">Detalhes do Chamado</div>
-	<div class="p-4 space-y-2" id="ticket-modal-body"></div>
+<dialog id="ticket-modal" class="ui-modal">
+	<div class="ui-modal-header">
+		<h2 class="text-lg font-semibold">Detalhes do chamado</h2>
+	</div>
+	<div class="ui-modal-body space-y-2" id="ticket-modal-body"></div>
 	<?php if (in_array($user['role'], ['support','admin'], true)): ?>
-		<div class="p-4 border-t">
-			<label class="block text-sm font-medium text-gray-700 mb-2">Resposta do Suporte</label>
-			<textarea id="support-response" rows="4" class="w-full border rounded px-3 py-2" placeholder="Digite sua resposta para o usuário..."></textarea>
-			
+		<div class="ui-modal-body border-t border-slate-100 pt-4">
+			<label class="label">Resposta do suporte</label>
+			<textarea id="support-response" rows="4" class="textarea" placeholder="Digite sua resposta para o usuário..."></textarea>
 			<div class="mt-3">
-				<label class="block text-sm font-medium text-gray-700 mb-2">Anexar Imagens</label>
-				<input type="file" id="support-images" accept="image/*" multiple class="w-full border rounded px-3 py-2">
+				<label class="label">Anexar imagens</label>
+				<input type="file" id="support-images" accept="image/*" multiple class="input">
 				<div id="image-preview" class="mt-2 grid grid-cols-3 gap-2"></div>
 			</div>
-			
-			<button id="btn-save-response" class="mt-2 bg-blue-700 text-white px-4 py-2 rounded hover:bg-blue-800">Salvar Resposta</button>
+			<button type="button" id="btn-save-response" class="btn btn-primary mt-3">Salvar resposta</button>
 		</div>
 	<?php endif; ?>
-	<div class="p-4 pt-0 flex gap-2 justify-end">
+	<div class="ui-modal-footer flex-wrap">
 		<?php if (in_array($user['role'], ['support','admin'], true)): ?>
-			<button data-status="Aberto" class="status-btn bg-gray-100 px-3 py-1 rounded hover:bg-gray-200">Aberto</button>
-			<button data-status="Em andamento" class="status-btn bg-yellow-100 px-3 py-1 rounded hover:bg-yellow-200">Em andamento</button>
-			<button data-status="Fechado" class="status-btn bg-green-100 px-3 py-1 rounded hover:bg-green-200">Fechado</button>
+			<div class="flex gap-2 mr-auto">
+				<button type="button" data-status="Aberto" class="status-btn btn btn-secondary btn-sm">Aberto</button>
+				<button type="button" data-status="Em andamento" class="status-btn btn btn-secondary btn-sm">Em andamento</button>
+				<button type="button" data-status="Fechado" class="status-btn btn btn-secondary btn-sm">Fechado</button>
+			</div>
 		<?php endif; ?>
-		<button id="modal-close" class="bg-blue-700 text-white px-4 py-1.5 rounded hover:bg-blue-800">Fechar</button>
+		<button type="button" id="modal-close" class="btn btn-primary">Fechar</button>
 	</div>
 </dialog>
 
@@ -221,6 +302,19 @@ $users = $users ?? [];
 		const div = document.createElement('div');
 		div.textContent = text;
 		return div.innerHTML;
+	}
+
+	function uiStatusBadgeClass(status) {
+		const map = {
+			'Fechado': 'badge badge-green',
+			'Em andamento': 'badge badge-yellow',
+			'Aberto': 'badge badge-blue',
+		};
+		return map[status] || 'badge badge-gray';
+	}
+
+	function statusBadgeHtml(status) {
+		return `<span class="${uiStatusBadgeClass(status)}">${escapeHtml(status)}</span>`;
 	}
 
 	// Preenchimento automatico de endereco pela sigla da loja (FORA de DOMContentLoaded para funcionar com modal)
@@ -660,10 +754,11 @@ $users = $users ?? [];
 						const r2 = await fetch('/tickets/status', { method: 'POST', body: fd });
 						const j2 = await r2.json();
 						if (j2.success) {
-							document.querySelector(`tr[data-id="${id}"] .status-cell`).innerHTML = `<span class="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">${status}</span>`;
-							showToast('Status atualizado');
+							const statusCell = document.querySelector(`tr[data-id="${id}"] .status-cell`);
+							if (statusCell) statusCell.innerHTML = statusBadgeHtml(status);
+							showToast('Status atualizado', 'success');
 						} else {
-							showToast('Falha ao atualizar');
+							showToast('Falha ao atualizar', 'error');
 						}
 					};
 				});
@@ -777,10 +872,11 @@ $users = $users ?? [];
 				const data = await res.json();
 				if (data.success) {
 					tr.querySelector('.assign-cell').textContent = 'Você';
-					tr.querySelector('.status-cell').innerHTML = `<span class="px-2 py-1 rounded text-xs bg-yellow-100 text-yellow-800">Em andamento</span>`;
-					showToast('Chamado atribuído');
+					const statusCell = tr.querySelector('.status-cell');
+					if (statusCell) statusCell.innerHTML = statusBadgeHtml('Em andamento');
+					showToast('Chamado atribuído', 'success');
 				} else {
-					showToast('Falha ao atribuir');
+					showToast('Falha ao atribuir', 'error');
 				}
 			});
 		});
