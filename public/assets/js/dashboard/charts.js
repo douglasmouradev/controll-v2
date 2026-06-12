@@ -8,6 +8,9 @@
 
 let dailiesChart, statusChart, creditsTicketPie, creditsDailyPie, creditsProjectPie, dailyDestinationChart, inventoryPieChart;
 let inventoryLocationsByCategory = {};
+const PURCHASED_DAILIES_PAGE_SIZE = 500;
+let purchasedDailiesRows = [];
+let purchasedDailiesShown = PURCHASED_DAILIES_PAGE_SIZE;
 
 	async function loadDailies() {
 		if (!chartLibReady()) return;
@@ -412,15 +415,8 @@ let inventoryLocationsByCategory = {};
 		return json;
 	}
 
-	function renderPurchasedDailiesTable(rows) {
-		const tbody = document.getElementById('purchased-dailies-table-body');
-		if (!tbody) return;
-		if (!Array.isArray(rows) || rows.length === 0) {
-			tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum registro encontrado na planilha.</td></tr>';
-			return;
-		}
-		const limited = rows.slice(0, 500);
-		tbody.innerHTML = limited.map((row) => `
+	function purchasedDailiesRowHtml(row) {
+		return `
 			<tr class="hover:bg-gray-50">
 				<td class="px-4 py-2">${escapeHtml(String(row.date || '-'))}</td>
 				<td class="px-4 py-2">${escapeHtml(String(row.store || '-'))}</td>
@@ -431,10 +427,60 @@ let inventoryLocationsByCategory = {};
 				<td class="px-4 py-2 text-right font-semibold text-blue-900">${Number(row.quantity || 0)}</td>
 				<td class="px-4 py-2">${escapeHtml(String(row.description || '-'))}</td>
 			</tr>
-		`).join('');
-		if (rows.length > limited.length) {
-			tbody.innerHTML += `<tr><td colspan="8" class="px-4 py-3 text-center text-xs text-gray-500">Exibindo ${limited.length} de ${rows.length} registros.</td></tr>`;
+		`;
+	}
+
+	function renderPurchasedDailiesTable(rows, options = {}) {
+		const tbody = document.getElementById('purchased-dailies-table-body');
+		if (!tbody) return;
+
+		if (Array.isArray(rows)) {
+			purchasedDailiesRows = rows;
+			if (options.reset !== false) {
+				purchasedDailiesShown = PURCHASED_DAILIES_PAGE_SIZE;
+			}
 		}
+
+		if (!Array.isArray(purchasedDailiesRows) || purchasedDailiesRows.length === 0) {
+			tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Nenhum registro encontrado na planilha.</td></tr>';
+			return;
+		}
+
+		const visibleCount = Math.min(purchasedDailiesShown, purchasedDailiesRows.length);
+		const limited = purchasedDailiesRows.slice(0, visibleCount);
+		tbody.innerHTML = limited.map(purchasedDailiesRowHtml).join('');
+
+		if (purchasedDailiesRows.length > visibleCount) {
+			const remaining = purchasedDailiesRows.length - visibleCount;
+			const nextBatch = Math.min(remaining, PURCHASED_DAILIES_PAGE_SIZE);
+			tbody.innerHTML += `
+				<tr>
+					<td colspan="8" class="px-4 py-3 text-center text-xs text-gray-500">
+						Exibindo ${visibleCount} de ${purchasedDailiesRows.length} registros.
+						<button type="button" data-purchased-dailies-show-more="page" class="ml-2 text-blue-700 font-semibold hover:underline">
+							Ver mais ${nextBatch}
+						</button>
+						<span class="mx-1 text-gray-300">|</span>
+						<button type="button" data-purchased-dailies-show-more="all" class="text-blue-700 font-semibold hover:underline">
+							Ver todos
+						</button>
+					</td>
+				</tr>
+			`;
+		}
+	}
+
+	function showMorePurchasedDailiesRows(mode) {
+		if (!Array.isArray(purchasedDailiesRows) || purchasedDailiesRows.length === 0) return;
+		if (mode === 'all') {
+			purchasedDailiesShown = purchasedDailiesRows.length;
+		} else {
+			purchasedDailiesShown = Math.min(
+				purchasedDailiesShown + PURCHASED_DAILIES_PAGE_SIZE,
+				purchasedDailiesRows.length
+			);
+		}
+		renderPurchasedDailiesTable(null, { reset: false });
 	}
 
 	function updatePurchasedDailiesSummary(summary, source) {

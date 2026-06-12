@@ -195,6 +195,11 @@ document.addEventListener('DOMContentLoaded', function() {
 			loadPurchasedDailiesData().catch((error) => {
 				console.error('Erro ao carregar diárias compradas:', error);
 			});
+			document.getElementById('purchased-dailies-table-body')?.addEventListener('click', (event) => {
+				const button = event.target.closest('[data-purchased-dailies-show-more]');
+				if (!button || typeof showMorePurchasedDailiesRows !== 'function') return;
+				showMorePurchasedDailiesRows(button.dataset.purchasedDailiesShowMore);
+			});
 			const importBtn = document.getElementById('btn-purchased-dailies-import');
 			const fileInput = document.getElementById('purchased-dailies-file-input');
 			importBtn?.addEventListener('click', () => fileInput?.click());
