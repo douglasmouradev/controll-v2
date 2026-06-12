@@ -342,5 +342,5 @@ $access_logs = $access_logs ?? [];
 <?php if (view_is_admin($user)): ?>
 	<script src="/assets/js/dashboard/maintenance.js"></script>
 <?php endif; ?>
-<?php include __DIR__ . '/components/scripts.php'; ?>
+<script src="/assets/js/dashboard/users.js"></script>
 

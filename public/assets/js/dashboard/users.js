@@ -1,5 +1,4 @@
-﻿<script>
-document.addEventListener('DOMContentLoaded', function() {
+﻿document.addEventListener('DOMContentLoaded', function() {
 		// Gerenciamento de Usuários
 		const modalUsuario = document.getElementById('modal-usuario');
 		const userForm = document.getElementById('user-form');
@@ -711,4 +710,3 @@ document.addEventListener('DOMContentLoaded', function() {
 			});
 		});
 	});
-</script>

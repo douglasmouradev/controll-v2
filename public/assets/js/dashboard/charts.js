@@ -8,9 +8,7 @@
 
 let dailiesChart, statusChart, creditsTicketPie, creditsDailyPie, creditsProjectPie, dailyDestinationChart, inventoryPieChart;
 let inventoryLocationsByCategory = {};
-	let selectedImages = [];
-	let selectedAttachments = [];
-	
+
 	async function loadDailies() {
 		if (!chartLibReady()) return;
 		try {

@@ -201,6 +201,22 @@ final class DashboardController extends Controller
 		$this->json($payload);
 	}
 
+	public function dailyDestinationStats(): void
+	{
+		$this->requireAuth([]);
+		$user = Auth::instance()->user();
+		$cacheKey = 'stats:daily_dest:' . (int) ($user['id'] ?? 0) . ':' . TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
+		$cached = Cache::get($cacheKey);
+		if (is_array($cached)) {
+			$this->json($cached);
+			return;
+		}
+
+		$payload = DashboardStatsService::dailyDestinationStats($user);
+		Cache::set($cacheKey, $payload, 60);
+		$this->json($payload);
+	}
+
 	public function statusStats(): void
 	{
 		$this->requireAuth([]);

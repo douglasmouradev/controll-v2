@@ -57,12 +57,7 @@ final class TicketAttachment
 		$attachment = $stmt->fetch(PDO::FETCH_ASSOC);
 		
 		if ($attachment && !empty($attachment['file_path'])) {
-			$webPath = (string) $attachment['file_path'];
-			$basePath = dirname(__DIR__, 2) . '/public';
-			$fsPath = $webPath[0] === '/' ? $basePath . $webPath : $basePath . '/' . $webPath;
-			if (is_file($fsPath)) {
-				@unlink($fsPath);
-			}
+			\App\Services\TicketAttachmentService::deleteFilesystem((string) $attachment['file_path']);
 		}
 		
 		$sql = 'DELETE FROM ticket_attachments WHERE id = :id';

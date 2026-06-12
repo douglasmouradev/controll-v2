@@ -154,4 +154,69 @@ final class DashboardStatsService
 
 		return $row ? (int) $row['cnt'] : 0;
 	}
+
+	/** @return array{success: bool, labels: list<string>, data: list<int>} */
+	public static function dailyDestinationStats(array $user): array
+	{
+		$pdo = Database::pdo();
+		$role = TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
+
+		if (!DatabaseSchema::columnExists($pdo, 'tickets', 'daily_destination')) {
+			return ['success' => true, 'labels' => [], 'data' => []];
+		}
+
+		$hasQtd = DatabaseSchema::columnExists($pdo, 'tickets', 'qtd');
+		$hasTicketCategories = DatabaseSchema::tableExists($pdo, 'ticket_categories');
+		$hasCategories = !$hasTicketCategories && DatabaseSchema::tableExists($pdo, 'categories');
+		$qtdExpr = $hasQtd
+			? 'CASE WHEN t.qtd IS NULL OR t.qtd = 0 THEN 1 ELSE t.qtd END'
+			: '1';
+
+		$sql = "
+			SELECT COALESCE(NULLIF(TRIM(t.daily_destination), ''), 'Não informado') AS destino,
+			       SUM($qtdExpr) AS total
+			FROM tickets t
+		";
+
+		if ($hasTicketCategories) {
+			$sql .= ' LEFT JOIN ticket_categories tc ON tc.id = t.category_id';
+		} elseif ($hasCategories) {
+			$sql .= ' LEFT JOIN categories c ON c.id = t.category_id';
+		}
+
+		$sql .= ' WHERE 1=1';
+
+		if ($hasTicketCategories) {
+			$sql .= " AND tc.name = 'Diária'";
+		} elseif ($hasCategories) {
+			$sql .= " AND c.name = 'Diária'";
+		} elseif (DatabaseSchema::columnExists($pdo, 'tickets', 'category')) {
+			$sql .= " AND t.category = 'Diária'";
+		}
+
+		$params = [];
+		if ($role === 'user') {
+			$sql .= ' AND t.user_id = :user_id';
+			$params[':user_id'] = (int) $user['id'];
+		}
+
+		$sql .= ' GROUP BY destino ORDER BY total DESC LIMIT 15';
+
+		$stmt = $pdo->prepare($sql);
+		$stmt->execute($params);
+		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+		$labels = [];
+		$data = [];
+		foreach ($rows as $row) {
+			$labels[] = (string) ($row['destino'] ?? '');
+			$data[] = (int) ($row['total'] ?? 0);
+		}
+
+		return [
+			'success' => true,
+			'labels' => $labels,
+			'data' => $data,
+		];
+	}
 }

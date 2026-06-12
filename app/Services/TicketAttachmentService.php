@@ -7,6 +7,13 @@ use App\Models\TicketAttachment;
 
 final class TicketAttachmentService
 {
+	private const PRIVATE_PREFIX = 'private:';
+
+	public static function storageDir(): string
+	{
+		return BASE_PATH . '/storage/uploads/tickets';
+	}
+
 	public static function handleUpload(int $ticketId, string $filesKey, ?array $user = null): void
 	{
 		if (empty($_FILES[$filesKey]) || !is_array($_FILES[$filesKey]['name'])) {
@@ -15,7 +22,7 @@ final class TicketAttachmentService
 
 		$user = $user ?? Auth::instance()->user();
 		$files = $_FILES[$filesKey];
-		$uploadDir = BASE_PATH . '/public/uploads/tickets/';
+		$uploadDir = self::storageDir();
 		if (!is_dir($uploadDir)) {
 			@mkdir($uploadDir, 0755, true);
 		}
@@ -64,7 +71,7 @@ final class TicketAttachmentService
 
 			$resolvedType = $fileType !== '' ? $fileType : ($isPdf ? 'application/pdf' : 'image/*');
 			$newFileName = 'ticket_' . $ticketId . '_' . time() . '_' . $i . '.' . $ext;
-			$filePath = $uploadDir . $newFileName;
+			$filePath = $uploadDir . '/' . $newFileName;
 			if (!@move_uploaded_file($fileTmp, $filePath)) {
 				continue;
 			}
@@ -72,7 +79,7 @@ final class TicketAttachmentService
 			try {
 				TicketAttachment::create([
 					'ticket_id' => $ticketId,
-					'file_path' => '/uploads/tickets/' . $newFileName,
+					'file_path' => self::PRIVATE_PREFIX . 'tickets/' . $newFileName,
 					'file_name' => $fileName,
 					'file_type' => $resolvedType,
 					'file_size' => $fileSize,
@@ -82,6 +89,39 @@ final class TicketAttachmentService
 			} catch (\Throwable $e) {
 				@unlink($filePath);
 			}
+		}
+	}
+
+	public static function resolveFilesystemPath(string $filePath): ?string
+	{
+		$filePath = trim($filePath);
+		if ($filePath === '') {
+			return null;
+		}
+
+		if (str_starts_with($filePath, self::PRIVATE_PREFIX)) {
+			$relative = ltrim(substr($filePath, strlen(self::PRIVATE_PREFIX)), '/');
+			$fsPath = BASE_PATH . '/storage/uploads/' . $relative;
+
+			return is_file($fsPath) && is_readable($fsPath) ? $fsPath : null;
+		}
+
+		if (str_starts_with($filePath, '/uploads/')) {
+			$fsPath = BASE_PATH . '/public' . $filePath;
+
+			return is_file($fsPath) && is_readable($fsPath) ? $fsPath : null;
+		}
+
+		$legacy = BASE_PATH . '/public/' . ltrim($filePath, '/');
+
+		return is_file($legacy) && is_readable($legacy) ? $legacy : null;
+	}
+
+	public static function deleteFilesystem(string $filePath): void
+	{
+		$fsPath = self::resolveFilesystemPath($filePath);
+		if ($fsPath !== null) {
+			@unlink($fsPath);
 		}
 	}
 }

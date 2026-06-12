@@ -120,246 +120,15 @@ final class TicketController extends Controller
 				return;
 			}
 
-			// Debitar créditos de acordo com a categoria/modalidade do chamado
 			$costs = TicketCreditService::calculateCost($data);
-			$this->logTicketCreateDebug('credits_cost_calculated', [
-				'user_id' => (int) ($user['id'] ?? 0),
-				'user_role' => (string) ($user['role'] ?? ''),
-				'category' => $data['category'],
-				'qtd' => $data['qtd'],
-				'costs' => $costs,
-			]);
-			$remainingTicketCredits = null;
-			$remainingDailyCredits = null;
-			$remainingProjectDailiesCredits = null;
-			$role = (string) ($user['role'] ?? 'user');
-			// Normalizar papéis vindos do banco/sessão para valores internos
-			if ($role === 'usuario') {
-				$role = 'user';
-			} elseif (in_array($role, ['suporte', 'gerente'], true)) {
-				$role = 'support';
-			} elseif ($role === 'superadmin') {
-				$role = 'admin';
-			}
-			$usePool = in_array($role, ['user', 'support', 'admin'], true);
-
-			try {
-					// Para user/support/admin, debitar do pool para TODOS os tipos (user, admin, support)
-					if ($usePool) {
-						$rolesPool = ['user', 'admin', 'support'];
-						// Créditos de ticket (inclui Ticket e Uso Geral)
-						if (!empty($costs['ticket']) && $costs['ticket'] > 0) {
-							$this->logTicketCreateDebug('debit_attempt_user_pool_ticket_all_roles', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['ticket'],
-							]);
-							$byUser = User::adjustCreditsForRoles($rolesPool, -$costs['ticket']);
-							if (empty($byUser) || !isset($byUser[(int) $user['id']])) {
-								$this->logTicketCreateDebug('debit_failed_user_pool_ticket_all_roles_no_user', [
-									'user_id' => (int) ($user['id'] ?? 0),
-									'amount' => $costs['ticket'],
-								]);
-								$this->json(['success' => false, 'message' => 'Nenhum usuário encontrado para débito de créditos de ticket'], 404);
-								return;
-							}
-							foreach (array_keys($byUser) as $uid) {
-								CreditHistory::record(
-									$uid,
-									'ticket',
-									-$costs['ticket'],
-									'Crédito utilizado - Ticket criado',
-									null,
-									'ticket_creation'
-								);
-							}
-							$remainingTicketCredits = $byUser[(int) $user['id']];
-							$this->logTicketCreateDebug('debit_success_user_pool_ticket_all_roles', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['ticket'],
-								'new_balance_current_user' => $remainingTicketCredits,
-							]);
-						}
-						// Créditos de diária
-						if (!empty($costs['daily']) && $costs['daily'] > 0) {
-							$this->logTicketCreateDebug('debit_attempt_user_pool_daily_all_roles', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['daily'],
-							]);
-							$byUser = User::adjustDailyCreditsForRoles($rolesPool, -$costs['daily']);
-							if (empty($byUser) || !isset($byUser[(int) $user['id']])) {
-								$this->logTicketCreateDebug('debit_failed_user_pool_daily_all_roles_no_user', [
-									'user_id' => (int) ($user['id'] ?? 0),
-									'amount' => $costs['daily'],
-								]);
-								$this->json(['success' => false, 'message' => 'Nenhum usuário encontrado para débito de créditos de diária'], 404);
-								return;
-							}
-							foreach (array_keys($byUser) as $uid) {
-								CreditHistory::record(
-									$uid,
-									'daily',
-									-$costs['daily'],
-									'Crédito utilizado - Diária criada',
-									null,
-									'ticket_creation'
-								);
-							}
-							$remainingDailyCredits = $byUser[(int) $user['id']];
-							$this->logTicketCreateDebug('debit_success_user_pool_daily_all_roles', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['daily'],
-								'new_balance_current_user' => $remainingDailyCredits,
-							]);
-						}
-						// Créditos de diárias projeto
-						if (!empty($costs['project_dailies']) && $costs['project_dailies'] > 0) {
-							$this->logTicketCreateDebug('debit_attempt_user_pool_project_dailies_all_roles', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['project_dailies'],
-							]);
-							$byUser = User::adjustProjectDailiesCreditsForRoles($rolesPool, -$costs['project_dailies']);
-							if (empty($byUser) || !isset($byUser[(int) $user['id']])) {
-								$this->logTicketCreateDebug('debit_failed_user_pool_project_dailies_all_roles_no_user', [
-									'user_id' => (int) ($user['id'] ?? 0),
-									'amount' => $costs['project_dailies'],
-								]);
-								$this->json(['success' => false, 'message' => 'Nenhum usuário encontrado para débito de créditos de diárias projeto'], 404);
-								return;
-							}
-							foreach (array_keys($byUser) as $uid) {
-								CreditHistory::record(
-									$uid,
-									'project_dailies',
-									-$costs['project_dailies'],
-									'Crédito utilizado - Diária Projeto criada',
-									null,
-									'ticket_creation'
-								);
-							}
-							$remainingProjectDailiesCredits = $byUser[(int) $user['id']];
-							$this->logTicketCreateDebug('debit_success_user_pool_project_dailies_all_roles', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['project_dailies'],
-								'new_balance_current_user' => $remainingProjectDailiesCredits,
-							]);
-						}
-					} else {
-						// Comportamento antigo: debitar apenas do usuário atual (support, etc.)
-						// Créditos de ticket (inclui Ticket e Uso Geral)
-						if (!empty($costs['ticket']) && $costs['ticket'] > 0) {
-							$this->logTicketCreateDebug('debit_attempt_single_user_ticket', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['ticket'],
-							]);
-							$remainingTicketCredits = User::adjustCredits((int) $user['id'], -$costs['ticket']);
-							if ($remainingTicketCredits === null) {
-								$this->logTicketCreateDebug('debit_failed_single_user_ticket_user_not_found', [
-									'user_id' => (int) ($user['id'] ?? 0),
-									'amount' => $costs['ticket'],
-								]);
-								$this->json(['success' => false, 'message' => 'Usuário não encontrado para débito de créditos de ticket'], 404);
-								return;
-							}
-							// Registrar no histórico
-							CreditHistory::record(
-								(int) $user['id'],
-								'ticket',
-								-$costs['ticket'],
-								'Crédito utilizado - Ticket criado',
-								null,
-								'ticket_creation'
-							);
-							$this->logTicketCreateDebug('debit_success_single_user_ticket', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['ticket'],
-								'new_balance' => $remainingTicketCredits,
-							]);
-						}
-						// Créditos de diária
-						if (!empty($costs['daily']) && $costs['daily'] > 0) {
-							$this->logTicketCreateDebug('debit_attempt_single_user_daily', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['daily'],
-							]);
-							$remainingDailyCredits = User::adjustDailyCredits((int) $user['id'], -$costs['daily']);
-							if ($remainingDailyCredits === null) {
-								$this->logTicketCreateDebug('debit_failed_single_user_daily_user_not_found', [
-									'user_id' => (int) ($user['id'] ?? 0),
-									'amount' => $costs['daily'],
-								]);
-								$this->json(['success' => false, 'message' => 'Usuário não encontrado para débito de créditos de diária'], 404);
-								return;
-							}
-							// Registrar no histórico
-							CreditHistory::record(
-								(int) $user['id'],
-								'daily',
-								-$costs['daily'],
-								'Crédito utilizado - Diária criada',
-								null,
-								'ticket_creation'
-							);
-							$this->logTicketCreateDebug('debit_success_single_user_daily', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['daily'],
-								'new_balance' => $remainingDailyCredits,
-							]);
-						}
-						// Créditos de diárias projeto
-						if (!empty($costs['project_dailies']) && $costs['project_dailies'] > 0) {
-							$this->logTicketCreateDebug('debit_attempt_single_user_project_dailies', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['project_dailies'],
-							]);
-							$remainingProjectDailiesCredits = User::adjustProjectDailiesCredits((int) $user['id'], -$costs['project_dailies']);
-							if ($remainingProjectDailiesCredits === null) {
-								$this->logTicketCreateDebug('debit_failed_single_user_project_dailies_user_not_found', [
-									'user_id' => (int) ($user['id'] ?? 0),
-									'amount' => $costs['project_dailies'],
-								]);
-								$this->json(['success' => false, 'message' => 'Usuário não encontrado para débito de créditos de diárias projeto'], 404);
-								return;
-							}
-							// Registrar no histórico
-							CreditHistory::record(
-								(int) $user['id'],
-								'project_dailies',
-								-$costs['project_dailies'],
-								'Crédito utilizado - Diária Projeto criada',
-								null,
-								'ticket_creation'
-							);
-							$this->logTicketCreateDebug('debit_success_single_user_project_dailies', [
-								'user_id' => (int) ($user['id'] ?? 0),
-								'amount' => $costs['project_dailies'],
-								'new_balance' => $remainingProjectDailiesCredits,
-							]);
-						}
-					}
-				} catch (\RuntimeException $e) {
-					$this->logTicketCreateDebug('debit_runtime_exception', [
-						'user_id' => (int) ($user['id'] ?? 0),
-						'category' => $data['category'] ?? null,
-						'qtd' => $data['qtd'] ?? null,
-						'costs' => $costs ?? null,
-						'exception_message' => $e->getMessage(),
-						'exception_class' => get_class($e),
-					]);
-					$this->json(['success' => false, 'message' => $e->getMessage()], 422);
-					return;
-			} catch (\Throwable $e) {
-				error_log('Erro ao debitar créditos: ' . $e->getMessage());
-				$this->logTicketCreateDebug('debit_unexpected_exception', [
-					'user_id' => (int) ($user['id'] ?? 0),
-					'category' => $data['category'] ?? null,
-					'qtd' => $data['qtd'] ?? null,
-					'costs' => $costs ?? null,
-					'exception_message' => $e->getMessage(),
-					'exception_class' => get_class($e),
-				]);
-				$this->json(['success' => false, 'message' => 'Erro ao debitar créditos'], 500);
+			$debit = TicketCreditService::debitForCreation($user, $costs);
+			if (!$debit['success']) {
+				$this->json(['success' => false, 'message' => $debit['message'] ?? 'Erro ao debitar créditos'], $debit['code'] ?? 422);
 				return;
 			}
+			$remainingTicketCredits = $debit['remaining_ticket'] ?? null;
+			$remainingDailyCredits = $debit['remaining_daily'] ?? null;
+			$remainingProjectDailiesCredits = $debit['remaining_project_dailies'] ?? null;
 
 			$id = Ticket::create($data);
 			$this->logTicketCreateDebug('ticket_created', [
@@ -551,142 +320,9 @@ final class TicketController extends Controller
 						'category' => $data['category'],
 						'qtd' => $deltaQtd,
 					]);
-					$this->logTicketUpdateDebug('credits_cost_calculated_update', [
-						'ticket_id' => $ticketId,
-						'user_id' => (int) ($user['id'] ?? 0),
-						'user_role' => $role,
-						'category' => $data['category'],
-						'delta_qtd' => $deltaQtd,
-						'costs' => $costs,
-					]);
-
-					try {
-						if ($role === 'user') {
-							$rolesPool = ['user', 'admin', 'support'];
-							if (!empty($costs['ticket']) && $costs['ticket'] > 0) {
-								$byUser = User::adjustCreditsForRoles($rolesPool, -$costs['ticket']);
-								if (empty($byUser) || !isset($byUser[(int) $user['id']])) {
-									$this->json(['success' => false, 'message' => 'Nenhum usuário encontrado para débito de créditos de ticket'], 404);
-									return;
-								}
-								foreach (array_keys($byUser) as $uid) {
-									CreditHistory::record(
-										$uid,
-										'ticket',
-										-$costs['ticket'],
-										'Crédito utilizado - Aumento de QTD em chamado',
-										$ticketId,
-										'ticket_qtd_increase'
-									);
-								}
-							}
-							if (!empty($costs['daily']) && $costs['daily'] > 0) {
-								$byUser = User::adjustDailyCreditsForRoles($rolesPool, -$costs['daily']);
-								if (empty($byUser) || !isset($byUser[(int) $user['id']])) {
-									$this->json(['success' => false, 'message' => 'Nenhum usuário encontrado para débito de créditos de diária'], 404);
-									return;
-								}
-								foreach (array_keys($byUser) as $uid) {
-									CreditHistory::record(
-										$uid,
-										'daily',
-										-$costs['daily'],
-										'Crédito utilizado - Aumento de QTD de Diária em chamado',
-										$ticketId,
-										'ticket_qtd_increase'
-									);
-								}
-							}
-							if (!empty($costs['project_dailies']) && $costs['project_dailies'] > 0) {
-								$byUser = User::adjustProjectDailiesCreditsForRoles($rolesPool, -$costs['project_dailies']);
-								if (empty($byUser) || !isset($byUser[(int) $user['id']])) {
-									$this->json(['success' => false, 'message' => 'Nenhum usuário encontrado para débito de créditos de diárias projeto'], 404);
-									return;
-								}
-								foreach (array_keys($byUser) as $uid) {
-									CreditHistory::record(
-										$uid,
-										'project_dailies',
-										-$costs['project_dailies'],
-										'Crédito utilizado - Aumento de QTD de Diária Projeto em chamado',
-										$ticketId,
-										'ticket_qtd_increase'
-									);
-								}
-							}
-						} else {
-							if (!empty($costs['ticket']) && $costs['ticket'] > 0) {
-								$remainingTicketCredits = User::adjustCredits((int) $user['id'], -$costs['ticket']);
-								if ($remainingTicketCredits === null) {
-									$this->json(['success' => false, 'message' => 'Usuário não encontrado para débito de créditos de ticket'], 404);
-									return;
-								}
-								CreditHistory::record(
-									(int) $user['id'],
-									'ticket',
-									-$costs['ticket'],
-									'Crédito utilizado - Aumento de QTD em chamado',
-									$ticketId,
-									'ticket_qtd_increase'
-								);
-							}
-							if (!empty($costs['daily']) && $costs['daily'] > 0) {
-								$remainingDailyCredits = User::adjustDailyCredits((int) $user['id'], -$costs['daily']);
-								if ($remainingDailyCredits === null) {
-									$this->json(['success' => false, 'message' => 'Usuário não encontrado para débito de créditos de diária'], 404);
-									return;
-								}
-								CreditHistory::record(
-									(int) $user['id'],
-									'daily',
-									-$costs['daily'],
-									'Crédito utilizado - Aumento de QTD de Diária em chamado',
-									$ticketId,
-									'ticket_qtd_increase'
-								);
-							}
-							if (!empty($costs['project_dailies']) && $costs['project_dailies'] > 0) {
-								$remainingProjectDailiesCredits = User::adjustProjectDailiesCredits((int) $user['id'], -$costs['project_dailies']);
-								if ($remainingProjectDailiesCredits === null) {
-									$this->json(['success' => false, 'message' => 'Usuário não encontrado para débito de créditos de diárias projeto'], 404);
-									return;
-								}
-								CreditHistory::record(
-									(int) $user['id'],
-									'project_dailies',
-									-$costs['project_dailies'],
-									'Crédito utilizado - Aumento de QTD de Diária Projeto em chamado',
-									$ticketId,
-									'ticket_qtd_increase'
-								);
-							}
-						}
-					} catch (\RuntimeException $e) {
-						$this->logTicketUpdateDebug('debit_runtime_exception_update', [
-							'ticket_id' => $ticketId,
-							'user_id' => (int) ($user['id'] ?? 0),
-							'user_role' => $role,
-							'category' => $data['category'] ?? null,
-							'delta_qtd' => $deltaQtd,
-							'costs' => $costs ?? null,
-							'exception_message' => $e->getMessage(),
-							'exception_class' => get_class($e),
-						]);
-						$this->json(['success' => false, 'message' => $e->getMessage()], 422);
-						return;
-					} catch (\Throwable $e) {
-						error_log('Erro ao debitar créditos em edição de chamado: ' . $e->getMessage());
-						$this->logTicketUpdateDebug('debit_unexpected_exception_update', [
-							'ticket_id' => $ticketId,
-							'user_id' => (int) ($user['id'] ?? 0),
-							'user_role' => $role,
-							'category' => $data['category'] ?? null,
-							'delta_qtd' => $deltaQtd,
-							'costs' => $costs ?? null,
-							'exception_message' => $e->getMessage(),
-							'exception_class' => get_class($e),
-						]);
-						$this->json(['success' => false, 'message' => 'Erro ao debitar créditos na edição do chamado'], 500);
+					$debit = TicketCreditService::debitForQtdIncrease($user, $costs, $ticketId, $role);
+					if (!$debit['success']) {
+						$this->json(['success' => false, 'message' => $debit['message'] ?? 'Erro ao debitar créditos'], $debit['code'] ?? 422);
 						return;
 					}
 				}
@@ -721,13 +357,14 @@ final class TicketController extends Controller
 		}
 	}
 
-	/**
-	 * Clonar um chamado existente, debitando créditos como se fosse um novo chamado.
-	 *
-	 * Endpoint esperado (pela interface atual): GET /tickets/clone?id=123
-	 */
+	/** Clonar um chamado existente, debitando créditos como se fosse um novo chamado (somente POST). */
 	public function cloneTicket(): void
 	{
+		if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+			$this->json(['success' => false, 'message' => 'Método não permitido'], 405);
+			return;
+		}
+
 		$this->requireAuth(['support', 'admin']);
 		$user = Auth::instance()->user();
 		if (!$user) {
@@ -735,7 +372,7 @@ final class TicketController extends Controller
 			return;
 		}
 
-		$id = (int) ($_GET['id'] ?? 0);
+		$id = (int) ($_POST['id'] ?? $_GET['id'] ?? 0);
 		if ($id <= 0) {
 			$this->json(['success' => false, 'message' => 'ID do chamado inválido'], 422);
 			return;
@@ -868,81 +505,12 @@ final class TicketController extends Controller
 			return;
 		}
 
-		// Processar upload de anexos da resposta (imagem/PDF)
-		$uploadedAttachments = [];
-		if (!empty($_FILES['images']) && is_array($_FILES['images']['name'])) {
-			$uploadDir = BASE_PATH . '/public/uploads/tickets/';
-			if (!is_dir($uploadDir)) {
-				mkdir($uploadDir, 0755, true);
-			}
-			
-			$user = Auth::instance()->user();
-			$files = $_FILES['images'];
-			$fileCount = count($files['name']);
-			
-			for ($i = 0; $i < $fileCount; $i++) {
-				if ($files['error'][$i] !== UPLOAD_ERR_OK) {
-					continue;
-				}
-				
-				$fileName = $files['name'][$i];
-				$fileTmp = $files['tmp_name'][$i];
-				$fileType = $files['type'][$i];
-				$fileSize = $files['size'][$i];
-				$ext = strtolower((string) pathinfo((string) $fileName, PATHINFO_EXTENSION));
-				$allowedImageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-				$isImage = strpos((string) $fileType, 'image/') === 0 || in_array($ext, $allowedImageExts, true);
-				$isPdf = $fileType === 'application/pdf' || $ext === 'pdf';
-				if (!$isImage && !$isPdf) {
-					continue;
-				}
-				if ($ext === '') {
-					$ext = $isPdf ? 'pdf' : 'bin';
-				}
-
-				$resolvedType = (string) $fileType;
-				if ($resolvedType === '') {
-					if ($isPdf) {
-						$resolvedType = 'application/pdf';
-					} elseif ($isImage) {
-						if (in_array($ext, ['jpg', 'jpeg'], true)) {
-							$resolvedType = 'image/jpeg';
-						} elseif ($ext === 'png') {
-							$resolvedType = 'image/png';
-						} elseif ($ext === 'gif') {
-							$resolvedType = 'image/gif';
-						} elseif ($ext === 'webp') {
-							$resolvedType = 'image/webp';
-						} else {
-							$resolvedType = 'image/*';
-						}
-					} else {
-						$resolvedType = 'application/octet-stream';
-					}
-				}
-				
-				$newFileName = 'ticket_' . $id . '_' . time() . '_' . $i . '.' . $ext;
-				$filePath = $uploadDir . $newFileName;
-				
-				if (move_uploaded_file($fileTmp, $filePath)) {
-					$attachmentId = TicketAttachment::create([
-						'ticket_id' => $id,
-						'file_path' => '/uploads/tickets/' . $newFileName,
-						'file_name' => $fileName,
-						'file_type' => $resolvedType,
-						'file_size' => $fileSize,
-						'uploaded_by' => (int) $user['id'],
-					]);
-					$uploadedAttachments[] = [
-						'id' => $attachmentId,
-						'file_path' => '/uploads/tickets/' . $newFileName,
-						'file_name' => $fileName,
-					];
-				}
-			}
+		$hadAttachments = !empty($_FILES['images']) && is_array($_FILES['images']['name'] ?? null);
+		if ($hadAttachments) {
+			TicketAttachmentService::handleUpload($id, 'images', $user);
 		}
-		
-		$hasUploadedAttachments = count($uploadedAttachments) > 0;
+
+		$hasUploadedAttachments = $hadAttachments;
 		$success = $responseResult['success'] || $hasUploadedAttachments;
 		$message = $success ? ($responseResult['message'] ?? 'Resposta salva com sucesso') : 'Falha ao salvar resposta';
 		if (!$responseResult['success'] && $hasUploadedAttachments) {
@@ -1008,6 +576,7 @@ final class TicketController extends Controller
 		$attachments = TicketAttachment::findByTicket($id);
 		foreach ($attachments as &$att) {
 			$att['download_url'] = '/tickets/attachment-download?id=' . (int) ($att['id'] ?? 0);
+			unset($att['file_path']);
 		}
 		unset($att);
 		$this->json(['success' => true, 'attachments' => $attachments]);
@@ -1038,13 +607,9 @@ final class TicketController extends Controller
 			return;
 		}
 
-		$webPath = (string) ($attachment['file_path'] ?? '');
-		$basePath = BASE_PATH . '/public';
-		$fsPath = $webPath !== '' && $webPath[0] === '/'
-			? $basePath . $webPath
-			: $basePath . '/' . ltrim($webPath, '/');
+		$fsPath = TicketAttachmentService::resolveFilesystemPath((string) ($attachment['file_path'] ?? ''));
 
-		if (!is_file($fsPath) || !is_readable($fsPath)) {
+		if ($fsPath === null) {
 			http_response_code(404);
 			echo 'Arquivo não encontrado';
 			return;
@@ -1128,6 +693,9 @@ final class TicketController extends Controller
 
 	private function logTicketCreateDebug(string $stage, array $data = []): void
 	{
+		if (!$this->isVerboseTicketLogging()) {
+			return;
+		}
 		try {
 			$logDir = BASE_PATH . '/storage/logs';
 			if (!is_dir($logDir)) {
@@ -1148,6 +716,9 @@ final class TicketController extends Controller
 
 	private function logTicketUpdateDebug(string $stage, array $data = []): void
 	{
+		if (!$this->isVerboseTicketLogging()) {
+			return;
+		}
 		try {
 			$logDir = BASE_PATH . '/storage/logs';
 			if (!is_dir($logDir)) {
@@ -1164,6 +735,11 @@ final class TicketController extends Controller
 			file_put_contents($logFile, json_encode($entry, JSON_UNESCAPED_UNICODE) . PHP_EOL, FILE_APPEND);
 		} catch (\Throwable $e) {
 		}
+	}
+
+	private function isVerboseTicketLogging(): bool
+	{
+		return in_array(strtolower((string) (getenv('APP_DEBUG') ?: '')), ['1', 'true', 'yes', 'on'], true);
 	}
 
 	private function findAuthorizedTicket(int $id, ?array $user): ?array

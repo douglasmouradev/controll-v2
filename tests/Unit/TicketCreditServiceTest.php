@@ -24,4 +24,13 @@ final class TicketCreditServiceTest extends TestCase
 		$costs = TicketCreditService::calculateCost(['category' => 'Ticket', 'qtd' => 0]);
 		$this->assertSame(0, $costs['ticket']);
 	}
+
+	public function testDebitForCreationWithZeroCost(): void
+	{
+		$result = TicketCreditService::debitForCreation(
+			['id' => 1, 'role' => 'user'],
+			['ticket' => 0, 'daily' => 0, 'project_dailies' => 0]
+		);
+		$this->assertTrue($result['success']);
+	}
 }

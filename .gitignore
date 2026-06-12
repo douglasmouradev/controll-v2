@@ -11,7 +11,10 @@ composer.lock
 .env.*.local
 
 # Uploads e arquivos gerados
-/public/uploads/
+/public/uploads/**
+!/public/uploads/tickets/
+/public/uploads/tickets/*
+!/public/uploads/tickets/.htaccess
 /storage/cache/
 .phpunit.cache/
 *.log

@@ -39,6 +39,9 @@ paths:
   /settings:
     get:
       summary: Configurações do sistema (admin)
+  /dashboard/daily-destinations:
+    get:
+      summary: Estatísticas de destinos de diárias (gráfico)
   /security/two-factor:
     get:
       summary: Status do 2FA do usuário staff

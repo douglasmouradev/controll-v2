@@ -34,7 +34,6 @@ return [
 		'/tickets/view' => [TicketController::class, 'show'],
 		'/tickets/attachments' => [TicketController::class, 'attachments'],
 		'/tickets/attachment-download' => [TicketController::class, 'downloadAttachment'],
-		'/tickets/clone' => [TicketController::class, 'cloneTicket'],
 		'/users' => [UserController::class, 'index'],
 		'/users/credit-history' => [UserController::class, 'creditHistory'],
 		'/reports/pdf' => [ReportController::class, 'pdf'],

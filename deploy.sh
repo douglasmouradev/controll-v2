@@ -49,6 +49,12 @@ if command -v composer >/dev/null 2>&1; then
 	COMPOSER_ALLOW_SUPERUSER=1 composer dump-autoload --no-interaction
 fi
 
+if command -v npm >/dev/null 2>&1 && [ -f package.json ]; then
+	echo "==> Compilando Tailwind CSS"
+	npm ci 2>/dev/null || npm install 2>/dev/null || true
+	npm run build:css || echo "==> Aviso: build CSS falhou"
+fi
+
 if [ -f bin/migrate.php ]; then
 	if ! "${PHP_BIN}" -m 2>/dev/null | grep -qi pdo_mysql; then
 		echo "==> Aviso: PDO MySQL ausente no PHP CLI. Ative pdo_mysql no aaPanel ou defina PHP_BIN."
