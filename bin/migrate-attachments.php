@@ -10,6 +10,12 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/bootstrap.php';
 
+$envFile = BASE_PATH . '/.env';
+if (!is_file($envFile) || !is_readable($envFile)) {
+	fwrite(STDERR, "Arquivo .env não encontrado em {$envFile}\n");
+	exit(1);
+}
+
 use App\Services\Database;
 use App\Services\TicketAttachmentService;
 

@@ -31,13 +31,18 @@ final class Database
 			self::$pdo = new PDO($dsn, $user, $pass, $options);
 			return self::$pdo;
 		} catch (PDOException $e) {
-			http_response_code(500);
 			$debug = getenv('APP_DEBUG') ?: getenv('DEBUG_DB');
-			if ($debug && in_array(strtolower((string)$debug), ['1','true','yes','on'], true)) {
-				echo 'Erro de conexão com o banco: ' . htmlspecialchars($e->getMessage());
-			} else {
-				echo 'Erro de conexão com o banco.';
+			$showDetails = PHP_SAPI === 'cli'
+				|| ($debug && in_array(strtolower((string) $debug), ['1', 'true', 'yes', 'on'], true));
+			$message = $showDetails
+				? 'Erro de conexão com o banco: ' . $e->getMessage()
+				: 'Erro de conexão com o banco.';
+			if (PHP_SAPI === 'cli') {
+				fwrite(STDERR, $message . PHP_EOL);
+				exit(1);
 			}
+			http_response_code(500);
+			echo $showDetails ? htmlspecialchars($message) : $message;
 			exit;
 		}
 	}
