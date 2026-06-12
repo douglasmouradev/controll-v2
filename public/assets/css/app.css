@@ -362,9 +362,9 @@ body.layout-dashboard main { max-width: none; padding: 0; }
 	max-width: 9.5rem;
 }
 .brand-logos--auth .brand-logo-ca {
-	height: 2.25rem;
+	height: 2.75rem;
 	width: auto;
-	max-width: 3.75rem;
+	max-width: 5rem;
 }
 .brand-logos-divider {
 	width: 1px;
