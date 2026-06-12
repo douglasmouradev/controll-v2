@@ -75,5 +75,5 @@
 	});
 
 	loadNotifications();
-	setInterval(loadNotifications, 60000);
+	startVisibilityAwareInterval(loadNotifications, 60000);
 })();

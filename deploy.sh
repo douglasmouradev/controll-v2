@@ -45,8 +45,9 @@ git fetch origin
 git checkout -f main 2>/dev/null || git checkout -f -B main origin/main
 git pull origin main
 
-if command -v composer >/dev/null 2>&1; then
-	COMPOSER_ALLOW_SUPERUSER=1 composer dump-autoload --no-interaction
+if command -v composer >/dev/null 2>&1 && [ -f composer.json ]; then
+	echo "==> Instalando dependências PHP (composer install)"
+	COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 fi
 
 if command -v npm >/dev/null 2>&1 && [ -f package.json ]; then
@@ -60,7 +61,8 @@ if [ -f bin/migrate.php ]; then
 		echo "==> Aviso: PDO MySQL ausente no PHP CLI. Ative pdo_mysql no aaPanel ou defina PHP_BIN."
 		echo "==> Exemplo: PHP_BIN=/www/server/php/81/bin/php bash deploy.sh"
 	else
-		"${PHP_BIN}" bin/migrate.php || echo "==> Aviso: migrations falharam (verifique o banco)"
+		echo "==> Executando migrations"
+		"${PHP_BIN}" bin/migrate.php
 	fi
 fi
 

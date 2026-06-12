@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\AuditLock;
 use App\Services\Auth;
 use App\Services\Cache;
+use App\Services\DashboardCache;
 use App\Services\DashboardStatsService;
 use App\Services\Database;
 use App\Services\DatabaseSchema;
@@ -138,7 +139,7 @@ final class DashboardController extends Controller
 	{
 		$this->requireAuth([]);
 		$user = Auth::instance()->user();
-		$cacheKey = 'stats:dailies:' . (int) ($user['id'] ?? 0) . ':' . TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
+		$cacheKey = DashboardCache::statsKey('stats:dailies', $user);
 		$cached = Cache::get($cacheKey);
 		if (is_array($cached)) {
 			$this->json($cached);
@@ -207,7 +208,7 @@ final class DashboardController extends Controller
 	{
 		$this->requireAuth([]);
 		$user = Auth::instance()->user();
-		$cacheKey = 'stats:daily_dest:' . (int) ($user['id'] ?? 0) . ':' . TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
+		$cacheKey = DashboardCache::statsKey('stats:daily_dest', $user);
 		$cached = Cache::get($cacheKey);
 		if (is_array($cached)) {
 			$this->json($cached);
@@ -223,7 +224,7 @@ final class DashboardController extends Controller
 	{
 		$this->requireAuth([]);
 		$user = Auth::instance()->user();
-		$cacheKey = 'stats:status:' . (int) ($user['id'] ?? 0) . ':' . TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
+		$cacheKey = DashboardCache::statsKey('stats:status', $user);
 		$cached = Cache::get($cacheKey);
 		if (is_array($cached)) {
 			$this->json($cached);
@@ -272,7 +273,7 @@ final class DashboardController extends Controller
 	{
 		$this->requireAuth([]);
 		$user = Auth::instance()->user();
-		$cacheKey = 'dashboard:summary:' . (int) ($user['id'] ?? 0) . ':' . TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
+		$cacheKey = DashboardCache::statsKey('dashboard:summary', $user);
 		$cached = Cache::get($cacheKey);
 		if (is_array($cached)) {
 			$this->json($cached);
@@ -399,23 +400,40 @@ final class DashboardController extends Controller
 			$this->json([
 				'success' => false,
 				'message' => 'Planilha de inventário não encontrada ou sem permissão de leitura. Envie uma planilha ou configure INVENTORY_XLSX_PATH.',
-				'path' => '',
 			], 500);
+			return;
+		}
+
+		$mtime = (int) (@filemtime($xlsxPath) ?: 0);
+		$filterKey = md5(json_encode([
+			'store' => (string) ($_GET['store'] ?? ''),
+			'support_status' => (string) ($_GET['support_status'] ?? ''),
+			'start_date' => (string) ($_GET['start_date'] ?? ''),
+			'end_date' => (string) ($_GET['end_date'] ?? ''),
+		], JSON_UNESCAPED_UNICODE));
+		$cacheKey = 'inventory:stats:' . md5($xlsxPath) . ':' . $mtime . ':' . $filterKey;
+		$cached = Cache::get($cacheKey);
+		if (is_array($cached)) {
+			$this->json($cached);
 			return;
 		}
 
 		try {
 			$rows = (new XlsxReaderService())->readRows($xlsxPath);
+			$payload = InventoryService::buildStatsPayload($rows, $_GET, $xlsxPath);
+			Cache::set($cacheKey, $payload, 300);
+			$this->json($payload);
 		} catch (\Throwable $e) {
-			$this->json([
+			error_log('Erro ao processar planilha de inventário: ' . $e->getMessage());
+			$response = [
 				'success' => false,
 				'message' => 'Erro ao processar planilha de inventário',
-				'details' => $e->getMessage(),
-			], 500);
-			return;
+			];
+			if (defined('APP_DEBUG') && APP_DEBUG) {
+				$response['details'] = $e->getMessage();
+			}
+			$this->json($response, 500);
 		}
-
-		$this->json(InventoryService::buildStatsPayload($rows, $_GET, $xlsxPath));
 	}
 
 	public function uploadInventoryFile(): void

@@ -9,6 +9,8 @@ use App\Models\TicketAttachment;
 use App\Models\User;
 use App\Models\CreditHistory;
 use App\Services\Auth;
+use App\Services\DashboardCache;
+use App\Services\Database;
 use App\Services\TicketAccess;
 use App\Services\InAppNotifier;
 use App\Services\TicketAttachmentService;
@@ -120,17 +122,30 @@ final class TicketController extends Controller
 				return;
 			}
 
-			$costs = TicketCreditService::calculateCost($data);
-			$debit = TicketCreditService::debitForCreation($user, $costs);
-			if (!$debit['success']) {
-				$this->json(['success' => false, 'message' => $debit['message'] ?? 'Erro ao debitar créditos'], $debit['code'] ?? 422);
-				return;
-			}
-			$remainingTicketCredits = $debit['remaining_ticket'] ?? null;
-			$remainingDailyCredits = $debit['remaining_daily'] ?? null;
-			$remainingProjectDailiesCredits = $debit['remaining_project_dailies'] ?? null;
+			$pdo = Database::pdo();
+			$pdo->beginTransaction();
+			try {
+				$costs = TicketCreditService::calculateCost($data);
+				$debit = TicketCreditService::debitForCreation($user, $costs);
+				if (!$debit['success']) {
+					$pdo->rollBack();
+					$this->json(['success' => false, 'message' => $debit['message'] ?? 'Erro ao debitar créditos'], $debit['code'] ?? 422);
+					return;
+				}
+				$remainingTicketCredits = $debit['remaining_ticket'] ?? null;
+				$remainingDailyCredits = $debit['remaining_daily'] ?? null;
+				$remainingProjectDailiesCredits = $debit['remaining_project_dailies'] ?? null;
 
-			$id = Ticket::create($data);
+				$id = Ticket::create($data);
+				$pdo->commit();
+			} catch (\Throwable $e) {
+				if ($pdo->inTransaction()) {
+					$pdo->rollBack();
+				}
+				throw $e;
+			}
+
+			DashboardCache::invalidateStats();
 			$this->logTicketCreateDebug('ticket_created', [
 				'user_id' => (int) ($user['id'] ?? 0),
 				'ticket_id' => (int) $id,
@@ -163,7 +178,10 @@ final class TicketController extends Controller
 				'exception_message' => $e->getMessage(),
 				'exception_class' => get_class($e),
 			]);
-			$this->json(['success' => false, 'message' => 'Erro interno: ' . $e->getMessage()], 500);
+			$this->json([
+				'success' => false,
+				'message' => defined('APP_DEBUG') && APP_DEBUG ? ('Erro interno: ' . $e->getMessage()) : 'Erro ao criar chamado',
+			], 500);
 		}
 	}
 
@@ -341,6 +359,7 @@ final class TicketController extends Controller
 			// Processar anexos adicionais enviados na edição (attachments[])
 			TicketAttachmentService::handleUpload($ticketId, 'attachments', $user);
 
+			DashboardCache::invalidateStats();
 			$this->json([
 				'success' => true,
 				'message' => 'Chamado atualizado com sucesso',
@@ -442,6 +461,7 @@ final class TicketController extends Controller
 			}
 
 			$pdo->commit();
+			DashboardCache::invalidateStats();
 			$this->json([
 				'success' => true,
 				'message' => 'Chamado clonado',
@@ -471,6 +491,9 @@ final class TicketController extends Controller
 			return;
 		}
 		$result = TicketService::updateStatus($id, $status, $user ?: []);
+		if (!empty($result['success'])) {
+			DashboardCache::invalidateStats();
+		}
 		$this->json($result, $result['success'] ? 200 : 422);
 	}
 
@@ -484,6 +507,9 @@ final class TicketController extends Controller
 			return;
 		}
 		$ok = Ticket::assignTo((int) $id, (int) $user['id']);
+		if ($ok) {
+			DashboardCache::invalidateStats();
+		}
 		$this->json(['success' => $ok, 'message' => $ok ? 'Chamado atribuído' : 'Falha ao atribuir']);
 	}
 
@@ -520,7 +546,6 @@ final class TicketController extends Controller
 		$this->json([
 			'success' => $success,
 			'message' => $message,
-			'attachments' => $uploadedAttachments
 		]);
 	}
 
@@ -681,6 +706,9 @@ final class TicketController extends Controller
 
 		try {
 			$ok = Ticket::delete($id);
+			if ($ok) {
+				DashboardCache::invalidateStats();
+			}
 			$this->json([
 				'success' => $ok,
 				'message' => $ok ? 'Chamado excluído com sucesso' : 'Falha ao excluir chamado',

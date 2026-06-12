@@ -251,3 +251,12 @@
 			return { date: fallbackDate, time: fallbackTime };
 		}
 	}
+
+	function startVisibilityAwareInterval(fn, ms) {
+		return setInterval(() => {
+			if (document.visibilityState === 'hidden') {
+				return;
+			}
+			fn();
+		}, ms);
+	}

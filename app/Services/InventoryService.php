@@ -462,7 +462,7 @@ final class InventoryService
 			$data = [0];
 		}
 
-		return [
+		$payload = [
 			'success' => true,
 			'labels' => $labels,
 			'data' => $data,
@@ -470,8 +470,11 @@ final class InventoryService
 			'summary_metrics' => $summaryMetrics,
 			'locations_by_category' => $locationsPayload,
 			'stores' => array_keys($availableStores),
-			'source' => $xlsxPath,
-			'debug' => [
+			'source' => basename($xlsxPath),
+		];
+
+		if (defined('APP_DEBUG') && APP_DEBUG) {
+			$payload['debug'] = [
 				'rows_total' => count($rows),
 				'rows_data' => count($dataRows),
 				'headers_detected' => array_values(array_filter($header, static fn($h) => $h !== '')),
@@ -485,8 +488,10 @@ final class InventoryService
 					'start_date' => $startDateFilter,
 					'end_date' => $endDateFilter,
 				],
-			],
-		];
+			];
+		}
+
+		return $payload;
 	}
 
 	private static function normalizeSpreadsheetDateToYmd($raw): ?string

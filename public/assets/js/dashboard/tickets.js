@@ -181,15 +181,15 @@ document.addEventListener('DOMContentLoaded', function() {
 		// Inicializar gráficos
 		if (document.getElementById('dailies-chart')) {
 			loadDailies();
-			setInterval(loadDailies, 10000);
+			startVisibilityAwareInterval(loadDailies, 10000);
 		}
 		if (document.getElementById('status-chart')) {
 			loadStatusChart();
-			setInterval(loadStatusChart, 10000);
+			startVisibilityAwareInterval(loadStatusChart, 10000);
 		}
 		if (document.getElementById('daily-destination-chart')) {
 			loadDailyDestinationChart();
-			setInterval(loadDailyDestinationChart, 15000);
+			startVisibilityAwareInterval(loadDailyDestinationChart, 15000);
 		}
 		if (document.getElementById('purchased-dailies-table-body')) {
 			loadPurchasedDailiesData().catch((error) => {
@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		}
 		if (document.getElementById('inventory-pie-chart')) {
 			loadInventoryPieChart();
-			setInterval(loadInventoryPieChart, 30000);
+			startVisibilityAwareInterval(loadInventoryPieChart, 30000);
 			const importBtn = document.getElementById('btn-inventory-import');
 			const fileInput = document.getElementById('inventory-file-input');
 			const storeFilter = document.getElementById('inventory-filter-store');
