@@ -46,7 +46,7 @@ final class DashboardStatsService
 
 		$closedTickets = self::countByStatus($pdo, $user, $role, $hasTicketStatuses, $hasStatusesTable, $hasStatusColumn, 'Fechado');
 		$openTickets = self::countByStatus($pdo, $user, $role, $hasTicketStatuses, $hasStatusesTable, $hasStatusColumn, 'Aberto');
-		$inProgressTickets = self::countByStatus($pdo, $user, $role, $hasTicketStatuses, $hasStatusesTable, $hasStatusColumn, 'Em andamento');
+		$inProgressTickets = self::countByStatus($pdo, $user, $role, $hasTicketStatuses, $hasStatusesTable, $hasStatusColumn, 'Em Andamento');
 		$scheduledTickets = self::countByStatus($pdo, $user, $role, $hasTicketStatuses, $hasStatusesTable, $hasStatusColumn, 'Agendado');
 
 		$projectDailies = 0;

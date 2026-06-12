@@ -621,7 +621,18 @@ final class Ticket
 
 	public static function allowedStatuses(): array
 	{
-		return ['Aberto', 'Em andamento', 'Agendado', 'Fechado'];
+		return ['Aberto', 'Em Andamento', 'Em andamento', 'Agendado', 'Fechado'];
+	}
+
+	public static function normalizeStatusName(string $status): string
+	{
+		$trimmed = trim($status);
+		$aliases = [
+			'em andamento' => 'Em Andamento',
+			'Em andamento' => 'Em Andamento',
+		];
+
+		return $aliases[$trimmed] ?? $aliases[mb_strtolower($trimmed)] ?? $trimmed;
 	}
 
 	public static function bootstrapStatuses(): void
@@ -632,6 +643,7 @@ final class Ticket
 	public static function updateStatus(int $id, string $status): bool
 	{
 		self::bootstrapStatuses();
+		$status = self::normalizeStatusName($status);
 		$pdo = Database::pdo();
 		if (self::tableExists('ticket_statuses')) {
 			$stId = self::getIdByName('ticket_statuses', $status);
@@ -658,7 +670,7 @@ final class Ticket
 	{
 		$stmt = Database::pdo()->prepare('UPDATE tickets SET assigned_to = :assigned_to, updated_at = NOW() WHERE id = :id');
 		$ok = $stmt->execute([':assigned_to' => $userId, ':id' => $id]);
-		if ($ok) { self::updateStatus($id, 'Em andamento'); }
+		if ($ok) { self::updateStatus($id, 'Em Andamento'); }
 		return $ok;
 	}
 
@@ -721,10 +733,19 @@ final class Ticket
 
 	private static function getIdByName(string $table, string $name): ?int
 	{
-		$stmt = Database::pdo()->prepare("SELECT id FROM `{$table}` WHERE name = ? LIMIT 1");
+		$pdo = Database::pdo();
+		$stmt = $pdo->prepare("SELECT id FROM `{$table}` WHERE name = ? LIMIT 1");
 		$stmt->execute([$name]);
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
-		return $row ? (int)$row['id'] : null;
+		if ($row) {
+			return (int) $row['id'];
+		}
+
+		$stmt = $pdo->prepare("SELECT id FROM `{$table}` WHERE LOWER(name) = LOWER(?) LIMIT 1");
+		$stmt->execute([$name]);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		return $row ? (int) $row['id'] : null;
 	}
 
 	private static function ensureTicketStatusRow(string $name, string $slug, string $color, bool $isFinal): void

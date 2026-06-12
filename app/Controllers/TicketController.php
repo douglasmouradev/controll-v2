@@ -504,8 +504,9 @@ final class TicketController extends Controller
 		$this->requireAuth(['support', 'admin']);
 		$user = Auth::instance()->user();
 		$id = (int) ($_POST['id'] ?? 0);
-		$status = (string) ($_POST['status'] ?? '');
-		if (!$id || !in_array($status, Ticket::allowedStatuses(), true)) {
+		$status = Ticket::normalizeStatusName((string) ($_POST['status'] ?? ''));
+		$allowedStatuses = ['Aberto', 'Em Andamento', 'Agendado', 'Fechado'];
+		if (!$id || !in_array($status, $allowedStatuses, true)) {
 			$this->json(['success' => false, 'message' => 'Parâmetros inválidos'], 422);
 			return;
 		}

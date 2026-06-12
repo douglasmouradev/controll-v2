@@ -490,15 +490,50 @@ document.addEventListener('DOMContentLoaded', function() {
 		const modal = document.getElementById('ticket-modal');
 		const modalBody = document.getElementById('ticket-modal-body');
 
-			document.querySelectorAll('.btn-view').forEach(btn => {
-			btn.addEventListener('click', async (e) => {
-				const tr = e.target.closest('tr');
-				const id = tr.dataset.id;
-				const res = await fetch('/tickets/view?id=' + id);
-				const data = await res.json();
-				if (!data.success) { showToast('Erro ao carregar chamado'); return; }
-				const t = data.ticket;
-				modalBody.innerHTML = ticketDetailHtml(t);
+		if (modal && !modal.dataset.statusHandlerBound) {
+			modal.dataset.statusHandlerBound = '1';
+			modal.addEventListener('click', async (e) => {
+				const statusBtn = e.target.closest('.status-btn');
+				if (!statusBtn) return;
+				const ticketId = modal.dataset.ticketId;
+				if (!ticketId) return;
+				const status = statusBtn.dataset.status || '';
+				const fd = new FormData();
+				fd.set('id', ticketId);
+				fd.set('status', status);
+				try {
+					const r2 = await fetch('/tickets/status', {
+						method: 'POST',
+						body: fd,
+						headers: { 'X-Requested-With': 'XMLHttpRequest' },
+					});
+					const j2 = await r2.json();
+					if (j2.success) {
+						const displayStatus = status;
+						const statusCell = document.querySelector(`tr[data-id="${ticketId}"] .status-cell`);
+						if (statusCell) statusCell.innerHTML = statusBadgeHtml(displayStatus);
+						if (typeof refreshDashboardAfterMutation === 'function') {
+							refreshDashboardAfterMutation();
+						}
+						showToast(j2.message || 'Status atualizado', 'success');
+					} else {
+						showToast(j2.message || 'Falha ao atualizar status', 'error');
+					}
+				} catch (error) {
+					console.error('Erro ao atualizar status:', error);
+					showToast('Erro ao conectar com o servidor', 'error');
+				}
+			});
+		}
+
+		async function openTicketDetailModal(id) {
+			if (!modal || !modalBody || !id) return;
+			const res = await fetch('/tickets/view?id=' + id);
+			const data = await res.json();
+			if (!data.success) { showToast('Erro ao carregar chamado'); return; }
+			const t = data.ticket;
+			modal.dataset.ticketId = String(id);
+			modalBody.innerHTML = ticketDetailHtml(t);
 
 				// Preencher campos de dados do técnico (se existirem no DOM)
 				const techNameDetail = document.getElementById('technician-name-detail');
@@ -515,23 +550,6 @@ document.addEventListener('DOMContentLoaded', function() {
 				modal.showModal();
 				// Carregar anexos (inclui anexos enviados na criação do chamado)
 				loadAttachments(id);
-				modal.querySelectorAll('.status-btn').forEach(b => {
-					b.onclick = async () => {
-						const status = b.dataset.status;
-						const fd = new FormData();
-						fd.set('id', id);
-						fd.set('status', status);
-						const r2 = await fetch('/tickets/status', { method: 'POST', body: fd });
-						const j2 = await r2.json();
-						if (j2.success) {
-							const statusCell = document.querySelector(`tr[data-id="${id}"] .status-cell`);
-							if (statusCell) statusCell.innerHTML = statusBadgeHtml(status);
-							showToast('Status atualizado', 'success');
-						} else {
-							showToast('Falha ao atualizar', 'error');
-						}
-					};
-				});
 
 				// Preview de imagens
 				const imageInput = document.getElementById('support-images');
@@ -662,7 +680,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
 				// Carregar anexos existentes
 				loadAttachments(id);
-			});
+		}
+
+		document.getElementById('tickets-tbody')?.addEventListener('click', async (e) => {
+			const viewBtn = e.target.closest('.btn-view');
+			if (!viewBtn) return;
+			const tr = viewBtn.closest('tr');
+			const id = tr?.dataset?.id;
+			if (!id) return;
+			try {
+				await openTicketDetailModal(id);
+			} catch (error) {
+				console.error('Erro ao abrir chamado:', error);
+				showToast('Erro ao carregar chamado');
+			}
 		});
 
 		// Edição de chamado pelo próprio usuário
@@ -806,7 +837,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				if (data.success) {
 					tr.querySelector('.assign-cell').textContent = 'Você';
 					const statusCell = tr.querySelector('.status-cell');
-					if (statusCell) statusCell.innerHTML = statusBadgeHtml('Em andamento');
+					if (statusCell) statusCell.innerHTML = statusBadgeHtml('Em Andamento');
 					showToast('Chamado atribuído', 'success');
 				} else {
 					showToast('Falha ao atribuir', 'error');
