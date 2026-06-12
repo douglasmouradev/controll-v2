@@ -8,9 +8,7 @@ declare(strict_types=1);
  * Uso: php bin/migrate-attachments.php [--dry-run]
  */
 
-require_once __DIR__ . '/../vendor/autoload.php';
-
-define('BASE_PATH', dirname(__DIR__));
+require_once __DIR__ . '/bootstrap.php';
 
 use App\Services\Database;
 use App\Services\TicketAttachmentService;

@@ -2,9 +2,7 @@
 <?php
 declare(strict_types=1);
 
-require_once dirname(__DIR__) . '/vendor/autoload.php';
-
-define('BASE_PATH', dirname(__DIR__));
+require_once __DIR__ . '/bootstrap.php';
 
 $result = \App\Services\EmailQueue::process(
 	(int) ($argv[1] ?? getenv('MAIL_QUEUE_BATCH') ?: 25)
