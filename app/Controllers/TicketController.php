@@ -156,21 +156,30 @@ final class TicketController extends Controller
 				'remaining_daily_credits' => $remainingDailyCredits,
 				'remaining_project_dailies_credits' => $remainingProjectDailiesCredits,
 			]);
-			// Processar anexos enviados na abertura do chamado (attachments[])
-			TicketAttachmentService::handleUpload((int) $id, 'attachments', $user);
+			$attachmentWarning = null;
+			try {
+				TicketAttachmentService::handleUpload((int) $id, 'attachments', $user);
+			} catch (\Throwable $e) {
+				error_log('Erro ao salvar anexos na abertura do chamado #' . $id . ': ' . $e->getMessage());
+				$attachmentWarning = 'Chamado criado, mas alguns anexos não foram salvos.';
+			}
 			try {
 				TicketNotification::notifyTicketOpened((int) $id, $data, $user);
 				InAppNotifier::ticketOpened((int) $id, $data, $user);
 			} catch (\Throwable $e) {
 				error_log('Erro ao notificar abertura de chamado por e-mail: ' . $e->getMessage());
 			}
-			$this->json([
+			$response = [
 				'success' => true,
 				'message' => 'Chamado aberto',
 				'id' => $id,
 				'remaining_ticket_credits' => $remainingTicketCredits,
 				'remaining_daily_credits' => $remainingDailyCredits,
-			]);
+			];
+			if ($attachmentWarning !== null) {
+				$response['attachment_warning'] = $attachmentWarning;
+			}
+			$this->json($response);
 		} catch (\Throwable $e) {
 			error_log('Erro ao criar chamado: ' . $e->getMessage());
 			$this->logTicketCreateDebug('create_unexpected_exception', [
@@ -329,32 +338,42 @@ final class TicketController extends Controller
 				return;
 			}
 
-			if ($hasQtdColumn) {
-				$deltaQtd = max(0, (int) ($data['qtd'] ?? $existingQtd) - $existingQtd);
-				// Sempre que a QTD aumentar, independentemente do papel (inclusive admin),
-				// devemos debitar créditos proporcionais ao aumento.
-				if ($deltaQtd > 0) {
-					$costs = TicketCreditService::calculateCost([
-						'category' => $data['category'],
-						'qtd' => $deltaQtd,
-					]);
-					$debit = TicketCreditService::debitForQtdIncrease($user, $costs, $ticketId, $role);
-					if (!$debit['success']) {
-						$this->json(['success' => false, 'message' => $debit['message'] ?? 'Erro ao debitar créditos'], $debit['code'] ?? 422);
-						return;
+			$pdo = Database::pdo();
+			$pdo->beginTransaction();
+			try {
+				if ($hasQtdColumn) {
+					$deltaQtd = max(0, (int) ($data['qtd'] ?? $existingQtd) - $existingQtd);
+					if ($deltaQtd > 0) {
+						$costs = TicketCreditService::calculateCost([
+							'category' => $data['category'],
+							'qtd' => $deltaQtd,
+						]);
+						$debit = TicketCreditService::debitForQtdIncrease($user, $costs, $ticketId, $role);
+						if (!$debit['success']) {
+							$pdo->rollBack();
+							$this->json(['success' => false, 'message' => $debit['message'] ?? 'Erro ao debitar créditos'], $debit['code'] ?? 422);
+							return;
+						}
 					}
 				}
-			}
-			
-			$ok = Ticket::updateTicket($ticketId, $data);
-			$this->logTicketUpdateDebug('update_persist_result', [
-				'ticket_id' => $ticketId,
-				'user_id' => (int) ($user['id'] ?? 0),
-				'ok' => $ok,
-			]);
-			if (!$ok) {
-				$this->json(['success' => false, 'message' => 'Nenhuma alteração realizada no chamado'], 422);
-				return;
+
+				$ok = Ticket::updateTicket($ticketId, $data);
+				$this->logTicketUpdateDebug('update_persist_result', [
+					'ticket_id' => $ticketId,
+					'user_id' => (int) ($user['id'] ?? 0),
+					'ok' => $ok,
+				]);
+				if (!$ok) {
+					$pdo->rollBack();
+					$this->json(['success' => false, 'message' => 'Nenhuma alteração realizada no chamado'], 422);
+					return;
+				}
+				$pdo->commit();
+			} catch (\Throwable $e) {
+				if ($pdo->inTransaction()) {
+					$pdo->rollBack();
+				}
+				throw $e;
 			}
 			// Processar anexos adicionais enviados na edição (attachments[])
 			TicketAttachmentService::handleUpload($ticketId, 'attachments', $user);

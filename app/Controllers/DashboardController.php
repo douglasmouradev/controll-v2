@@ -74,9 +74,16 @@ final class DashboardController extends Controller
 			$closedPage = $closedPages;
 		}
 
-		// Estatísticas para os cards
+		// Estatísticas para os cards (reutiliza cache do summary)
 		try {
-			$stats = $this->getStats($user);
+			$cacheKey = DashboardCache::statsKey('dashboard:summary', $user);
+			$cached = Cache::get($cacheKey);
+			if (is_array($cached) && isset($cached['stats']) && is_array($cached['stats'])) {
+				$stats = $cached['stats'];
+			} else {
+				$stats = $this->getStats($user);
+				Cache::set($cacheKey, ['success' => true, 'stats' => $stats], 30);
+			}
 		} catch (\Throwable $e) {
 			error_log('Erro ao obter estatísticas: ' . $e->getMessage());
 			$stats = [
@@ -91,11 +98,21 @@ final class DashboardController extends Controller
 			];
 		}
 
-		// Lista de usuários (para admin/suporte)
+		// Lista de usuários (para admin/suporte) — primeira página apenas no SSR
 		$users = [];
+		$usersPagination = ['page' => 1, 'pages' => 1, 'total' => 0, 'per_page' => 50];
 		if (Auth::instance()->isSupport()) {
 			try {
-				$users = User::listAll();
+				$usersPerPage = 50;
+				$usersTotal = User::countAll();
+				$usersPages = max(1, (int) ceil($usersTotal / $usersPerPage));
+				$users = User::listPaginated($usersPerPage, 0);
+				$usersPagination = [
+					'page' => 1,
+					'pages' => $usersPages,
+					'total' => $usersTotal,
+					'per_page' => $usersPerPage,
+				];
 			} catch (\Throwable $e) {
 				error_log('Erro ao listar usuários: ' . $e->getMessage());
 				$users = [];
@@ -113,6 +130,7 @@ final class DashboardController extends Controller
 			'closed_filters' => $closedFilters,
 			'stats' => $stats,
 			'users' => $users,
+			'users_pagination' => $usersPagination,
 			'maintenance_mode' => AuditLock::isMaintenanceEnabled(),
 			'ticket_pagination' => [
 				'page' => $page,
@@ -146,60 +164,7 @@ final class DashboardController extends Controller
 			return;
 		}
 
-		$pdo = Database::pdo();
-		$hasQtd = DatabaseSchema::columnExists($pdo, 'tickets', 'qtd');
-		$hasTicketCategories = DatabaseSchema::tableExists($pdo, 'ticket_categories');
-		$hasCategories = !$hasTicketCategories && DatabaseSchema::tableExists($pdo, 'categories');
-
-		$qtdExpr = $hasQtd
-			? 'CASE WHEN t.qtd IS NULL OR t.qtd = 0 THEN 1 ELSE t.qtd END'
-			: '1';
-
-		$sql = "
-			SELECT DATE(t.created_at) AS dia,
-			       SUM($qtdExpr) AS total
-			FROM tickets t
-		";
-
-		if ($hasTicketCategories) {
-			$sql .= " LEFT JOIN ticket_categories tc ON tc.id = t.category_id";
-		} elseif ($hasCategories) {
-			$sql .= " LEFT JOIN categories c ON c.id = t.category_id";
-		}
-
-		$sql .= " WHERE 1=1";
-
-		// Considerar apenas chamados da categoria Diária (para bater com créditos de Diária)
-		if ($hasTicketCategories) {
-			$sql .= " AND tc.name = 'Diária'";
-		} elseif ($hasCategories) {
-			$sql .= " AND c.name = 'Diária'";
-		} elseif (DatabaseSchema::columnExists($pdo, 'tickets', 'category')) {
-			$sql .= " AND t.category = 'Diária'";
-		}
-
-		$params = [];
-		if (TicketAccess::normalizeRole((string) ($user['role'] ?? '')) === 'user') {
-			$sql .= " AND t.user_id = :user_id";
-			$params[':user_id'] = (int) $user['id'];
-		}
-
-		$sql .= " GROUP BY DATE(t.created_at) ORDER BY dia ASC LIMIT 60";
-
-		$stmt = $pdo->prepare($sql);
-		$stmt->execute($params);
-		$rows = $stmt->fetchAll();
-		$labels = [];
-		$data = [];
-		foreach ($rows as $r) {
-			$labels[] = $r['dia'];
-			$data[] = (int) $r['total'];
-		}
-		$payload = [
-			'success' => true,
-			'labels' => $labels,
-			'data' => $data,
-		];
+		$payload = $this->buildDailyStatsPayload($user);
 		Cache::set($cacheKey, $payload, 45);
 		$this->json($payload);
 	}
@@ -231,40 +196,7 @@ final class DashboardController extends Controller
 			return;
 		}
 
-		$pdo = Database::pdo();
-		
-		// Buscar distribuição de chamados por status
-		$sql = "
-			SELECT ts.name, COUNT(t.id) as total
-			FROM tickets t
-			LEFT JOIN ticket_statuses ts ON t.status_id = ts.id
-			WHERE 1=1
-		";
-		$params = [];
-		if (TicketAccess::normalizeRole((string) ($user['role'] ?? '')) === 'user') {
-			$sql .= " AND t.user_id = :user_id";
-			$params[':user_id'] = (int) $user['id'];
-		}
-		$sql .= " GROUP BY ts.id, ts.name ORDER BY ts.id ASC";
-		
-		$stmt = $pdo->prepare($sql);
-		$stmt->execute($params);
-		$rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-		
-		$labels = [];
-		$data = [];
-		foreach ($rows as $r) {
-			if ($r['name']) {
-				$labels[] = $r['name'];
-				$data[] = (int) $r['total'];
-			}
-		}
-
-		$payload = [
-			'success' => true,
-			'labels' => $labels,
-			'data' => $data,
-		];
+		$payload = $this->buildStatusStatsPayload($user);
 		Cache::set($cacheKey, $payload, 45);
 		$this->json($payload);
 	}
@@ -292,6 +224,13 @@ final class DashboardController extends Controller
 	{
 		$this->requireAuth([]);
 		$user = Auth::instance()->user();
+		$cacheKey = DashboardCache::statsKey('stats:credit_usage', $user);
+		$cached = Cache::get($cacheKey);
+		if (is_array($cached)) {
+			$this->json($cached);
+			return;
+		}
+
 		$pdo = Database::pdo();
 
 		$hasQtd = DatabaseSchema::columnExists($pdo, 'tickets', 'qtd');
@@ -388,7 +327,64 @@ final class DashboardController extends Controller
 			'total_used_dailies' => (int) $spent['daily'] + (int) $spent['project_dailies'],
 		];
 
-		$this->json(['success' => true, 'summary' => $summary]);
+		$payload = ['success' => true, 'summary' => $summary];
+		Cache::set($cacheKey, $payload, 45);
+		$this->json($payload);
+	}
+
+	public function chartsBundle(): void
+	{
+		$this->requireAuth([]);
+		$user = Auth::instance()->user();
+		$cacheKey = DashboardCache::statsKey('dashboard:charts_bundle', $user);
+		$cached = Cache::get($cacheKey);
+		if (is_array($cached)) {
+			$this->json($cached);
+			return;
+		}
+
+		$payload = [
+			'success' => true,
+			'dailies' => $this->buildDailyStatsPayload($user),
+			'status' => $this->buildStatusStatsPayload($user),
+			'daily_destinations' => DashboardStatsService::dailyDestinationStats($user),
+		];
+		Cache::set($cacheKey, $payload, 45);
+		$this->json($payload);
+	}
+
+	public function ticketsOpen(): void
+	{
+		$this->requireAuth([]);
+		$user = Auth::instance()->user();
+		$perPage = 50;
+		$page = max(1, (int) ($_GET['page'] ?? 1));
+		$filters = [
+			'id' => $_GET['id'] ?? null,
+			'status' => $_GET['status'] ?? null,
+			'priority' => $_GET['priority'] ?? null,
+			'user' => $_GET['user'] ?? null,
+			'sigla' => $_GET['sigla'] ?? null,
+			'cidade' => $_GET['cidade'] ?? null,
+			'estado' => $_GET['estado'] ?? null,
+			'limit' => $perPage,
+			'offset' => ($page - 1) * $perPage,
+		];
+		$tickets = Ticket::listForUser($user, $filters);
+		$total = Ticket::countForUser($user, $filters);
+		$pages = max(1, (int) ceil($total / $perPage));
+		$this->json([
+			'success' => true,
+			'tickets' => $tickets,
+			'pagination' => [
+				'page' => min($page, $pages),
+				'pages' => $pages,
+				'total' => $total,
+				'per_page' => $perPage,
+			],
+			'is_support' => Auth::instance()->isSupport(),
+			'current_user_id' => (int) ($user['id'] ?? 0),
+		]);
 	}
 
 	public function inventoryStats(): void
@@ -463,7 +459,8 @@ final class DashboardController extends Controller
 			$this->json(['success' => false, 'message' => $e->getMessage()], 400);
 			return;
 		} catch (\Throwable $e) {
-			$this->json(['success' => false, 'message' => $e->getMessage()], 500);
+			error_log('Erro no upload de inventário: ' . $e->getMessage());
+			$this->json(['success' => false, 'message' => 'Erro ao importar planilha de inventário'], 500);
 			return;
 		}
 
@@ -699,17 +696,25 @@ final class DashboardController extends Controller
 				'success' => false,
 				'message' => 'Arquivo de endereços não encontrado',
 			], 500);
+			return;
+		}
+
+		$mtime = (int) (@filemtime($path) ?: 0);
+		$cacheKey = 'store:addresses:' . $mtime;
+		$cached = Cache::get($cacheKey);
+		if (is_array($cached)) {
+			$this->json($cached);
+			return;
 		}
 
 		$raw = trim((string) file_get_contents($path));
 		if ($raw === '') {
-			$this->json([
-				'success' => true,
-				'data' => [],
-			]);
+			$payload = ['success' => true, 'data' => []];
+			Cache::set($cacheKey, $payload, 3600);
+			$this->json($payload);
+			return;
 		}
 
-		// O arquivo é uma sequência de objetos sem colchetes; adaptar para JSON válido
 		$json = '[' . rtrim($raw, ", \n\r\t") . ']';
 		$data = json_decode($json, true);
 		if (!is_array($data)) {
@@ -717,6 +722,7 @@ final class DashboardController extends Controller
 				'success' => false,
 				'message' => 'Erro ao ler arquivo de endereços',
 			], 500);
+			return;
 		}
 
 		$result = [];
@@ -735,10 +741,103 @@ final class DashboardController extends Controller
 			];
 		}
 
-		$this->json([
+		$payload = ['success' => true, 'data' => $result];
+		Cache::set($cacheKey, $payload, 3600);
+		$this->json($payload);
+	}
+
+	private function buildDailyStatsPayload(array $user): array
+	{
+		$pdo = Database::pdo();
+		$hasQtd = DatabaseSchema::columnExists($pdo, 'tickets', 'qtd');
+		$hasTicketCategories = DatabaseSchema::tableExists($pdo, 'ticket_categories');
+		$hasCategories = !$hasTicketCategories && DatabaseSchema::tableExists($pdo, 'categories');
+
+		$qtdExpr = $hasQtd
+			? 'CASE WHEN t.qtd IS NULL OR t.qtd = 0 THEN 1 ELSE t.qtd END'
+			: '1';
+
+		$sql = "
+			SELECT DATE(t.created_at) AS dia,
+			       SUM($qtdExpr) AS total
+			FROM tickets t
+		";
+
+		if ($hasTicketCategories) {
+			$sql .= ' LEFT JOIN ticket_categories tc ON tc.id = t.category_id';
+		} elseif ($hasCategories) {
+			$sql .= ' LEFT JOIN categories c ON c.id = t.category_id';
+		}
+
+		$sql .= ' WHERE 1=1';
+
+		if ($hasTicketCategories) {
+			$sql .= " AND tc.name = 'Diária'";
+		} elseif ($hasCategories) {
+			$sql .= " AND c.name = 'Diária'";
+		} elseif (DatabaseSchema::columnExists($pdo, 'tickets', 'category')) {
+			$sql .= " AND t.category = 'Diária'";
+		}
+
+		$params = [];
+		if (TicketAccess::normalizeRole((string) ($user['role'] ?? '')) === 'user') {
+			$sql .= ' AND t.user_id = :user_id';
+			$params[':user_id'] = (int) $user['id'];
+		}
+
+		$sql .= ' GROUP BY DATE(t.created_at) ORDER BY dia ASC LIMIT 60';
+
+		$stmt = $pdo->prepare($sql);
+		$stmt->execute($params);
+		$rows = $stmt->fetchAll();
+		$labels = [];
+		$data = [];
+		foreach ($rows as $r) {
+			$labels[] = $r['dia'];
+			$data[] = (int) $r['total'];
+		}
+
+		return [
 			'success' => true,
-			'data' => $result,
-		]);
+			'labels' => $labels,
+			'data' => $data,
+		];
+	}
+
+	private function buildStatusStatsPayload(array $user): array
+	{
+		$pdo = Database::pdo();
+		$sql = '
+			SELECT ts.name, COUNT(t.id) as total
+			FROM tickets t
+			LEFT JOIN ticket_statuses ts ON t.status_id = ts.id
+			WHERE 1=1
+		';
+		$params = [];
+		if (TicketAccess::normalizeRole((string) ($user['role'] ?? '')) === 'user') {
+			$sql .= ' AND t.user_id = :user_id';
+			$params[':user_id'] = (int) $user['id'];
+		}
+		$sql .= ' GROUP BY ts.id, ts.name ORDER BY ts.id ASC';
+
+		$stmt = $pdo->prepare($sql);
+		$stmt->execute($params);
+		$rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+		$labels = [];
+		$data = [];
+		foreach ($rows as $r) {
+			if ($r['name']) {
+				$labels[] = $r['name'];
+				$data[] = (int) $r['total'];
+			}
+		}
+
+		return [
+			'success' => true,
+			'labels' => $labels,
+			'data' => $data,
+		];
 	}
 }
 

@@ -676,12 +676,16 @@ final class Ticket
 		try {
 			// Excluir anexos associados (se a tabela existir)
 			if (self::tableExists('ticket_attachments')) {
-				$stmt = $pdo->prepare('SELECT id FROM ticket_attachments WHERE ticket_id = :id');
+				$stmt = $pdo->prepare('SELECT id, file_path FROM ticket_attachments WHERE ticket_id = :id');
 				$stmt->execute([':id' => $id]);
 				$attachments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 				foreach ($attachments as $att) {
-					TicketAttachment::delete((int) $att['id']);
+					if (!empty($att['file_path'])) {
+						\App\Services\TicketAttachmentService::deleteFilesystem((string) $att['file_path']);
+					}
 				}
+				$stmtDelete = $pdo->prepare('DELETE FROM ticket_attachments WHERE ticket_id = :id');
+				$stmtDelete->execute([':id' => $id]);
 			}
 
 			$stmt = $pdo->prepare('DELETE FROM tickets WHERE id = :id');

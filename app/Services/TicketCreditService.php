@@ -133,7 +133,7 @@ final class TicketCreditService
 				return ['success' => false, 'message' => 'Nenhum usuário encontrado para débito de créditos de ticket', 'code' => 404];
 			}
 			foreach (array_keys($byUser) as $uid) {
-				CreditHistory::record($uid, 'ticket', -$costs['ticket'], $messages['ticket'], $ticketId, $source);
+				CreditHistory::recordOrFail($uid, 'ticket', -$costs['ticket'], $messages['ticket'], $ticketId, $source);
 			}
 			$remainingTicket = $byUser[$userId];
 		}
@@ -144,7 +144,7 @@ final class TicketCreditService
 				return ['success' => false, 'message' => 'Nenhum usuário encontrado para débito de créditos de diária', 'code' => 404];
 			}
 			foreach (array_keys($byUser) as $uid) {
-				CreditHistory::record($uid, 'daily', -$costs['daily'], $messages['daily'], $ticketId, $source);
+				CreditHistory::recordOrFail($uid, 'daily', -$costs['daily'], $messages['daily'], $ticketId, $source);
 			}
 			$remainingDaily = $byUser[$userId];
 		}
@@ -155,7 +155,7 @@ final class TicketCreditService
 				return ['success' => false, 'message' => 'Nenhum usuário encontrado para débito de créditos de diárias projeto', 'code' => 404];
 			}
 			foreach (array_keys($byUser) as $uid) {
-				CreditHistory::record($uid, 'project_dailies', -$costs['project_dailies'], $messages['project_dailies'], $ticketId, $source);
+				CreditHistory::recordOrFail($uid, 'project_dailies', -$costs['project_dailies'], $messages['project_dailies'], $ticketId, $source);
 			}
 			$remainingProject = $byUser[$userId];
 		}
@@ -188,7 +188,7 @@ final class TicketCreditService
 			if ($remainingTicket === null) {
 				return ['success' => false, 'message' => 'Usuário não encontrado para débito de créditos de ticket', 'code' => 404];
 			}
-			CreditHistory::record($userId, 'ticket', -$costs['ticket'], $messages['ticket'], $ticketId, $source);
+			CreditHistory::recordOrFail($userId, 'ticket', -$costs['ticket'], $messages['ticket'], $ticketId, $source);
 		}
 
 		if (!empty($costs['daily']) && $costs['daily'] > 0) {
@@ -196,7 +196,7 @@ final class TicketCreditService
 			if ($remainingDaily === null) {
 				return ['success' => false, 'message' => 'Usuário não encontrado para débito de créditos de diária', 'code' => 404];
 			}
-			CreditHistory::record($userId, 'daily', -$costs['daily'], $messages['daily'], $ticketId, $source);
+			CreditHistory::recordOrFail($userId, 'daily', -$costs['daily'], $messages['daily'], $ticketId, $source);
 		}
 
 		if (!empty($costs['project_dailies']) && $costs['project_dailies'] > 0) {
@@ -204,7 +204,7 @@ final class TicketCreditService
 			if ($remainingProject === null) {
 				return ['success' => false, 'message' => 'Usuário não encontrado para débito de créditos de diárias projeto', 'code' => 404];
 			}
-			CreditHistory::record($userId, 'project_dailies', -$costs['project_dailies'], $messages['project_dailies'], $ticketId, $source);
+			CreditHistory::recordOrFail($userId, 'project_dailies', -$costs['project_dailies'], $messages['project_dailies'], $ticketId, $source);
 		}
 
 		return [

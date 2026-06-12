@@ -24,7 +24,7 @@ final class InventoryService
 	public static function setGlobalPath(string $path): void
 	{
 		$pointerPath = BASE_PATH . '/storage/uploads/inventory/current_path.txt';
-		@file_put_contents($pointerPath, $path);
+		@file_put_contents($pointerPath, $path, LOCK_EX);
 	}
 
 

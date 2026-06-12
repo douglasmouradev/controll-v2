@@ -260,3 +260,171 @@
 			fn();
 		}, ms);
 	}
+
+	function uiPriorityBadgeClass(priority) {
+		const map = {
+			'Alta': 'badge badge-red',
+			'Média': 'badge badge-yellow',
+			'Media': 'badge badge-yellow',
+			'Baixa': 'badge badge-green',
+		};
+		return map[priority] || 'badge badge-gray';
+	}
+
+	function formatDashboardDate(value) {
+		if (!value) return '-';
+		const raw = String(value).substring(0, 10);
+		const parts = raw.split('-');
+		if (parts.length === 3) {
+			return `${parts[2]}/${parts[1]}/${parts[0]}`;
+		}
+		return raw;
+	}
+
+	function renderOpenTicketRow(t, meta) {
+		const isSupport = !!meta.is_support;
+		const currentUserId = Number(meta.current_user_id || 0);
+		const canEdit = Number(t.user_id || 0) === currentUserId || isSupport;
+		const serviceTime = t.service_time ? String(t.service_time).substring(0, 5) : '';
+		const serviceLabel = t.service_date
+			? `${formatDashboardDate(t.service_date)}${serviceTime ? ' ' + serviceTime : ''}`
+			: '-';
+		let actions = `<button type="button" class="btn-link btn-view">Ver</button>`;
+		if (isSupport) {
+			actions += `<button type="button" class="btn-link ml-2 btn-clone-ticket" data-id="${Number(t.id)}">Clonar</button>`;
+		}
+		if (canEdit) {
+			actions += `<button type="button" class="btn-link ml-2 btn-edit-ticket">Editar</button>`;
+		}
+		if (isSupport) {
+			actions += `<button type="button" class="btn-link ml-2 btn-assign">Atribuir</button>`;
+			actions += `<button type="button" class="btn-link danger btn-delete-ticket ml-2">Excluir</button>`;
+		}
+		return `
+			<tr data-id="${Number(t.id)}">
+				<td class="px-3 py-2">${Number(t.id)}</td>
+				<td class="px-3 py-2">${escapeHtml(t.title || '')}</td>
+				<td class="px-3 py-2">${escapeHtml(String(t.category || ''))}</td>
+				<td class="px-3 py-2">${escapeHtml(t.user_name || '-')}</td>
+				<td class="px-3 py-2">${escapeHtml(String(t.registration || ''))}</td>
+				<td class="px-3 py-2">${escapeHtml(String(t.unit || ''))}</td>
+				<td class="px-3 py-2">${escapeHtml(String(t.address || ''))}</td>
+				<td class="px-3 py-2">${escapeHtml(String(t.address_number || ''))}</td>
+				<td class="px-3 py-2">${escapeHtml(String(t.city || ''))}/${escapeHtml(String(t.uf || ''))}</td>
+				<td class="px-3 py-2 status-cell">${statusBadgeHtml(t.status || '')}</td>
+				<td class="px-3 py-2"><span class="${uiPriorityBadgeClass(t.priority || '')}">${escapeHtml(String(t.priority || ''))}</span></td>
+				<td class="px-3 py-2 assign-cell">${escapeHtml(t.assigned_name || '-')}</td>
+				<td class="px-3 py-2">${formatDashboardDate(t.created_at)}</td>
+				<td class="px-3 py-2">${escapeHtml(serviceLabel)}</td>
+				<td class="px-3 py-2 whitespace-nowrap">${actions}</td>
+			</tr>
+		`;
+	}
+
+	async function refreshOpenTicketsTable() {
+		const tbody = document.getElementById('tickets-tbody');
+		if (!tbody) return;
+		const params = new URLSearchParams(window.location.search);
+		const query = new URLSearchParams();
+		['id', 'status', 'priority', 'user', 'sigla', 'cidade', 'estado', 'page'].forEach((key) => {
+			if (params.has(key) && params.get(key)) {
+				query.set(key, params.get(key));
+			}
+		});
+		try {
+			const res = await fetch('/dashboard/tickets-open?' + query.toString(), {
+				headers: { 'X-Requested-With': 'XMLHttpRequest' },
+			});
+			const data = await res.json();
+			if (!data.success) return;
+			const tickets = Array.isArray(data.tickets) ? data.tickets : [];
+			if (tickets.length === 0) {
+				tbody.innerHTML = '<tr><td colspan="15" class="empty-state">Nenhum chamado encontrado.</td></tr>';
+				return;
+			}
+			const meta = {
+				is_support: !!data.is_support,
+				current_user_id: data.current_user_id,
+			};
+			tbody.innerHTML = tickets.map((t) => renderOpenTicketRow(t, meta)).join('');
+		} catch (error) {
+			console.error('Erro ao atualizar tabela de chamados:', error);
+		}
+	}
+
+	function renderUserRow(u, options) {
+		const isAdmin = !!options.isAdmin;
+		const currentUserId = Number(options.currentUserId || 0);
+		const createdAt = u.created_at ? formatDashboardDate(String(u.created_at).replace(' ', 'T')) : '-';
+		let actions = '<button type="button" class="btn-link btn-edit-user">Editar</button>';
+		if (isAdmin && Number(u.id) !== currentUserId) {
+			actions += '<button type="button" class="btn-link danger btn-delete-user ml-2">Excluir</button>';
+		}
+		if (isAdmin) {
+			actions += `<button type="button" class="btn-link muted btn-view-credit-history ml-2" data-user-id="${Number(u.id)}" data-user-name="${escapeHtml(u.name || '')}">Histórico</button>`;
+		}
+		return `
+			<tr data-id="${Number(u.id)}">
+				<td>${Number(u.id)}</td>
+				<td class="font-medium text-slate-800">${escapeHtml(u.name || '')}</td>
+				<td>${escapeHtml(u.email || '')}</td>
+				<td><span class="badge badge-gray">${escapeHtml(u.role || '')}</span></td>
+				<td class="hide-mobile credits-ticket-cell">${Number(u.credits || 0)}</td>
+				<td class="hide-mobile credits-daily-cell">${Number(u.daily_credits || 0)}</td>
+				<td class="hide-mobile credits-project-dailies-cell">${Number(u.project_dailies_credits || 0)}</td>
+				<td>${escapeHtml(createdAt)}</td>
+				<td class="whitespace-nowrap">${actions}</td>
+			</tr>
+		`;
+	}
+
+	async function refreshUsersTable(page) {
+		const tbody = document.getElementById('users-tbody');
+		if (!tbody) return;
+		const targetPage = page || Number(document.getElementById('users-tbody')?.dataset.page || 1);
+		try {
+			const res = await fetch('/users?page=' + targetPage + '&per_page=50', {
+				headers: { 'X-Requested-With': 'XMLHttpRequest' },
+			});
+			const data = await res.json();
+			if (!data.success) return;
+			const users = Array.isArray(data.users) ? data.users : [];
+			const tab = document.getElementById('tab-usuarios');
+			const isAdmin = tab?.dataset.isAdmin === '1';
+			const currentUserId = Number(tab?.dataset.currentUserId || 0);
+			if (users.length === 0) {
+				tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum usuário encontrado.</td></tr>';
+			} else {
+				tbody.innerHTML = users.map((u) => renderUserRow(u, { isAdmin, currentUserId })).join('');
+			}
+			tbody.dataset.page = String(data.pagination?.page || targetPage);
+			const paginationEl = document.getElementById('users-pagination');
+			if (paginationEl && data.pagination) {
+				const p = data.pagination;
+				paginationEl.innerHTML = `
+					<p>Página <strong>${p.page}</strong> de <strong>${p.pages}</strong> — ${p.total} usuário(s)</p>
+					<div class="flex items-center gap-2">
+						<button type="button" class="btn btn-secondary btn-sm" data-users-page="${Math.max(1, p.page - 1)}" ${p.page <= 1 ? 'disabled' : ''}>Anterior</button>
+						<button type="button" class="btn btn-secondary btn-sm" data-users-page="${Math.min(p.pages, p.page + 1)}" ${p.page >= p.pages ? 'disabled' : ''}>Próxima</button>
+					</div>
+				`;
+			}
+		} catch (error) {
+			console.error('Erro ao atualizar tabela de usuários:', error);
+		}
+	}
+
+	async function refreshDashboardAfterMutation() {
+		const tasks = [];
+		if (typeof loadDashboardChartsBundle === 'function') {
+			tasks.push(loadDashboardChartsBundle());
+		}
+		if (typeof loadCreditSummaries === 'function') {
+			tasks.push(loadCreditSummaries());
+		}
+		if (typeof loadCreditPieCharts === 'function') {
+			tasks.push(loadCreditPieCharts());
+		}
+		tasks.push(refreshOpenTicketsTable());
+		await Promise.allSettled(tasks);
+	}

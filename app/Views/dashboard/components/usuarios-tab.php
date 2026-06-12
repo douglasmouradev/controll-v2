@@ -4,7 +4,7 @@
 $users = $users ?? [];
 require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 ?>
-<div id="tab-usuarios" class="tab-content hidden">
+<div id="tab-usuarios" class="tab-content hidden" data-is-admin="<?php echo $user['role'] === 'admin' ? '1' : '0'; ?>" data-current-user-id="<?php echo (int) $user['id']; ?>">
 	<div class="ui-card ui-card-body">
 		<div class="page-header !mb-5 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
 			<div>
@@ -41,7 +41,7 @@ require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 						<th>Ações</th>
 					</tr>
 				</thead>
-				<tbody id="users-tbody">
+				<tbody id="users-tbody" data-page="1">
 					<?php if (empty($users)): ?>
 						<tr>
 							<td colspan="9" class="empty-state">Nenhum usuário encontrado.</td>
@@ -75,6 +75,22 @@ require_once BASE_PATH . '/app/Views/components/ui-helpers.php';
 					<?php endif; ?>
 				</tbody>
 			</table>
+		</div>
+		<?php
+		$usersPagination = $users_pagination ?? ['page' => 1, 'pages' => 1, 'total' => 0, 'per_page' => 50];
+		?>
+		<div id="users-pagination" class="flex flex-wrap items-center justify-between gap-3 mt-4 text-sm text-slate-600">
+			<p>
+				Página <strong><?php echo (int) $usersPagination['page']; ?></strong>
+				de <strong><?php echo (int) $usersPagination['pages']; ?></strong>
+				— <?php echo (int) $usersPagination['total']; ?> usuário(s)
+			</p>
+			<?php if (($usersPagination['pages'] ?? 1) > 1): ?>
+				<div class="flex items-center gap-2">
+					<button type="button" class="btn btn-secondary btn-sm" data-users-page="<?php echo max(1, (int) $usersPagination['page'] - 1); ?>" <?php echo (int) $usersPagination['page'] <= 1 ? 'disabled' : ''; ?>>Anterior</button>
+					<button type="button" class="btn btn-secondary btn-sm" data-users-page="<?php echo min((int) $usersPagination['pages'], (int) $usersPagination['page'] + 1); ?>" <?php echo (int) $usersPagination['page'] >= (int) $usersPagination['pages'] ? 'disabled' : ''; ?>>Próxima</button>
+				</div>
+			<?php endif; ?>
 		</div>
 	</div>
 </div>

@@ -63,7 +63,7 @@
 				.then(data => {
 					if (data.success) {
 						showToast(data.message || 'Chamado clonado', 'success');
-						setTimeout(() => location.reload(), 500);
+						refreshDashboardAfterMutation();
 					} else {
 						showToast(data.message || 'Erro ao clonar', 'error');
 					}
@@ -178,18 +178,14 @@ document.addEventListener('DOMContentLoaded', function() {
 			});
 		}
 
-		// Inicializar gráficos
-		if (document.getElementById('dailies-chart')) {
-			loadDailies();
-			startVisibilityAwareInterval(loadDailies, 10000);
-		}
-		if (document.getElementById('status-chart')) {
-			loadStatusChart();
-			startVisibilityAwareInterval(loadStatusChart, 10000);
-		}
-		if (document.getElementById('daily-destination-chart')) {
-			loadDailyDestinationChart();
-			startVisibilityAwareInterval(loadDailyDestinationChart, 15000);
+		// Inicializar gráficos (um único poll agregado)
+		if (
+			document.getElementById('dailies-chart') ||
+			document.getElementById('status-chart') ||
+			document.getElementById('daily-destination-chart')
+		) {
+			loadDashboardChartsBundle();
+			startVisibilityAwareInterval(loadDashboardChartsBundle, 30000);
 		}
 		if (document.getElementById('purchased-dailies-table-body')) {
 			loadPurchasedDailiesData().catch((error) => {
@@ -358,6 +354,9 @@ document.addEventListener('DOMContentLoaded', function() {
 					}
 					if (data && data.success) {
 						showToast(isEdit ? 'Chamado atualizado' : 'Chamado aberto', 'success');
+						if (data.attachment_warning && typeof showToast === 'function') {
+							showToast(data.attachment_warning, 'error');
+						}
 						form.reset();
 						if (ticketIdInput) {
 							ticketIdInput.value = '';
@@ -370,7 +369,7 @@ document.addEventListener('DOMContentLoaded', function() {
 							submitBtn.disabled = false;
 							submitBtn.textContent = 'Abrir chamado';
 						}
-						setTimeout(() => location.reload(), 500);
+						refreshDashboardAfterMutation();
 					} else {
 						const msg = data && data.message ? data.message : `Erro ao ${isEdit ? 'atualizar' : 'abrir'} chamado${res.ok ? '' : ` (HTTP ${res.status})`}`;
 						showToast(msg, 'error');

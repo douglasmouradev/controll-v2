@@ -80,7 +80,7 @@
 					modalUsuario.close();
 					userForm.reset();
 					editingUserId = null;
-					setTimeout(() => location.reload(), 500);
+					refreshUsersTable();
 				} else {
 					showToast(data.message || 'Erro ao salvar usuário');
 					if (submitBtn) {
@@ -98,14 +98,14 @@
 			}
 		});
 
-		// Botão Editar
-		document.querySelectorAll('.btn-edit-user').forEach(btn => {
-			btn.addEventListener('click', async (e) => {
-				const tr = e.target.closest('tr');
-				const id = tr.dataset.id;
+		document.getElementById('users-tbody')?.addEventListener('click', async (e) => {
+			const editBtn = e.target.closest('.btn-edit-user');
+			if (editBtn) {
+				const tr = editBtn.closest('tr');
+				const id = tr?.dataset?.id;
+				if (!id) return;
 				const res = await fetch('/users?id=' + id);
 				const data = await res.json();
-				
 				if (data.success && data.users && data.users.length > 0) {
 					const u = data.users[0];
 					editingUserId = id;
@@ -121,42 +121,42 @@
 				} else {
 					showToast('Erro ao carregar usuário');
 				}
-			});
+				return;
+			}
+
+			const deleteBtn = e.target.closest('.btn-delete-user');
+			if (!deleteBtn) return;
+			const tr = deleteBtn.closest('tr');
+			const id = tr?.dataset?.id;
+			const name = tr?.querySelector('td:nth-child(2)')?.textContent || '';
+			if (!id || !confirm(`Tem certeza que deseja excluir o usuário "${name}"?`)) {
+				return;
+			}
+			const formData = new FormData();
+			formData.set('id', id);
+			try {
+				const res = await fetch('/users/delete', {
+					method: 'POST',
+					body: formData,
+					headers: { 'X-Requested-With': 'XMLHttpRequest' },
+				});
+				const data = await res.json();
+				if (data.success) {
+					showToast('Usuário excluído com sucesso', 'success');
+					refreshUsersTable();
+				} else {
+					showToast(data.message || 'Erro ao excluir usuário');
+				}
+			} catch (error) {
+				console.error('Erro:', error);
+				showToast('Erro ao conectar com o servidor');
+			}
 		});
 
-		// Botão Excluir
-		document.querySelectorAll('.btn-delete-user').forEach(btn => {
-			btn.addEventListener('click', async (e) => {
-				const tr = e.target.closest('tr');
-				const id = tr.dataset.id;
-				const name = tr.querySelector('td:nth-child(2)').textContent;
-				
-				if (!confirm(`Tem certeza que deseja excluir o usuário "${name}"?`)) {
-					return;
-				}
-
-				const formData = new FormData();
-				formData.set('id', id);
-				
-				try {
-					const res = await fetch('/users/delete', {
-						method: 'POST',
-						body: formData,
-						headers: { 'X-Requested-With': 'XMLHttpRequest' }
-					});
-					const data = await res.json();
-					
-					if (data.success) {
-						showToast('Usuário excluído com sucesso', 'success');
-						setTimeout(() => location.reload(), 500);
-					} else {
-						showToast(data.message || 'Erro ao excluir usuário');
-					}
-				} catch (error) {
-					console.error('Erro:', error);
-					showToast('Erro ao conectar com o servidor');
-				}
-			});
+		document.getElementById('users-pagination')?.addEventListener('click', (e) => {
+			const button = e.target.closest('[data-users-page]');
+			if (!button || button.disabled) return;
+			refreshUsersTable(Number(button.dataset.usersPage || 1));
 		});
 
 		function updateCreditsPreview() {
@@ -318,7 +318,7 @@
 						modalCredits.close();
 						// Como os créditos agora são globais para todos os usuários do tipo "usuario",
 						// recarregamos a página para atualizar todas as linhas da tabela.
-						setTimeout(() => location.reload(), 400);
+						refreshUsersTable();
 					} else {
 						if (typeof showToast === 'function') {
 							showToast(data.message || 'Erro ao ajustar créditos');

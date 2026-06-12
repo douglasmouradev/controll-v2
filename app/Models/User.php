@@ -60,100 +60,95 @@ final class User
 
 	public static function listAll(): array
 	{
-		$sql = 'SELECT id, name, email, user_type as role, username, active, credits, daily_credits, project_dailies_credits, created_at FROM users ORDER BY created_at DESC';
-		$stmt = Database::pdo()->query($sql);
+		return self::listPaginated(10000, 0);
+	}
+
+	public static function listPaginated(int $limit = 50, int $offset = 0): array
+	{
+		$limit = max(1, min(200, $limit));
+		$offset = max(0, $offset);
+		$sql = 'SELECT id, name, email, user_type as role, username, active, credits, daily_credits, project_dailies_credits, created_at
+		        FROM users ORDER BY created_at DESC LIMIT :limit OFFSET :offset';
+		$stmt = Database::pdo()->prepare($sql);
+		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+		$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+		$stmt->execute();
 		$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 		return $result ?: [];
+	}
+
+	public static function countAll(): int
+	{
+		$row = Database::pdo()->query('SELECT COUNT(*) AS cnt FROM users')->fetch(PDO::FETCH_ASSOC);
+
+		return $row ? (int) $row['cnt'] : 0;
 	}
 
 	public static function adjustCredits(int $id, int $delta): ?int
 	{
-		$pdo = Database::pdo();
-		$pdo->beginTransaction();
-		try {
+		return self::runInTransaction(function () use ($id, $delta) {
+			$pdo = Database::pdo();
 			$stmt = $pdo->prepare('SELECT credits FROM users WHERE id = :id FOR UPDATE');
 			$stmt->execute([':id' => $id]);
 			$row = $stmt->fetch(PDO::FETCH_ASSOC);
 			if (!$row) {
-				$pdo->rollBack();
 				return null;
 			}
 			$current = (int) $row['credits'];
 			$new = $current + $delta;
 			if ($new < 0) {
-				$pdo->rollBack();
 				throw new \RuntimeException('Saldo de créditos insuficiente');
 			}
 			$stmt = $pdo->prepare('UPDATE users SET credits = :credits WHERE id = :id');
 			$stmt->execute([':credits' => $new, ':id' => $id]);
-			$pdo->commit();
+
 			return $new;
-		} catch (\Throwable $e) {
-			if ($pdo->inTransaction()) {
-				$pdo->rollBack();
-			}
-			throw $e;
-		}
+		});
 	}
 
 	public static function adjustDailyCredits(int $id, int $delta): ?int
 	{
-		$pdo = Database::pdo();
-		$pdo->beginTransaction();
-		try {
+		return self::runInTransaction(function () use ($id, $delta) {
+			$pdo = Database::pdo();
 			$stmt = $pdo->prepare('SELECT daily_credits FROM users WHERE id = :id FOR UPDATE');
 			$stmt->execute([':id' => $id]);
 			$row = $stmt->fetch(PDO::FETCH_ASSOC);
 			if (!$row) {
-				$pdo->rollBack();
 				return null;
 			}
 			$current = (int) $row['daily_credits'];
 			$new = $current + $delta;
 			if ($new < 0) {
-				$pdo->rollBack();
 				throw new \RuntimeException('Saldo de créditos insuficiente');
 			}
 			$stmt = $pdo->prepare('UPDATE users SET daily_credits = :credits WHERE id = :id');
 			$stmt->execute([':credits' => $new, ':id' => $id]);
-			$pdo->commit();
+
 			return $new;
-		} catch (\Throwable $e) {
-			if ($pdo->inTransaction()) {
-				$pdo->rollBack();
-			}
-			throw $e;
-		}
+		});
 	}
 
 	public static function adjustProjectDailiesCredits(int $id, int $delta): ?int
 	{
-		$pdo = Database::pdo();
-		$pdo->beginTransaction();
-		try {
+		return self::runInTransaction(function () use ($id, $delta) {
+			$pdo = Database::pdo();
 			$stmt = $pdo->prepare('SELECT project_dailies_credits FROM users WHERE id = :id FOR UPDATE');
 			$stmt->execute([':id' => $id]);
 			$row = $stmt->fetch(PDO::FETCH_ASSOC);
 			if (!$row) {
-				$pdo->rollBack();
 				return null;
 			}
 			$current = (int) $row['project_dailies_credits'];
 			$new = $current + $delta;
 			if ($new < 0) {
-				$pdo->rollBack();
 				throw new \RuntimeException('Saldo de créditos insuficiente');
 			}
 			$stmt = $pdo->prepare('UPDATE users SET project_dailies_credits = :credits WHERE id = :id');
 			$stmt->execute([':credits' => $new, ':id' => $id]);
-			$pdo->commit();
+
 			return $new;
-		} catch (\Throwable $e) {
-			if ($pdo->inTransaction()) {
-				$pdo->rollBack();
-			}
-			throw $e;
-		}
+		});
 	}
 
 	/**
@@ -232,17 +227,17 @@ final class User
 	 */
 	public static function adjustCreditsForRoles(array $userTypes, int $delta): array
 	{
-		$result = [];
-		$userTypes = array_values(array_unique($userTypes));
-		foreach ($userTypes as $type) {
-			$byType = self::adjustCreditsForUserType($type, $delta);
-			if (!empty($byType)) {
+		return self::runInTransaction(function () use ($userTypes, $delta) {
+			$result = [];
+			foreach (array_values(array_unique($userTypes)) as $type) {
+				$byType = self::adjustCreditsForUserTypeInternal($type, $delta, false);
 				foreach ($byType as $userId => $credits) {
 					$result[$userId] = $credits;
 				}
 			}
-		}
-		return $result;
+
+			return $result;
+		});
 	}
 
 	/**
@@ -251,17 +246,17 @@ final class User
 	 */
 	public static function adjustCreditsForRolesAllowNegative(array $userTypes, int $delta): array
 	{
-		$result = [];
-		$userTypes = array_values(array_unique($userTypes));
-		foreach ($userTypes as $type) {
-			$byType = self::adjustCreditsForUserTypeAllowNegative($type, $delta);
-			if (!empty($byType)) {
+		return self::runInTransaction(function () use ($userTypes, $delta) {
+			$result = [];
+			foreach (array_values(array_unique($userTypes)) as $type) {
+				$byType = self::adjustCreditsForUserTypeInternal($type, $delta, true);
 				foreach ($byType as $userId => $credits) {
 					$result[$userId] = $credits;
 				}
 			}
-		}
-		return $result;
+
+			return $result;
+		});
 	}
 
 	/**
@@ -270,17 +265,17 @@ final class User
 	 */
 	public static function adjustDailyCreditsForRoles(array $userTypes, int $delta): array
 	{
-		$result = [];
-		$userTypes = array_values(array_unique($userTypes));
-		foreach ($userTypes as $type) {
-			$byType = self::adjustDailyCreditsForUserType($type, $delta);
-			if (!empty($byType)) {
+		return self::runInTransaction(function () use ($userTypes, $delta) {
+			$result = [];
+			foreach (array_values(array_unique($userTypes)) as $type) {
+				$byType = self::adjustDailyCreditsForUserTypeInternal($type, $delta);
 				foreach ($byType as $userId => $credits) {
 					$result[$userId] = $credits;
 				}
 			}
-		}
-		return $result;
+
+			return $result;
+		});
 	}
 
 	/**
@@ -289,17 +284,17 @@ final class User
 	 */
 	public static function adjustProjectDailiesCreditsForRoles(array $userTypes, int $delta): array
 	{
-		$result = [];
-		$userTypes = array_values(array_unique($userTypes));
-		foreach ($userTypes as $type) {
-			$byType = self::adjustProjectDailiesCreditsForUserType($type, $delta);
-			if (!empty($byType)) {
+		return self::runInTransaction(function () use ($userTypes, $delta) {
+			$result = [];
+			foreach (array_values(array_unique($userTypes)) as $type) {
+				$byType = self::adjustProjectDailiesCreditsForUserTypeInternal($type, $delta);
 				foreach ($byType as $userId => $credits) {
 					$result[$userId] = $credits;
 				}
 			}
-		}
-		return $result;
+
+			return $result;
+		});
 	}
 
 	/**
@@ -308,44 +303,7 @@ final class User
 	 */
 	public static function adjustDailyCreditsForUserType(string $userType, int $delta): array
 	{
-		$pdo = Database::pdo();
-		$pdo->beginTransaction();
-		try {
-			$stmt = $pdo->prepare('SELECT id, daily_credits FROM users WHERE user_type = :user_type AND active = 1 FOR UPDATE');
-			$stmt->execute([':user_type' => $userType]);
-			$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-			if (!$rows) {
-				$pdo->rollBack();
-				return [];
-			}
-
-			$newById = [];
-			foreach ($rows as $row) {
-				$current = (int) $row['daily_credits'];
-				$new = $current + $delta;
-				if ($new < 0) {
-					$pdo->rollBack();
-					throw new \RuntimeException('Saldo de créditos insuficiente');
-				}
-				$newById[(int) $row['id']] = $new;
-			}
-
-			$stmtUpdate = $pdo->prepare('UPDATE users SET daily_credits = :credits WHERE id = :id');
-			foreach ($newById as $userId => $newCredits) {
-				$stmtUpdate->execute([
-					':credits' => $newCredits,
-					':id' => $userId,
-				]);
-			}
-
-			$pdo->commit();
-			return $newById;
-		} catch (\Throwable $e) {
-			if ($pdo->inTransaction()) {
-				$pdo->rollBack();
-			}
-			throw $e;
-		}
+		return self::runInTransaction(fn () => self::adjustDailyCreditsForUserTypeInternal($userType, $delta));
 	}
 
 	/**
@@ -354,44 +312,69 @@ final class User
 	 */
 	public static function adjustProjectDailiesCreditsForUserType(string $userType, int $delta): array
 	{
+		return self::runInTransaction(fn () => self::adjustProjectDailiesCreditsForUserTypeInternal($userType, $delta));
+	}
+
+	private static function adjustDailyCreditsForUserTypeInternal(string $userType, int $delta): array
+	{
 		$pdo = Database::pdo();
-		$pdo->beginTransaction();
-		try {
-			$stmt = $pdo->prepare('SELECT id, project_dailies_credits FROM users WHERE user_type = :user_type AND active = 1 FOR UPDATE');
-			$stmt->execute([':user_type' => $userType]);
-			$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-			if (!$rows) {
-				$pdo->rollBack();
-				return [];
-			}
-
-			$newById = [];
-			foreach ($rows as $row) {
-				$current = (int) $row['project_dailies_credits'];
-				$new = $current + $delta;
-				if ($new < 0) {
-					$pdo->rollBack();
-					throw new \RuntimeException('Saldo de créditos insuficiente');
-				}
-				$newById[(int) $row['id']] = $new;
-			}
-
-			$stmtUpdate = $pdo->prepare('UPDATE users SET project_dailies_credits = :credits WHERE id = :id');
-			foreach ($newById as $userId => $newCredits) {
-				$stmtUpdate->execute([
-					':credits' => $newCredits,
-					':id' => $userId,
-				]);
-			}
-
-			$pdo->commit();
-			return $newById;
-		} catch (\Throwable $e) {
-			if ($pdo->inTransaction()) {
-				$pdo->rollBack();
-			}
-			throw $e;
+		$stmt = $pdo->prepare('SELECT id, daily_credits FROM users WHERE user_type = :user_type AND active = 1 FOR UPDATE');
+		$stmt->execute([':user_type' => $userType]);
+		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		if (!$rows) {
+			return [];
 		}
+
+		$newById = [];
+		foreach ($rows as $row) {
+			$current = (int) $row['daily_credits'];
+			$new = $current + $delta;
+			if ($new < 0) {
+				throw new \RuntimeException('Saldo de créditos insuficiente');
+			}
+			$newById[(int) $row['id']] = $new;
+		}
+
+		$stmtUpdate = $pdo->prepare('UPDATE users SET daily_credits = :credits WHERE id = :id');
+		foreach ($newById as $userId => $newCredits) {
+			$stmtUpdate->execute([
+				':credits' => $newCredits,
+				':id' => $userId,
+			]);
+		}
+
+		return $newById;
+	}
+
+	private static function adjustProjectDailiesCreditsForUserTypeInternal(string $userType, int $delta): array
+	{
+		$pdo = Database::pdo();
+		$stmt = $pdo->prepare('SELECT id, project_dailies_credits FROM users WHERE user_type = :user_type AND active = 1 FOR UPDATE');
+		$stmt->execute([':user_type' => $userType]);
+		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		if (!$rows) {
+			return [];
+		}
+
+		$newById = [];
+		foreach ($rows as $row) {
+			$current = (int) $row['project_dailies_credits'];
+			$new = $current + $delta;
+			if ($new < 0) {
+				throw new \RuntimeException('Saldo de créditos insuficiente');
+			}
+			$newById[(int) $row['id']] = $new;
+		}
+
+		$stmtUpdate = $pdo->prepare('UPDATE users SET project_dailies_credits = :credits WHERE id = :id');
+		foreach ($newById as $userId => $newCredits) {
+			$stmtUpdate->execute([
+				':credits' => $newCredits,
+				':id' => $userId,
+			]);
+		}
+
+		return $newById;
 	}
 
 	public static function create(array $data): int
@@ -631,6 +614,29 @@ final class User
 	private static function twoFactorSelectColumns(): string
 	{
 		return self::hasTwoFactorColumns() ? ', two_factor_secret, two_factor_enabled' : '';
+	}
+
+	private static function runInTransaction(callable $callback): mixed
+	{
+		$pdo = Database::pdo();
+		$startedTx = false;
+		if (!$pdo->inTransaction()) {
+			$pdo->beginTransaction();
+			$startedTx = true;
+		}
+		try {
+			$result = $callback();
+			if ($startedTx) {
+				$pdo->commit();
+			}
+
+			return $result;
+		} catch (\Throwable $e) {
+			if ($startedTx && $pdo->inTransaction()) {
+				$pdo->rollBack();
+			}
+			throw $e;
+		}
 	}
 }
 

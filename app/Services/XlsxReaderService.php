@@ -5,8 +5,16 @@ namespace App\Services;
 
 final class XlsxReaderService
 {
+	private const MAX_FILE_BYTES = 15728640;
+	private const MAX_ROWS = 50000;
+
 	public function readRows(string $xlsxPath, ?array $preferredHeaders = null): array
 	{
+		$fileSize = @filesize($xlsxPath);
+		if ($fileSize !== false && $fileSize > self::MAX_FILE_BYTES) {
+			throw new \RuntimeException('Planilha excede o tamanho máximo permitido (15 MB).');
+		}
+
 		if (!class_exists(\ZipArchive::class)) {
 			throw new \RuntimeException('Extensão ZipArchive não está disponível no PHP.');
 		}
@@ -224,6 +232,9 @@ final class XlsxReaderService
 			if (!empty($row)) {
 				ksort($row);
 				$rows[] = $row;
+				if (count($rows) >= self::MAX_ROWS) {
+					break;
+				}
 			}
 		}
 

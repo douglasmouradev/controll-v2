@@ -25,6 +25,8 @@ return [
 		'/dashboard/daily-destinations' => [DashboardController::class, 'dailyDestinationStats'],
 		'/dashboard/status-stats' => [DashboardController::class, 'statusStats'],
 		'/dashboard/credit-usage' => [DashboardController::class, 'creditUsageStats'],
+		'/dashboard/charts-bundle' => [DashboardController::class, 'chartsBundle'],
+		'/dashboard/tickets-open' => [DashboardController::class, 'ticketsOpen'],
 		'/dashboard/inventory-stats' => [DashboardController::class, 'inventoryStats'],
 		'/dashboard/inventory-download' => [DashboardController::class, 'downloadInventoryFile'],
 		'/dashboard/purchased-dailies' => [DashboardController::class, 'purchasedDailiesStats'],

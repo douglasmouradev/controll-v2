@@ -12,11 +12,10 @@ const PURCHASED_DAILIES_PAGE_SIZE = 500;
 let purchasedDailiesRows = [];
 let purchasedDailiesShown = PURCHASED_DAILIES_PAGE_SIZE;
 
-	async function loadDailies() {
+	async function loadDailies(prefetched) {
 		if (!chartLibReady()) return;
 		try {
-			const res = await fetch('/dashboard/dailies');
-			const json = await res.json();
+			const json = prefetched || await (await fetch('/dashboard/dailies')).json();
 			const ctx = document.getElementById('dailies-chart').getContext('2d');
 			
 			let labels = json.labels || [];
@@ -76,10 +75,9 @@ let purchasedDailiesShown = PURCHASED_DAILIES_PAGE_SIZE;
 		}
 	}
 
-	async function loadStatusChart() {
+	async function loadStatusChart(prefetched) {
 		try {
-			const res = await fetch('/dashboard/status-stats');
-			const json = await res.json();
+			const json = prefetched || await (await fetch('/dashboard/status-stats')).json();
 			if (!json.success) throw new Error('Erro ao buscar dados');
 			
 			const ctx = document.getElementById('status-chart').getContext('2d');
@@ -136,13 +134,12 @@ let purchasedDailiesShown = PURCHASED_DAILIES_PAGE_SIZE;
 		}
 	}
 
-	async function loadDailyDestinationChart() {
+	async function loadDailyDestinationChart(prefetched) {
 		try {
 			const canvas = document.getElementById('daily-destination-chart');
 			if (!canvas) return;
 
-			const res = await fetch('/dashboard/daily-destinations');
-			const json = await res.json();
+			const json = prefetched || await (await fetch('/dashboard/daily-destinations')).json();
 
 			let labels = json.labels || [];
 			let dataValues = json.data || [];
@@ -590,5 +587,24 @@ let purchasedDailiesShown = PURCHASED_DAILIES_PAGE_SIZE;
 			creditsProjectPie = renderCreditsPie('credits-project-pie', project, creditsProjectPie);
 		} catch (e) {
 			console.error('Erro ao carregar gráficos de créditos:', e);
+		}
+	}
+
+	async function loadDashboardChartsBundle() {
+		try {
+			const res = await fetch('/dashboard/charts-bundle');
+			const json = await res.json();
+			if (!json.success) return;
+			if (document.getElementById('dailies-chart')) {
+				await loadDailies(json.dailies);
+			}
+			if (document.getElementById('status-chart')) {
+				await loadStatusChart(json.status);
+			}
+			if (document.getElementById('daily-destination-chart')) {
+				await loadDailyDestinationChart(json.daily_destinations);
+			}
+		} catch (e) {
+			console.error('Erro ao carregar bundle de gráficos:', e);
 		}
 	}

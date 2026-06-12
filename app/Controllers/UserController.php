@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\CreditHistory;
 use App\Services\AuditLog;
 use App\Services\Auth;
+use App\Services\DashboardCache;
+use App\Services\Database;
 use App\Services\TicketAccess;
 
 final class UserController extends Controller
@@ -28,8 +30,24 @@ final class UserController extends Controller
 			return;
 		}
 		
-		$users = User::listAll();
-		$this->json(['success' => true, 'users' => $users]);
+		$page = max(1, (int) ($_GET['page'] ?? 1));
+		$perPage = max(10, min(200, (int) ($_GET['per_page'] ?? 50)));
+		$total = User::countAll();
+		$pages = max(1, (int) ceil($total / $perPage));
+		if ($page > $pages) {
+			$page = $pages;
+		}
+		$users = User::listPaginated($perPage, ($page - 1) * $perPage);
+		$this->json([
+			'success' => true,
+			'users' => $users,
+			'pagination' => [
+				'page' => $page,
+				'pages' => $pages,
+				'total' => $total,
+				'per_page' => $perPage,
+			],
+		]);
 	}
 
 	public function create(): void
@@ -160,133 +178,91 @@ final class UserController extends Controller
 		try {
 			$currentUser = Auth::instance()->user();
 			$description = $delta > 0 ? 'Créditos comprados' : 'Créditos ajustados';
+			$createdBy = $currentUser ? (int) $currentUser['id'] : null;
+			$pdo = Database::pdo();
+			$pdo->beginTransaction();
 
-			// Pool global: aplicar ajuste para todos os tipos (user, admin, support) quando id = 0
+			$responseCredits = null;
+			$creditsByUser = [];
+
 			if ($id === 0) {
-				$rolesPool = ['user', 'admin', 'support'];
-				$creditsByUser = [];
-				if ($type === 'daily') {
-					$creditsByUser = User::adjustDailyCreditsForRoles($rolesPool, $delta);
-				} elseif ($type === 'project_dailies') {
-					$creditsByUser = User::adjustProjectDailiesCreditsForRoles($rolesPool, $delta);
-				} else {
-					$creditsByUser = User::adjustCreditsForRoles($rolesPool, $delta);
-				}
-				
+				$creditsByUser = $this->applyCreditsAdjustment(['user', 'admin', 'support'], $type, $delta);
 				if (empty($creditsByUser)) {
+					$pdo->rollBack();
 					$this->json(['success' => false, 'message' => 'Nenhum usuário do tipo usuario encontrado'], 404);
 					return;
 				}
-
-				// Registrar no historico para cada usuario afetado
-				foreach (array_keys($creditsByUser) as $userId) {
-					CreditHistory::record(
-						$userId,
-						$type,
-						$delta,
-						$description,
-						null,
-						'manual',
-						$currentUser ? (int) $currentUser['id'] : null
-					);
-				}
-
-				$this->json([
-					'success' => true,
-					'message' => 'Creditos atualizados para todos os usuarios',
-					'type' => $type,
-					'credits' => reset($creditsByUser),
-				]);
-				return;
-			}
-
-			// Ajuste individual para um usuario especifico
-			if (!$id) {
+				$responseCredits = reset($creditsByUser);
+			} elseif (!$id) {
+				$pdo->rollBack();
 				$this->json(['success' => false, 'message' => 'ID de usuario invalido'], 422);
 				return;
-			}
-
-			$targetUser = User::findById($id);
-			if (!$targetUser) {
-				$this->json(['success' => false, 'message' => 'Usuario nao encontrado'], 404);
-				return;
-			}
-			
-			$targetRole = (string) ($targetUser['role'] ?? 'user');
-
-			// Se for usuario final (user), aplicar o ajuste para TODOS os tipos (user, admin, support)
-			if ($targetRole === 'user') {
-				$rolesPool = ['user', 'admin', 'support'];
-				$creditsByUser = [];
-				if ($type === 'daily') {
-					$creditsByUser = User::adjustDailyCreditsForRoles($rolesPool, $delta);
-				} elseif ($type === 'project_dailies') {
-					$creditsByUser = User::adjustProjectDailiesCreditsForRoles($rolesPool, $delta);
-				} else {
-					$creditsByUser = User::adjustCreditsForRoles($rolesPool, $delta);
-				}
-				
-				if (empty($creditsByUser)) {
-					$this->json(['success' => false, 'message' => 'Nenhum usuario do tipo usuario encontrado para ajuste de creditos'], 404);
+			} else {
+				$targetUser = User::findById($id);
+				if (!$targetUser) {
+					$pdo->rollBack();
+					$this->json(['success' => false, 'message' => 'Usuario nao encontrado'], 404);
 					return;
 				}
 
-				// Registrar no historico para cada usuario afetado
-				foreach (array_keys($creditsByUser) as $userId) {
-					CreditHistory::record(
-						$userId,
-						$type,
-						$delta,
-						$description,
-						null,
-						'manual',
-						$currentUser ? (int) $currentUser['id'] : null
-					);
+				$targetRole = (string) ($targetUser['role'] ?? 'user');
+				if ($targetRole === 'user') {
+					$creditsByUser = $this->applyCreditsAdjustment(['user', 'admin', 'support'], $type, $delta);
+					if (empty($creditsByUser)) {
+						$pdo->rollBack();
+						$this->json(['success' => false, 'message' => 'Nenhum usuario do tipo usuario encontrado para ajuste de creditos'], 404);
+						return;
+					}
+					$responseCredits = $creditsByUser[$id] ?? null;
+				} else {
+					if ($type === 'daily') {
+						$responseCredits = User::adjustDailyCredits($id, $delta);
+					} elseif ($type === 'project_dailies') {
+						$responseCredits = User::adjustProjectDailiesCredits($id, $delta);
+					} else {
+						$responseCredits = User::adjustCredits($id, $delta);
+					}
+					if ($responseCredits === null) {
+						$pdo->rollBack();
+						$this->json(['success' => false, 'message' => 'Usuario nao encontrado'], 404);
+						return;
+					}
+					$creditsByUser = [$id => $responseCredits];
 				}
-
-				$newForTarget = $creditsByUser[$id] ?? null;
-				$this->json([
-					'success' => true,
-					'message' => 'Creditos atualizados para todos os usuarios',
-					'type' => $type,
-					'credits' => $newForTarget,
-				]);
-				return;
 			}
 
-			// Para outros perfis (admin/support), manter ajuste individual
-			if ($type === 'daily') {
-				$new = User::adjustDailyCredits($id, $delta);
-			} elseif ($type === 'project_dailies') {
-				$new = User::adjustProjectDailiesCredits($id, $delta);
-			} else {
-				$new = User::adjustCredits($id, $delta);
-			}
-			
-			if ($new === null) {
-				$this->json(['success' => false, 'message' => 'Usuario nao encontrado'], 404);
-				return;
+			foreach (array_keys($creditsByUser) as $userId) {
+				CreditHistory::recordOrFail(
+					(int) $userId,
+					$type,
+					$delta,
+					$description,
+					null,
+					'manual',
+					$createdBy
+				);
 			}
 
-			CreditHistory::record(
-				$id,
-				$type,
-				$delta,
-				$description,
-				null,
-				'manual',
-				$currentUser ? (int) $currentUser['id'] : null
-			);
+			$pdo->commit();
+			DashboardCache::invalidateStats();
 
 			$this->json([
 				'success' => true,
-				'message' => 'Creditos atualizados',
+				'message' => ($id === 0 || (isset($targetUser) && ($targetUser['role'] ?? '') === 'user'))
+					? 'Creditos atualizados para todos os usuarios'
+					: 'Creditos atualizados',
 				'type' => $type,
-				'credits' => $new,
+				'credits' => $responseCredits,
 			]);
 		} catch (\RuntimeException $e) {
+			if (isset($pdo) && $pdo->inTransaction()) {
+				$pdo->rollBack();
+			}
 			$this->json(['success' => false, 'message' => $e->getMessage()], 422);
 		} catch (\Throwable $e) {
+			if (isset($pdo) && $pdo->inTransaction()) {
+				$pdo->rollBack();
+			}
 			error_log('Erro ao ajustar creditos: ' . $e->getMessage());
 			$this->json(['success' => false, 'message' => 'Erro ao ajustar creditos'], 500);
 		}
@@ -405,8 +381,24 @@ final class UserController extends Controller
 		}
 	}
 
+	/** @return array<int, int> */
+	private function applyCreditsAdjustment(array $rolesPool, string $type, int $delta): array
+	{
+		if ($type === 'daily') {
+			return User::adjustDailyCreditsForRoles($rolesPool, $delta);
+		}
+		if ($type === 'project_dailies') {
+			return User::adjustProjectDailiesCreditsForRoles($rolesPool, $delta);
+		}
+
+		return User::adjustCreditsForRoles($rolesPool, $delta);
+	}
+
 	private function logUserCreateDebug(string $stage, array $data = []): void
 	{
+		if (!defined('APP_DEBUG') || !APP_DEBUG) {
+			return;
+		}
 		try {
 			$logDir = BASE_PATH . '/storage/logs';
 			if (!is_dir($logDir)) {
@@ -455,6 +447,7 @@ final class UserController extends Controller
 			$stmtDel->execute([':type' => $type]);
 
 			$pdo->commit();
+			DashboardCache::invalidateStats();
 			AuditLog::record('credits_reset', $type);
 			$this->json([
 				'success' => true,
@@ -491,6 +484,7 @@ final class UserController extends Controller
 			}
 
 			$pdo->commit();
+			DashboardCache::invalidateStats();
 			$this->json([
 				'success' => true,
 				'message' => $type === '' ? 'Histórico apagado' : ('Histórico apagado para o tipo ' . $type),

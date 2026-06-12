@@ -41,6 +41,20 @@ class CreditHistory
         }
     }
 
+    public static function recordOrFail(
+        int $userId,
+        string $type,
+        int $amount,
+        string $description,
+        ?int $referenceId = null,
+        ?string $referenceType = null,
+        ?int $createdBy = null
+    ): void {
+        if (!self::record($userId, $type, $amount, $description, $referenceId, $referenceType, $createdBy)) {
+            throw new \RuntimeException('Falha ao registrar histórico de créditos');
+        }
+    }
+
     /**
      * Conta usuários por role (user_type)
      */
