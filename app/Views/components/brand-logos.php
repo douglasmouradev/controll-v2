@@ -34,7 +34,7 @@ $wrapperClass = match ($variant) {
 };
 
 $controllSrc = asset_url('/logo-controll-it.png');
-$caSrc = asset_url('/logo-ca.png');
+$caSrc = asset_url('/logo-ca.svg');
 ?>
 <div class="<?php echo htmlspecialchars($wrapperClass, ENT_QUOTES, 'UTF-8'); ?>">
 	<img src="<?php echo htmlspecialchars($controllSrc, ENT_QUOTES, 'UTF-8'); ?>" onerror="this.onerror=null;this.src='<?php echo htmlspecialchars(asset_url('/logo-controll-it.svg'), ENT_QUOTES, 'UTF-8'); ?>';" class="<?php echo htmlspecialchars($controllClass, ENT_QUOTES, 'UTF-8'); ?>" alt="Controll IT" width="152" height="40">
@@ -45,5 +45,5 @@ $caSrc = asset_url('/logo-ca.png');
 			<div class="h-10 w-px bg-slate-200 flex-shrink-0" aria-hidden="true"></div>
 		<?php endif; ?>
 	<?php endif; ?>
-	<img src="<?php echo htmlspecialchars($caSrc, ENT_QUOTES, 'UTF-8'); ?>" onerror="this.onerror=null;this.src='<?php echo htmlspecialchars(asset_url('/logo-ca.svg'), ENT_QUOTES, 'UTF-8'); ?>';" class="<?php echo htmlspecialchars($caClass, ENT_QUOTES, 'UTF-8'); ?>" alt="C&amp;A" width="88" height="40">
+	<img src="<?php echo htmlspecialchars($caSrc, ENT_QUOTES, 'UTF-8'); ?>" class="<?php echo htmlspecialchars($caClass, ENT_QUOTES, 'UTF-8'); ?>" alt="C&amp;A" width="88" height="40">
 </div>
