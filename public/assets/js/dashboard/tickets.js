@@ -509,15 +509,22 @@ document.addEventListener('DOMContentLoaded', function() {
 					});
 					const j2 = await r2.json();
 					if (j2.success) {
-						const displayStatus = status;
+						const displayStatus = j2.status || status;
 						const statusCell = document.querySelector(`tr[data-id="${ticketId}"] .status-cell`);
 						if (statusCell) statusCell.innerHTML = statusBadgeHtml(displayStatus);
+						const noticeMessage = j2.message || `Status alterado para ${displayStatus}`;
+						showTicketStatusNotice(modal, noticeMessage, displayStatus);
+						if (typeof showToast === 'function') {
+							showToast(noticeMessage, 'success');
+						}
 						if (typeof refreshDashboardAfterMutation === 'function') {
 							refreshDashboardAfterMutation();
 						}
-						showToast(j2.message || 'Status atualizado', 'success');
 					} else {
-						showToast(j2.message || 'Falha ao atualizar status', 'error');
+						const errorMsg = j2.message || 'Falha ao atualizar status';
+						if (typeof showToast === 'function') {
+							showToast(errorMsg, 'error');
+						}
 					}
 				} catch (error) {
 					console.error('Erro ao atualizar status:', error);
@@ -533,6 +540,17 @@ document.addEventListener('DOMContentLoaded', function() {
 			if (!data.success) { showToast('Erro ao carregar chamado'); return; }
 			const t = data.ticket;
 			modal.dataset.ticketId = String(id);
+			const statusNotice = document.getElementById('ticket-status-notice');
+			if (statusNotice) {
+				statusNotice.classList.add('hidden');
+				statusNotice.classList.remove('show');
+				statusNotice.innerHTML = '';
+			}
+			modal.querySelectorAll('.status-btn').forEach((btn) => {
+				const isActive = (btn.dataset.status || '') === String(t.status || '');
+				btn.classList.toggle('btn-primary', isActive);
+				btn.classList.toggle('btn-secondary', !isActive);
+			});
 			modalBody.innerHTML = ticketDetailHtml(t);
 
 				// Preencher campos de dados do técnico (se existirem no DOM)

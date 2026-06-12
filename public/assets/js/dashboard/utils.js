@@ -252,6 +252,30 @@
 		}
 	}
 
+	function showTicketStatusNotice(modal, message, status) {
+		if (!modal) return;
+		const notice = document.getElementById('ticket-status-notice');
+		if (!notice) return;
+		notice.innerHTML = `
+			<span class="ticket-status-notice-icon" aria-hidden="true">✓</span>
+			<span>${escapeHtml(message || 'Status alterado')}</span>
+			${status ? statusBadgeHtml(status) : ''}
+		`;
+		notice.classList.remove('hidden');
+		notice.classList.add('show');
+		clearTimeout(notice._hideTimer);
+		notice._hideTimer = setTimeout(() => {
+			notice.classList.remove('show');
+			notice.classList.add('hidden');
+		}, 5000);
+
+		modal.querySelectorAll('.status-btn').forEach((btn) => {
+			const isActive = (btn.dataset.status || '') === String(status || '');
+			btn.classList.toggle('btn-primary', isActive);
+			btn.classList.toggle('btn-secondary', !isActive);
+		});
+	}
+
 	function startVisibilityAwareInterval(fn, ms) {
 		return setInterval(() => {
 			if (document.visibilityState === 'hidden') {

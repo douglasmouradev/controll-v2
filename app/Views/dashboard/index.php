@@ -304,6 +304,7 @@ $access_logs = $access_logs ?? [];
 <dialog id="ticket-modal" class="ui-modal">
 	<div class="ui-modal-header">
 		<h2 class="text-lg font-semibold">Detalhes do chamado</h2>
+		<div id="ticket-status-notice" class="ticket-status-notice hidden" role="status" aria-live="polite"></div>
 	</div>
 	<div class="ui-modal-body space-y-2" id="ticket-modal-body"></div>
 	<?php if (view_is_support_or_admin($user)): ?>

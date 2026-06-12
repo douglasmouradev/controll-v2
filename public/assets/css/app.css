@@ -270,6 +270,41 @@ body.layout-dashboard main { max-width: none; padding: 0; }
 	color: #fff;
 	padding: 1rem 1.5rem;
 	border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+.ticket-status-notice {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	padding: 0.625rem 0.875rem;
+	border-radius: var(--radius);
+	background: rgba(255, 255, 255, 0.95);
+	color: #065f46;
+	border: 1px solid #a7f3d0;
+	font-size: 0.875rem;
+	font-weight: 500;
+	box-shadow: var(--shadow-md);
+	animation: ticketStatusNoticeIn 0.25s ease;
+}
+.ticket-status-notice.hidden { display: none; }
+.ticket-status-notice .ticket-status-notice-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.25rem;
+	height: 1.25rem;
+	border-radius: 9999px;
+	background: #10b981;
+	color: #fff;
+	font-size: 0.75rem;
+	font-weight: 700;
+}
+@keyframes ticketStatusNoticeIn {
+	from { opacity: 0; transform: translateY(-0.35rem); }
+	to { opacity: 1; transform: translateY(0); }
 }
 .ui-modal-body { padding: 1.5rem; background: #fff; }
 .ui-modal-footer {

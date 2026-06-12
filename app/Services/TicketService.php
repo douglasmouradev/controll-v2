@@ -28,7 +28,11 @@ final class TicketService
 			InAppNotifier::ticketStatusChanged($id, $ticket, $status, $actor);
 		}
 
-		return ['success' => true, 'message' => 'Status atualizado'];
+		return [
+			'success' => true,
+			'message' => 'Status do chamado alterado para ' . $status,
+			'status' => $status,
+		];
 	}
 
 	/** @return array{success: bool, message: string} */
