@@ -70,6 +70,16 @@ final class AuthController extends Controller
 			return;
 		}
 
+		$ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+		$rateKey = '2fa:' . $userId . ':' . $ip;
+		if (RateLimiter::tooManyAttempts($rateKey, 8, 15)) {
+			$this->view('auth/two-factor', [
+				'layout' => 'auth',
+				'error' => 'Muitas tentativas. Aguarde 15 minutos e tente novamente.',
+			]);
+			return;
+		}
+
 		$code = trim((string) ($_POST['code'] ?? ''));
 		$user = User::findById($userId);
 		if (!$user || !TwoFactor::isEnabledForUser($user)) {
@@ -79,6 +89,7 @@ final class AuthController extends Controller
 		}
 
 		if ($code === '' || !TwoFactor::verify((string) $user['two_factor_secret'], $code)) {
+			RateLimiter::hit($rateKey, $ip);
 			$this->view('auth/two-factor', [
 				'layout' => 'auth',
 				'error' => 'Código inválido ou expirado.',
@@ -86,6 +97,7 @@ final class AuthController extends Controller
 			return;
 		}
 
+		RateLimiter::clear($rateKey);
 		unset($_SESSION['pending_2fa_user_id']);
 		$this->completeLogin($user);
 	}

@@ -189,47 +189,6 @@ final class ReportController extends Controller
 		fclose($output);
 	}
 
-	private function generateXlsxWithPhpSpreadsheet(array $tickets, string $date): void
-	{
-		$spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-		$sheet = $spreadsheet->getActiveSheet();
-		$sheet->setTitle('Chamados');
-
-		// Cabeçalho
-		$headers = ['ID', 'Título', 'Prioridade', 'Categoria', 'QTD', 'Nome', 'Matrícula', 'Unidade', 'CEP', 'Endereço', 'Cidade/UF', 'Status', 'Data'];
-		$sheet->fromArray([$headers], null, 'A1');
-
-		// Dados
-		$row = 2;
-		foreach ($tickets as $t) {
-			$sheet->fromArray([[
-				$t['id'],
-				$t['title'],
-				$t['priority'] ?? '',
-				$t['category'] ?? '',
-				$t['qtd'] ?? '',
-				$t['name'] ?? '',
-				$t['registration'] ?? '',
-				$t['unit'] ?? '',
-				$t['cep'] ?? '',
-				$t['address'] ?? '',
-				(($t['city'] ?? '') . '/' . ($t['uf'] ?? '')),
-				$t['status'] ?? '',
-				date('d/m/Y H:i', strtotime($t['created_at']))
-			]], null, 'A' . $row);
-			$row++;
-		}
-
-		header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-		header('Content-Disposition: attachment; filename="relatorio-chamados-' . date('Y-m-d') . '.xlsx"');
-		header('Cache-Control: no-cache, no-store, must-revalidate');
-		header('Pragma: no-cache');
-		header('Expires: 0');
-
-		$writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-		$writer->save('php://output');
-	}
-
 	public function csv(): void
 	{
 		$this->requireAuth(['support', 'admin']);

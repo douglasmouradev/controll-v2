@@ -32,12 +32,14 @@ final class HealthController extends Controller
 			$ok = false;
 		}
 
+		$emailQueuePending = null;
 		if (EmailQueue::isAvailable()) {
 			try {
 				$stmt = Database::pdo()->query(
 					"SELECT COUNT(*) FROM email_queue WHERE status = 'pending' AND attempts < 5"
 				);
 				$pending = (int) ($stmt->fetchColumn() ?: 0);
+				$emailQueuePending = $pending;
 				$checks['email_queue'] = $pending > 100 ? 'backlog' : 'ok';
 				if ($pending > 500) {
 					$ok = false;
@@ -69,12 +71,20 @@ final class HealthController extends Controller
 			}
 		}
 
-		$this->json([
+		$payload = [
 			'status' => $ok ? 'ok' : 'degraded',
 			'php' => PHP_VERSION,
 			'time' => date('c'),
 			'checks' => $checks,
 			'pending_migrations' => max(0, $pendingMigrations),
-		], $ok ? 200 : 503);
+		];
+		if ($emailQueuePending !== null) {
+			$payload['email_queue_pending'] = $emailQueuePending;
+			if ($emailQueuePending > 100) {
+				$payload['email_queue_alert'] = 'Backlog elevado na fila de e-mail. Verifique o cron de process-mail-queue.';
+			}
+		}
+
+		$this->json($payload, $ok ? 200 : 503);
 	}
 }

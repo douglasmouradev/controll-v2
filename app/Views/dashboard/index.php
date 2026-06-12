@@ -8,6 +8,7 @@
 /** @var array $closed_pagination */
 /** @var array $access_logs */
 require_once BASE_PATH . '/app/Views/helpers/auth.php';
+require_once BASE_PATH . '/app/Views/helpers/assets.php';
 $users = $users ?? [];
 $ticket_pagination = $ticket_pagination ?? ['page' => 1, 'per_page' => 50, 'total' => 0, 'pages' => 1];
 $closed_pagination = $closed_pagination ?? ['page' => 1, 'per_page' => 50, 'total' => 0, 'pages' => 1];
@@ -332,15 +333,17 @@ $access_logs = $access_logs ?? [];
 
 <!-- Scripts do Sidebar e Abas -->
 <?php include __DIR__ . '/components/sidebar-script.php'; ?>
-<script src="/assets/js/dashboard/utils.js"></script>
-<script src="/assets/js/dashboard/charts.js"></script>
-<script src="/assets/js/dashboard/notifications.js"></script>
-<script src="/assets/js/dashboard/tickets.js"></script>
+<script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/utils.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/charts.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/credits.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/notifications.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/tickets.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/closed-tickets.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <?php if (view_is_staff($user)): ?>
-	<script src="/assets/js/dashboard/security.js"></script>
+	<script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/security.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <?php endif; ?>
 <?php if (view_is_admin($user)): ?>
-	<script src="/assets/js/dashboard/maintenance.js"></script>
+	<script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/maintenance.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <?php endif; ?>
-<script src="/assets/js/dashboard/users.js"></script>
+<script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/users.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 

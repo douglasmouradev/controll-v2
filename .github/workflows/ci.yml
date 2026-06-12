@@ -58,15 +58,15 @@ jobs:
       - name: Run PHPUnit
         run: vendor/bin/phpunit
 
-      - name: Smoke test (login + health)
+      - name: Integration smoke tests
         env:
           DB_HOST: 127.0.0.1
           DB_PORT: 3306
           DB_NAME: helpdesk
           DB_USER: root
           DB_PASS: root
+          APP_TEST_URL: http://127.0.0.1:8000
         run: |
           php -S 127.0.0.1:8000 -t public public/index.php &
           sleep 2
-          curl -sf -o /dev/null http://127.0.0.1:8000/login
-          curl -sf http://127.0.0.1:8000/health | grep -q '"status"'
+          vendor/bin/phpunit --testsuite Integration

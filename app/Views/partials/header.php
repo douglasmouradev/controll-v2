@@ -3,6 +3,10 @@
 
 use App\Services\Csrf;
 
+if (!function_exists('asset_url')) {
+	require_once BASE_PATH . '/app/Views/helpers/assets.php';
+}
+
 $layout = $layout ?? 'default';
 $isDashboard = $layout === 'dashboard';
 $isAuth = $layout === 'auth';
@@ -18,8 +22,8 @@ $bodyClass = $isDashboard ? 'layout-dashboard' : ($isAuth ? 'layout-auth' : '');
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="/assets/css/app.css">
-	<link rel="stylesheet" href="/assets/css/tw.css">
+	<link rel="stylesheet" href="<?php echo htmlspecialchars(asset_url('/assets/css/app.css'), ENT_QUOTES, 'UTF-8'); ?>">
+	<link rel="stylesheet" href="<?php echo htmlspecialchars(asset_url('/assets/css/tw.css'), ENT_QUOTES, 'UTF-8'); ?>">
 	<script>
 	(function () {
 		var meta = document.querySelector('meta[name="csrf-token"]');
