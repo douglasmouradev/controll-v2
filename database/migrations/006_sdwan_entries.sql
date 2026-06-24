@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS sdwan_entries (
+	id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	xpads_previsto INT UNSIGNED NOT NULL DEFAULT 0,
+	quantidade_localizada INT UNSIGNED NOT NULL DEFAULT 0,
+	pdv_numero VARCHAR(60) NOT NULL DEFAULT '',
+	pdv_serie VARCHAR(60) NOT NULL DEFAULT '',
+	loja VARCHAR(120) NOT NULL,
+	created_by INT UNSIGNED NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+	PRIMARY KEY (id),
+	KEY idx_sdwan_loja (loja),
+	KEY idx_sdwan_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

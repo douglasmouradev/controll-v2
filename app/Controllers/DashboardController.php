@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Models\SdwanEntry;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\AuditLock;
@@ -838,6 +839,102 @@ final class DashboardController extends Controller
 			'labels' => $labels,
 			'data' => $data,
 		];
+	}
+
+	public function sdwanEntries(): void
+	{
+		$this->requireAuth([]);
+
+		if (!SdwanEntry::tableReady()) {
+			$this->json([
+				'success' => false,
+				'message' => 'Tabela SDWAN não configurada. Execute as migrations do banco.',
+			], 503);
+			return;
+		}
+
+		$this->json([
+			'success' => true,
+			'entries' => SdwanEntry::listAll(),
+			'summary' => SdwanEntry::summary(),
+		]);
+	}
+
+	public function sdwanEntryCreate(): void
+	{
+		$this->requireAuth([]);
+
+		$validation = SdwanEntry::validateInput($_POST);
+		if (!$validation['success']) {
+			$this->json(['success' => false, 'message' => $validation['message'] ?? 'Dados inválidos'], 422);
+			return;
+		}
+
+		try {
+			$user = Auth::instance()->user();
+			$id = SdwanEntry::create($validation['data'], isset($user['id']) ? (int) $user['id'] : null);
+			$entry = SdwanEntry::findById($id);
+			$this->json([
+				'success' => true,
+				'message' => 'Registro SDWAN salvo com sucesso',
+				'entry' => $entry,
+				'summary' => SdwanEntry::summary(),
+			]);
+		} catch (\Throwable $e) {
+			error_log('Erro ao criar registro SDWAN: ' . $e->getMessage());
+			$this->json(['success' => false, 'message' => 'Erro ao salvar registro SDWAN'], 500);
+		}
+	}
+
+	public function sdwanEntryUpdate(): void
+	{
+		$this->requireAuth([]);
+
+		$id = (int) ($_POST['id'] ?? 0);
+		if ($id <= 0 || !SdwanEntry::findById($id)) {
+			$this->json(['success' => false, 'message' => 'Registro não encontrado'], 404);
+			return;
+		}
+
+		$validation = SdwanEntry::validateInput($_POST);
+		if (!$validation['success']) {
+			$this->json(['success' => false, 'message' => $validation['message'] ?? 'Dados inválidos'], 422);
+			return;
+		}
+
+		if (!SdwanEntry::update($id, $validation['data'])) {
+			$this->json(['success' => false, 'message' => 'Erro ao atualizar registro SDWAN'], 500);
+			return;
+		}
+
+		$this->json([
+			'success' => true,
+			'message' => 'Registro SDWAN atualizado com sucesso',
+			'entry' => SdwanEntry::findById($id),
+			'summary' => SdwanEntry::summary(),
+		]);
+	}
+
+	public function sdwanEntryDelete(): void
+	{
+		$this->requireAuth([]);
+
+		$id = (int) ($_POST['id'] ?? 0);
+		if ($id <= 0 || !SdwanEntry::findById($id)) {
+			$this->json(['success' => false, 'message' => 'Registro não encontrado'], 404);
+			return;
+		}
+
+		if (!SdwanEntry::delete($id)) {
+			$this->json(['success' => false, 'message' => 'Erro ao excluir registro SDWAN'], 500);
+			return;
+		}
+
+		$this->json([
+			'success' => true,
+			'message' => 'Registro SDWAN excluído com sucesso',
+			'summary' => SdwanEntry::summary(),
+		]);
 	}
 }
 
