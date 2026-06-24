@@ -10,7 +10,91 @@ document.addEventListener('DOMContentLoaded', function () {
 	const totalRowsEl = document.getElementById('sdwan-total-rows');
 	const totalXpadsEl = document.getElementById('sdwan-total-xpads');
 	const totalLocalizadaEl = document.getElementById('sdwan-total-localizada');
+	const lojaInput = document.getElementById('sdwan-loja');
+	const lojaDatalist = document.getElementById('sdwan-loja-list');
+	const lojaHint = document.getElementById('sdwan-loja-hint');
 	let sdwanEntries = [];
+	let storeSiglas = [];
+
+	async function loadStoreSiglas() {
+		try {
+			let list = [];
+			if (typeof loadStoreAddresses === 'function') {
+				list = await loadStoreAddresses();
+			} else {
+				const res = await fetch('/dashboard/enderecos', {
+					headers: { 'X-Requested-With': 'XMLHttpRequest' },
+				});
+				const data = await res.json();
+				list = data.success && Array.isArray(data.data) ? data.data : [];
+			}
+
+			storeSiglas = list
+				.map((item) => ({
+					sigla: String(item.sigla || '').trim().toUpperCase(),
+					endereco: String(item.endereco || item.ENDERECO || '').trim(),
+				}))
+				.filter((item) => item.sigla !== '')
+				.sort((a, b) => a.sigla.localeCompare(b.sigla, 'pt-BR'));
+		} catch (error) {
+			console.error('Erro ao carregar siglas de lojas:', error);
+			storeSiglas = [];
+		}
+	}
+
+	function populateLojaDatalist() {
+		if (!lojaDatalist) return;
+		lojaDatalist.innerHTML = storeSiglas
+			.map((item) => `<option value="${escapeHtml(item.sigla)}"></option>`)
+			.join('');
+	}
+
+	function findStoreBySigla(query) {
+		const sigla = String(query || '').trim().toUpperCase();
+		if (!sigla) return null;
+		return storeSiglas.find((item) => item.sigla === sigla) || null;
+	}
+
+	function findStoresByPrefix(query) {
+		const sigla = String(query || '').trim().toUpperCase();
+		if (!sigla) return [];
+		return storeSiglas.filter((item) => item.sigla.startsWith(sigla));
+	}
+
+	function updateLojaHint(store) {
+		if (!lojaHint) return;
+		if (!store) {
+			lojaHint.textContent = 'Digite a sigla para buscar na planilha de lojas.';
+			return;
+		}
+		lojaHint.textContent = store.endereco || `Sigla ${store.sigla} encontrada na planilha de lojas.`;
+	}
+
+	function completeLojaSigla() {
+		if (!lojaInput) return;
+		const query = lojaInput.value.trim().toUpperCase();
+		lojaInput.value = query;
+		if (!query) {
+			updateLojaHint(null);
+			return;
+		}
+
+		const exact = findStoreBySigla(query);
+		if (exact) {
+			lojaInput.value = exact.sigla;
+			updateLojaHint(exact);
+			return;
+		}
+
+		const matches = findStoresByPrefix(query);
+		if (matches.length === 1) {
+			lojaInput.value = matches[0].sigla;
+			updateLojaHint(matches[0]);
+			return;
+		}
+
+		updateLojaHint(null);
+	}
 
 	function getCsrfToken() {
 		return form.querySelector('input[name="csrf_token"]')?.value || '';
@@ -22,6 +106,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		formTitle.textContent = 'Novo registro';
 		submitBtn.textContent = 'Salvar registro';
 		cancelBtn.classList.add('hidden');
+		updateLojaHint(null);
 	}
 
 	function fillForm(entry) {
@@ -30,7 +115,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		document.getElementById('sdwan-quantidade-localizada').value = String(entry.quantidade_localizada ?? 0);
 		document.getElementById('sdwan-pdv-numero').value = entry.pdv_numero || '';
 		document.getElementById('sdwan-pdv-serie').value = entry.pdv_serie || '';
-		document.getElementById('sdwan-loja').value = entry.loja || '';
+		if (lojaInput) {
+			lojaInput.value = entry.loja || '';
+			updateLojaHint(findStoreBySigla(entry.loja || ''));
+		}
 		formTitle.textContent = 'Editar registro';
 		submitBtn.textContent = 'Atualizar registro';
 		cancelBtn.classList.remove('hidden');
@@ -92,6 +180,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
+		completeLojaSigla();
 
 		const formData = new FormData(form);
 		const editingId = entryIdInput.value.trim();
@@ -130,6 +219,16 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 
 	cancelBtn.addEventListener('click', resetForm);
+
+	lojaInput?.addEventListener('input', () => {
+		lojaInput.value = lojaInput.value.toUpperCase();
+		const exact = findStoreBySigla(lojaInput.value);
+		updateLojaHint(exact);
+	});
+
+	lojaInput?.addEventListener('blur', completeLojaSigla);
+
+	lojaInput?.addEventListener('change', completeLojaSigla);
 
 	tableBody.addEventListener('click', async (event) => {
 		const editBtn = event.target.closest('[data-sdwan-edit]');
@@ -179,5 +278,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	});
 
-	loadEntries();
+	(async function initSdwanTab() {
+		await loadStoreSiglas();
+		populateLojaDatalist();
+		await loadEntries();
+	})();
 });

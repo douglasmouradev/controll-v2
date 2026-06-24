@@ -44,7 +44,9 @@
 			</div>
 			<div>
 				<label class="label" for="sdwan-loja">Loja</label>
-				<input class="input" name="loja" id="sdwan-loja" placeholder="Ex: SP01" style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase();" required>
+				<input class="input" name="loja" id="sdwan-loja" list="sdwan-loja-list" placeholder="Digite a sigla da loja" autocomplete="off" style="text-transform: uppercase;" required>
+				<datalist id="sdwan-loja-list"></datalist>
+				<p class="text-xs text-slate-500 mt-1" id="sdwan-loja-hint">Digite a sigla para buscar na planilha de lojas.</p>
 			</div>
 			<div class="md:col-span-2 lg:col-span-3 flex flex-wrap gap-2">
 				<button type="submit" id="sdwan-form-submit" class="btn btn-primary">Salvar registro</button>
