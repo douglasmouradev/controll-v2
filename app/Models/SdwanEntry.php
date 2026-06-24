@@ -40,6 +40,45 @@ final class SdwanEntry
 		}
 	}
 
+	/** @param array<string, mixed> $filters @return array<int, array<string, mixed>> */
+	public static function storePanel(array $filters = []): array
+	{
+		if (!self::tableReady()) {
+			return [];
+		}
+
+		$filter = self::buildFilterWhere($filters);
+		$pdo = Database::pdo();
+		$stmt = $pdo->prepare('
+			SELECT
+				e.loja,
+				COUNT(*) AS registros,
+				COALESCE(SUM(e.xpads_previsto), 0) AS xpads_previsto,
+				COALESCE(SUM(e.quantidade_localizada), 0) AS quantidade_localizada
+			FROM sdwan_entries e
+			WHERE ' . $filter['where'] . '
+			GROUP BY e.loja
+			ORDER BY e.loja ASC
+		');
+		$stmt->execute($filter['params']);
+		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+		return array_map(static function (array $row): array {
+			$previsto = (int) ($row['xpads_previsto'] ?? 0);
+			$localizada = (int) ($row['quantidade_localizada'] ?? 0);
+			$percent = $previsto > 0 ? min(100, (int) round(($localizada / $previsto) * 100)) : ($localizada > 0 ? 100 : 0);
+
+			return [
+				'loja' => (string) ($row['loja'] ?? ''),
+				'registros' => (int) ($row['registros'] ?? 0),
+				'xpads_previsto' => $previsto,
+				'quantidade_localizada' => $localizada,
+				'pendente' => max(0, $previsto - $localizada),
+				'percent' => $percent,
+			];
+		}, $rows);
+	}
+
 	/** @return array{loja: string, pdv: string, source: string, date_from: string, date_to: string, page: int, per_page: int} */
 	public static function filtersFromRequest(): array
 	{
@@ -484,9 +523,10 @@ final class SdwanEntry
 		$filter = self::buildFilterWhere($filters);
 		$pdo = Database::pdo();
 		$sourceSelect = self::hasSourceColumns() ? ', e.entry_source' : '';
+		$imageSelect = self::hasImageColumns() ? ', e.id, e.image_path' : ', e.id';
 		$stmt = $pdo->prepare('
 			SELECT e.loja, e.xpads_previsto, e.quantidade_localizada, e.pdv_numero, e.pdv_serie, e.created_at,
-				u.name AS created_by_name' . $sourceSelect . '
+				u.name AS created_by_name' . $sourceSelect . $imageSelect . '
 			FROM sdwan_entries e
 			LEFT JOIN users u ON u.id = e.created_by
 			WHERE ' . $filter['where'] . '

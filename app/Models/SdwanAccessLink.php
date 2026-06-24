@@ -5,6 +5,7 @@ namespace App\Models;
 
 use App\Services\Database;
 use App\Services\DatabaseSchema;
+use App\Services\SdwanSettings;
 use PDO;
 
 final class SdwanAccessLink
@@ -16,6 +17,48 @@ final class SdwanAccessLink
 		} catch (\Throwable $e) {
 			return false;
 		}
+	}
+
+	public static function hasSubmissionColumns(): bool
+	{
+		try {
+			return DatabaseSchema::columnExists(Database::pdo(), 'sdwan_access_links', 'submission_count');
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
+	/** @param array<string, mixed> $row */
+	public static function canAcceptSubmission(array $row): bool
+	{
+		if (strtotime((string) ($row['expires_at'] ?? '')) <= time()) {
+			return false;
+		}
+
+		if (!self::hasSubmissionColumns()) {
+			return true;
+		}
+
+		$max = (int) ($row['max_submissions'] ?? SdwanSettings::linkMaxSubmissions());
+		$count = (int) ($row['submission_count'] ?? 0);
+
+		return $count < max(1, $max);
+	}
+
+	public static function incrementSubmission(int $linkId): bool
+	{
+		if (!self::tableReady() || $linkId <= 0 || !self::hasSubmissionColumns()) {
+			return true;
+		}
+
+		$pdo = Database::pdo();
+		$stmt = $pdo->prepare('
+			UPDATE sdwan_access_links
+			SET submission_count = submission_count + 1
+			WHERE id = :id AND expires_at > NOW()
+		');
+
+		return $stmt->execute([':id' => $linkId]);
 	}
 
 	public static function appBaseUrl(): string
@@ -192,6 +235,8 @@ final class SdwanAccessLink
 
 		$pdo = Database::pdo();
 		$expiresAt = (new \DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
+		$maxSubmissions = SdwanSettings::linkMaxSubmissions();
+		$hasSubmission = self::hasSubmissionColumns();
 
 		for ($attempt = 0; $attempt < 30; $attempt++) {
 			$code = str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
@@ -199,17 +244,21 @@ final class SdwanAccessLink
 				continue;
 			}
 
-			$stmt = $pdo->prepare('
-				INSERT INTO sdwan_access_links (code, created_by, expires_at)
-				VALUES (:code, :created_by, :expires_at)
-			');
+			$sql = $hasSubmission
+				? 'INSERT INTO sdwan_access_links (code, created_by, expires_at, max_submissions) VALUES (:code, :created_by, :expires_at, :max_submissions)'
+				: 'INSERT INTO sdwan_access_links (code, created_by, expires_at) VALUES (:code, :created_by, :expires_at)';
+			$stmt = $pdo->prepare($sql);
 
 			try {
-				$stmt->execute([
+				$params = [
 					':code' => $code,
 					':created_by' => $createdBy,
 					':expires_at' => $expiresAt,
-				]);
+				];
+				if ($hasSubmission) {
+					$params[':max_submissions'] = $maxSubmissions;
+				}
+				$stmt->execute($params);
 			} catch (\PDOException $e) {
 				continue;
 			}
@@ -248,6 +297,8 @@ final class SdwanAccessLink
 		$code = self::normalizeCode((string) ($row['code'] ?? ''));
 		$expiresAt = (string) ($row['expires_at'] ?? '');
 		$url = self::buildPublicUrl($code);
+		$max = (int) ($row['max_submissions'] ?? SdwanSettings::linkMaxSubmissions());
+		$count = (int) ($row['submission_count'] ?? 0);
 
 		return [
 			'id' => (int) ($row['id'] ?? 0),
@@ -256,6 +307,9 @@ final class SdwanAccessLink
 			'qr_url' => self::qrCodeUrl((int) ($row['id'] ?? 0)),
 			'expires_at' => $expiresAt,
 			'created_at' => (string) ($row['created_at'] ?? ''),
+			'submission_count' => $count,
+			'max_submissions' => $max,
+			'submissions_remaining' => max(0, $max - $count),
 		];
 	}
 }

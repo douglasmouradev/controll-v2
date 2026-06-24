@@ -29,6 +29,56 @@
 		</div>
 	</div>
 
+	<section class="ui-card ui-card-body mb-6" id="sdwan-goal-section">
+		<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+			<div>
+				<h3 class="text-lg font-bold text-slate-800">Meta do projeto</h3>
+				<p class="text-sm text-slate-600" id="sdwan-goal-label">Progresso em relação à meta de XPads</p>
+			</div>
+			<p class="text-sm font-semibold text-slate-700" id="sdwan-goal-percent">0%</p>
+		</div>
+		<div class="sdwan-goal-bar">
+			<div class="sdwan-goal-bar-fill" id="sdwan-goal-bar-fill" style="width:0%"></div>
+		</div>
+		<p class="text-xs text-slate-500 mt-2" id="sdwan-goal-detail">0 de 0 XPads localizados</p>
+	</section>
+
+	<section class="ui-card ui-card-body mb-6 hidden" id="sdwan-admin-tools">
+		<h3 class="text-lg font-bold text-slate-800 mb-4">Ferramentas administrativas</h3>
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<form id="sdwan-settings-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div>
+					<label class="label" for="sdwan-setting-goal">Meta global de XPads</label>
+					<input class="input" type="number" min="0" id="sdwan-setting-goal" name="xpads_goal" placeholder="0">
+				</div>
+				<div>
+					<label class="label" for="sdwan-setting-link-max">Limite por link técnico</label>
+					<input class="input" type="number" min="1" max="500" id="sdwan-setting-link-max" name="link_max_submissions" placeholder="50">
+				</div>
+				<div class="sm:col-span-2">
+					<button type="submit" class="btn btn-primary btn-sm">Salvar configurações</button>
+				</div>
+			</form>
+			<div class="space-y-4">
+				<form id="sdwan-import-form" class="flex flex-wrap items-end gap-2">
+					<div class="flex-1 min-w-[12rem]">
+						<label class="label" for="sdwan-import-file">Importar CSV</label>
+						<input class="input" type="file" id="sdwan-import-file" name="file" accept=".csv,.txt">
+					</div>
+					<button type="submit" class="btn btn-secondary btn-sm">Importar</button>
+				</form>
+				<form id="sdwan-stores-upload-form" class="flex flex-wrap items-end gap-2">
+					<div class="flex-1 min-w-[12rem]">
+						<label class="label" for="sdwan-stores-file">Atualizar lojas (JSON)</label>
+						<input class="input" type="file" id="sdwan-stores-file" name="file" accept=".json">
+					</div>
+					<button type="submit" class="btn btn-secondary btn-sm">Enviar</button>
+				</form>
+				<button type="button" id="sdwan-cleanup-btn" class="btn btn-ghost btn-sm text-red-600">Executar limpeza de arquivos</button>
+			</div>
+		</div>
+	</section>
+
 	<section class="ui-card ui-card-body mb-6">
 		<h3 class="text-lg font-bold text-slate-800 mb-4">Filtros</h3>
 		<form id="sdwan-filters-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
@@ -83,6 +133,27 @@
 	</div>
 
 	<section class="ui-card ui-card-body mb-6">
+		<h3 class="text-lg font-bold text-slate-800 mb-4">Painel por loja</h3>
+		<div class="overflow-x-auto">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Loja</th>
+						<th>Registros</th>
+						<th>XPads previstos</th>
+						<th>Localizado</th>
+						<th>Pendente</th>
+						<th>%</th>
+					</tr>
+				</thead>
+				<tbody id="sdwan-store-panel-body">
+					<tr><td colspan="6" class="empty-state">Nenhum dado por loja.</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<section class="ui-card ui-card-body mb-6" id="sdwan-links-section">
 		<div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
 			<div>
 				<h3 class="text-lg font-bold text-slate-800 mb-1">Links para técnicos</h3>
@@ -117,17 +188,18 @@
 						<th>Código</th>
 						<th>Link</th>
 						<th>Expira em</th>
+						<th>Cadastros</th>
 						<th class="sdwan-actions-col">Ações</th>
 					</tr>
 				</thead>
 				<tbody id="sdwan-links-table-body">
-					<tr><td colspan="4" class="empty-state">Nenhum link ativo.</td></tr>
+					<tr><td colspan="5" class="empty-state">Nenhum link ativo.</td></tr>
 				</tbody>
 			</table>
 		</div>
 	</section>
 
-	<section class="ui-card ui-card-body mb-6">
+	<section class="ui-card ui-card-body mb-6" id="sdwan-form-section">
 		<h3 class="text-lg font-bold text-slate-800 mb-4" id="sdwan-form-title">Novo registro</h3>
 		<form id="sdwan-entry-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" enctype="multipart/form-data">
 			<?php echo \App\Services\Csrf::field(); ?>
@@ -192,13 +264,14 @@
 						<th>Nº PDV</th>
 						<th>Nº Série PDV</th>
 						<th>Loja</th>
+						<th>Cadastrado por</th>
 						<th>Imagem</th>
 						<th class="sdwan-actions-col">Ações</th>
 					</tr>
 				</thead>
 				<tbody id="sdwan-table-body">
 					<tr>
-						<td colspan="9" class="empty-state">Nenhum registro cadastrado.</td>
+						<td colspan="10" class="empty-state">Nenhum registro cadastrado.</td>
 					</tr>
 				</tbody>
 			</table>

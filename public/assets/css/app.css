@@ -136,6 +136,9 @@ body.layout-dashboard main { max-width: none; padding: 0; }
 .page-title { font-size: 1.875rem; font-weight: 800; color: var(--brand-primary); letter-spacing: -0.02em; }
 .page-subtitle { color: var(--text-muted); margin-top: 0.375rem; font-size: 0.9375rem; }
 
+/* Utilities */
+.hidden { display: none !important; }
+
 /* Tables */
 .data-table { width: 100%; font-size: 0.875rem; border-collapse: collapse; }
 .data-table thead { background: #f8fafc; }
@@ -207,6 +210,23 @@ body.layout-dashboard main { max-width: none; padding: 0; }
 	font-size: 0.65rem;
 	font-weight: 700;
 	vertical-align: middle;
+}
+.sdwan-goal-bar {
+	height: 0.75rem;
+	border-radius: 9999px;
+	background: #e2e8f0;
+	overflow: hidden;
+}
+.sdwan-goal-bar-fill {
+	height: 100%;
+	background: linear-gradient(90deg, #059669, #10b981);
+	border-radius: 9999px;
+	transition: width 0.3s ease;
+}
+.sdwan-store-percent {
+	display: inline-block;
+	min-width: 2.5rem;
+	font-weight: 600;
 }
 
 /* Sidebar */

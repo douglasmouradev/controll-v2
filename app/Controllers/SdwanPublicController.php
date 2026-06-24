@@ -8,6 +8,8 @@ use App\Models\SdwanAccessLink;
 use App\Models\SdwanEntry;
 use App\Services\Cache;
 use App\Services\SdwanEntryService;
+use App\Services\SdwanNotifier;
+use App\Services\SdwanAudit;
 use App\Services\StoreAddressService;
 
 final class SdwanPublicController extends Controller
@@ -21,16 +23,18 @@ final class SdwanPublicController extends Controller
 		}
 
 		$link = SdwanAccessLink::findActiveByCode($code);
-		if ($link === null) {
+		if ($link === null || !SdwanAccessLink::canAcceptSubmission($link)) {
 			$this->view('sdwan/expired', ['layout' => 'auth', 'title' => 'Link expirado']);
 			return;
 		}
 
+		$presented = SdwanAccessLink::present($link);
 		$this->view('sdwan/public-form', [
 			'layout' => 'auth',
 			'title' => 'Cadastro SDWAN',
 			'code' => $code,
 			'expiresAt' => (string) ($link['expires_at'] ?? ''),
+			'linkInfo' => $presented,
 		]);
 	}
 
@@ -38,8 +42,8 @@ final class SdwanPublicController extends Controller
 	{
 		$code = SdwanAccessLink::normalizeCode((string) ($_POST['code'] ?? ''));
 		$link = $code !== '' ? SdwanAccessLink::findActiveByCode($code) : null;
-		if ($link === null) {
-			$this->json(['success' => false, 'message' => 'Link inválido ou expirado. Solicite um novo link ao administrador.'], 403);
+		if ($link === null || !SdwanAccessLink::canAcceptSubmission($link)) {
+			$this->json(['success' => false, 'message' => 'Link inválido, expirado ou limite de cadastros atingido.'], 403);
 			return;
 		}
 
@@ -61,9 +65,20 @@ final class SdwanPublicController extends Controller
 				]
 			);
 			SdwanEntryService::applyImageUpload($id, $_POST, $_FILES);
+			$linkId = (int) ($link['id'] ?? 0);
+			if ($linkId > 0) {
+				SdwanAccessLink::incrementSubmission($linkId);
+			}
+			$notifyUserId = (int) ($link['created_by'] ?? 0);
+			if ($notifyUserId > 0) {
+				SdwanNotifier::notifyPublicSubmission($id, $notifyUserId, $validation['data']);
+			}
+			SdwanAudit::record('public_create', 'entry:' . $id);
+			$entry = SdwanEntry::findById($id);
 			$response = [
 				'success' => true,
 				'message' => 'Registro enviado com sucesso. Obrigado!',
+				'entry' => $entry,
 			];
 			if (!empty($validation['warning'])) {
 				$response['warning'] = $validation['warning'];
@@ -83,7 +98,7 @@ final class SdwanPublicController extends Controller
 	public function storeAddresses(): void
 	{
 		$code = SdwanAccessLink::normalizeCode((string) ($_GET['code'] ?? ''));
-		if ($code === '' || SdwanAccessLink::findActiveByCode($code) === null) {
+		if ($code === '' || ($link = SdwanAccessLink::findActiveByCode($code)) === null || !SdwanAccessLink::canAcceptSubmission($link)) {
 			$this->json(['success' => false, 'message' => 'Link inválido ou expirado'], 403);
 			return;
 		}

@@ -8,6 +8,64 @@ final class StoreAddressService
 	/** @var array<int, string>|null */
 	private static ?array $siglaCache = null;
 
+	public static function clearCache(): void
+	{
+		self::$siglaCache = null;
+	}
+
+	public static function findBySigla(string $sigla): ?array
+	{
+		$sigla = strtoupper(trim($sigla));
+		foreach (self::loadAddresses() as $row) {
+			if ($row['sigla'] === $sigla) {
+				return $row;
+			}
+		}
+
+		return null;
+	}
+
+	/** @return array{success: bool, message?: string, total?: int} */
+	public static function uploadAddressesFile(array $file): array
+	{
+		if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+			return ['success' => false, 'message' => 'Arquivo não enviado'];
+		}
+
+		$tmp = (string) ($file['tmp_name'] ?? '');
+		$name = (string) ($file['name'] ?? '');
+		$ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+		if (!in_array($ext, ['json'], true)) {
+			return ['success' => false, 'message' => 'Envie um arquivo JSON de lojas'];
+		}
+
+		$raw = file_get_contents($tmp);
+		if ($raw === false || trim($raw) === '') {
+			return ['success' => false, 'message' => 'Arquivo vazio'];
+		}
+
+		$json = '[' . rtrim(trim($raw), ", \n\r\t") . ']';
+		$data = json_decode($json, true);
+		if (!is_array($data) || $data === []) {
+			return ['success' => false, 'message' => 'JSON de lojas inválido'];
+		}
+
+		$path = self::addressesFile();
+		$backup = $path . '.backup.' . date('YmdHis');
+		if (is_file($path)) {
+			@copy($path, $backup);
+		}
+
+		if (@file_put_contents($path, $raw) === false) {
+			return ['success' => false, 'message' => 'Não foi possível salvar o arquivo de lojas'];
+		}
+
+		self::clearCache();
+		$total = count(self::loadAddresses());
+
+		return ['success' => true, 'message' => 'Planilha de lojas atualizada (' . $total . ' lojas)', 'total' => $total];
+	}
+
 	public static function addressesFile(): string
 	{
 		return BASE_PATH . '/endereco.json';

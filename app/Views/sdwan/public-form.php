@@ -8,8 +8,18 @@
 				Este link expira em: <strong id="sdwan-public-expires-at"><?php echo htmlspecialchars($expiresAt); ?></strong>
 			</p>
 		<?php endif; ?>
+		<?php if (!empty($linkInfo['max_submissions'])): ?>
+			<p class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mt-2">
+				Cadastros restantes neste link: <strong><?php echo (int) ($linkInfo['submissions_remaining'] ?? 0); ?></strong>
+			</p>
+		<?php endif; ?>
 	</div>
 	<div class="px-6 md:px-8 pb-8">
+		<div id="sdwan-public-success" class="hidden mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+			<h2 class="text-lg font-bold text-emerald-900 mb-2">Registro enviado!</h2>
+			<p class="text-sm text-emerald-800" id="sdwan-public-success-text"></p>
+			<button type="button" id="sdwan-public-new-entry" class="btn btn-primary btn-sm mt-4">Cadastrar outro PDV</button>
+		</div>
 		<form id="sdwan-public-form" class="grid grid-cols-1 md:grid-cols-2 gap-4" enctype="multipart/form-data">
 			<?php echo \App\Services\Csrf::field(); ?>
 			<input type="hidden" name="code" value="<?php echo htmlspecialchars($code ?? '', ENT_QUOTES, 'UTF-8'); ?>">
@@ -34,6 +44,7 @@
 				<input class="input" name="loja" id="sdwan-public-loja" list="sdwan-public-loja-list" placeholder="Digite a sigla da loja" autocomplete="off" style="text-transform: uppercase;" required>
 				<datalist id="sdwan-public-loja-list"></datalist>
 				<p class="text-xs text-slate-500 mt-1" id="sdwan-public-loja-hint">Digite a sigla para buscar na planilha de lojas.</p>
+				<p class="text-xs font-medium text-slate-700 mt-1 hidden" id="sdwan-public-loja-address"></p>
 			</div>
 			<div class="md:col-span-2">
 				<label class="label" for="sdwan-public-image">Imagem</label>

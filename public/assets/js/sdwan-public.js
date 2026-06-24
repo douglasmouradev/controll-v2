@@ -12,6 +12,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	const imageSizeHint = document.getElementById('sdwan-public-image-size-hint');
 	const submitBtn = document.getElementById('sdwan-public-submit');
 	const expiresEl = document.getElementById('sdwan-public-expires-at');
+	const addressEl = document.getElementById('sdwan-public-loja-address');
+	const successBox = document.getElementById('sdwan-public-success');
+	const successText = document.getElementById('sdwan-public-success-text');
+	const newEntryBtn = document.getElementById('sdwan-public-new-entry');
 	let storeSiglas = [];
 	let previewObjectUrl = null;
 	let compressedImageFile = null;
@@ -73,9 +77,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	function updateLojaHint(store) {
 		if (!lojaHint) return;
-		lojaHint.textContent = store
-			? (store.endereco || `Sigla ${store.sigla} encontrada na planilha de lojas.`)
-			: 'Digite a sigla para buscar na planilha de lojas.';
+		if (!store) {
+			lojaHint.textContent = 'Digite a sigla para buscar na planilha de lojas.';
+			if (addressEl) {
+				addressEl.textContent = '';
+				addressEl.classList.add('hidden');
+			}
+			return;
+		}
+		lojaHint.textContent = `Sigla ${store.sigla} encontrada.`;
+		if (addressEl && store.endereco) {
+			addressEl.textContent = store.endereco;
+			addressEl.classList.remove('hidden');
+		}
+	}
+
+	function showSuccessPanel(entry, message) {
+		if (!successBox || !successText) return;
+		const loja = entry?.loja || lojaInput?.value || '';
+		const pdv = entry?.pdv_numero || document.getElementById('sdwan-public-pdv-numero')?.value || '-';
+		successText.textContent = message || `Loja ${loja} — PDV ${pdv} registrado com sucesso.`;
+		successBox.classList.remove('hidden');
+		form.classList.add('hidden');
+	}
+
+	function hideSuccessPanel() {
+		if (successBox) successBox.classList.add('hidden');
+		if (form) form.classList.remove('hidden');
 	}
 
 	function completeLojaSigla() {
@@ -194,11 +222,8 @@ document.addEventListener('DOMContentLoaded', function () {
 			});
 			const data = await res.json();
 			if (data.success) {
-				if (typeof showToast === 'function') showToast(data.message || 'Registro enviado com sucesso', 'success');
-				form.reset();
-				form.querySelector('input[name="code"]').value = code;
-				clearImagePreview();
-				updateLojaHint(null);
+				if (data.warning && typeof showToast === 'function') showToast(data.warning, 'info');
+				showSuccessPanel(data.entry || {}, data.message || 'Registro enviado com sucesso');
 			} else if (typeof showToast === 'function') {
 				showToast(data.message || 'Erro ao enviar registro');
 			}
@@ -209,6 +234,14 @@ document.addEventListener('DOMContentLoaded', function () {
 			submitBtn.disabled = false;
 			submitBtn.textContent = originalText;
 		}
+	});
+
+	newEntryBtn?.addEventListener('click', () => {
+		form.reset();
+		form.querySelector('input[name="code"]').value = code;
+		clearImagePreview();
+		updateLojaHint(null);
+		hideSuccessPanel();
 	});
 
 	loadStoreSiglas().then(populateLojaDatalist);

@@ -37,8 +37,19 @@ document.addEventListener('DOMContentLoaded', function () {
 	const exportPdfLink = document.getElementById('sdwan-export-pdf');
 	const exportXlsxLink = document.getElementById('sdwan-export-xlsx');
 	const linksTableBody = document.getElementById('sdwan-links-table-body');
+	const storePanelBody = document.getElementById('sdwan-store-panel-body');
+	const adminTools = document.getElementById('sdwan-admin-tools');
+	const formSection = document.getElementById('sdwan-form-section');
+	const linksSection = document.getElementById('sdwan-links-section');
+	const goalPercentEl = document.getElementById('sdwan-goal-percent');
+	const goalBarFill = document.getElementById('sdwan-goal-bar-fill');
+	const goalDetailEl = document.getElementById('sdwan-goal-detail');
+	const settingsForm = document.getElementById('sdwan-settings-form');
+	const settingGoalInput = document.getElementById('sdwan-setting-goal');
+	const settingLinkMaxInput = document.getElementById('sdwan-setting-link-max');
 
 	let sdwanEntries = [];
+	let canManage = false;
 	let previewObjectUrl = null;
 	let compressedImageFile = null;
 	let storeSiglas = [];
@@ -152,6 +163,23 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (filters.page && filters.page > 1) params.set('page', String(filters.page));
 		const query = params.toString();
 		return query ? `?${query}` : '';
+	}
+
+	function syncFiltersToUrl() {
+		const query = buildFilterQuery();
+		const base = `${window.location.pathname}${window.location.hash || ''}`;
+		const newUrl = query ? `${window.location.pathname}${query}${window.location.hash || ''}` : base;
+		window.history.replaceState({}, '', newUrl);
+	}
+
+	function loadFiltersFromUrl() {
+		const params = new URLSearchParams(window.location.search);
+		if (filterLoja) filterLoja.value = (params.get('loja') || '').toUpperCase();
+		if (filterPdv) filterPdv.value = params.get('pdv') || '';
+		if (filterSource) filterSource.value = params.get('source') || '';
+		if (filterDateFrom) filterDateFrom.value = params.get('date_from') || '';
+		if (filterDateTo) filterDateTo.value = params.get('date_to') || '';
+		currentPage = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
 	}
 
 	function updateExportLinks() {
@@ -407,8 +435,9 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${escapeHtml(entry.pdv_numero || '-')}</td>
 				<td>${escapeHtml(entry.pdv_serie || '-')}</td>
 				<td>${escapeHtml(entry.loja || '-')}</td>
+				<td class="text-sm">${escapeHtml(entry.created_by_name || '-')}</td>
 				<td class="sdwan-image-cell">${imageCellHtml(entry)}</td>
-				<td class="sdwan-actions-col whitespace-nowrap">
+				<td class="sdwan-actions-col whitespace-nowrap sdwan-row-actions">
 					<button type="button" class="btn btn-secondary btn-sm" data-sdwan-edit="${escapeHtml(String(entry.id))}">Editar</button>
 					<button type="button" class="btn btn-ghost btn-sm text-red-600" data-sdwan-delete="${escapeHtml(String(entry.id))}">Excluir</button>
 				</td>
@@ -418,20 +447,71 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	function renderTable(entries) {
 		if (!Array.isArray(entries) || entries.length === 0) {
-			tableBody.innerHTML = '<tr><td colspan="9" class="empty-state">Nenhum registro encontrado.</td></tr>';
+			tableBody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhum registro encontrado.</td></tr>';
 			return;
 		}
 		tableBody.innerHTML = entries.map(rowHtml).join('');
 	}
 
+	function renderStorePanel(rows) {
+		if (!storePanelBody) return;
+		if (!Array.isArray(rows) || rows.length === 0) {
+			storePanelBody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum dado por loja.</td></tr>';
+			return;
+		}
+		storePanelBody.innerHTML = rows.map((row) => `
+			<tr>
+				<td class="font-semibold">${escapeHtml(row.loja || '')}</td>
+				<td>${escapeHtml(String(row.registros ?? 0))}</td>
+				<td>${escapeHtml(String(row.xpads_previsto ?? 0))}</td>
+				<td>${escapeHtml(String(row.quantidade_localizada ?? 0))}</td>
+				<td>${escapeHtml(String(row.pendente ?? 0))}</td>
+				<td><span class="sdwan-store-percent">${escapeHtml(String(row.percent ?? 0))}%</span></td>
+			</tr>
+		`).join('');
+	}
+
+	function renderGoalProgress(settings) {
+		const progress = settings?.goal_progress || {};
+		const goal = Number(progress.goal || 0);
+		const localizada = Number(progress.localizada || 0);
+		const percent = Number(progress.percent || 0);
+		if (goalPercentEl) goalPercentEl.textContent = `${percent}%`;
+		if (goalBarFill) goalBarFill.style.width = `${percent}%`;
+		if (goalDetailEl) {
+			goalDetailEl.textContent = goal > 0
+				? `${localizada.toLocaleString('pt-BR')} de ${goal.toLocaleString('pt-BR')} XPads localizados`
+				: `${localizada.toLocaleString('pt-BR')} XPads localizados (defina uma meta nas configurações)`;
+		}
+		if (settingGoalInput) settingGoalInput.value = String(settings?.xpads_goal ?? goal);
+		if (settingLinkMaxInput) settingLinkMaxInput.value = String(settings?.link_max_submissions ?? 50);
+	}
+
+	function applyManageUi() {
+		const show = !!canManage;
+		if (adminTools) adminTools.classList.toggle('hidden', !show);
+		if (formSection) formSection.classList.toggle('hidden', !show);
+		if (linksSection) linksSection.classList.toggle('hidden', !show);
+		document.querySelectorAll('.sdwan-row-actions').forEach((el) => {
+			el.classList.toggle('hidden', !show);
+		});
+		const generateBtn = document.getElementById('btn-sdwan-generate-link');
+		if (generateBtn) generateBtn.classList.toggle('hidden', !show);
+	}
+
 	function applyListResponse(data) {
+		canManage = !!data.can_manage;
 		renderTable(data.entries || []);
 		sdwanEntries = data.entries || [];
 		updateSummary(data.summary || {});
 		renderSdwanPieChart(data.chart || {});
 		renderProgressChart(data.progress || {});
 		renderPagination(data.pagination || {});
+		renderStorePanel(data.store_panel || []);
+		renderGoalProgress(data.settings || {});
+		applyManageUi();
 		updateExportLinks();
+		syncFiltersToUrl();
 	}
 
 	async function loadEntries(page) {
@@ -669,6 +749,7 @@ document.addEventListener('DOMContentLoaded', function () {
 					<a href="${escapeHtml(link.url || '#')}" target="_blank" rel="noopener noreferrer" class="text-blue-700 break-all hover:underline">${escapeHtml(link.url || '')}</a>
 				</td>
 				<td class="whitespace-nowrap text-sm">${escapeHtml(formatDateTime(link.expires_at || ''))}</td>
+				<td class="text-sm">${escapeHtml(String(link.submission_count ?? 0))} / ${escapeHtml(String(link.max_submissions ?? '-'))}</td>
 				<td class="sdwan-actions-col whitespace-nowrap">
 					<button type="button" class="btn btn-ghost btn-sm" data-sdwan-copy-link-row="${escapeHtml(String(link.id))}" data-url="${escapeHtml(link.url || '')}">Copiar</button>
 					<a href="${escapeHtml(link.qr_url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">QR</a>
@@ -681,7 +762,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	function renderLinksList(links) {
 		if (!linksTableBody) return;
 		if (!Array.isArray(links) || links.length === 0) {
-			linksTableBody.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhum link ativo.</td></tr>';
+			linksTableBody.innerHTML = '<tr><td colspan="5" class="empty-state">Nenhum link ativo.</td></tr>';
 			return;
 		}
 		linksTableBody.innerHTML = links.map(linkRowHtml).join('');
@@ -800,10 +881,85 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 
 	(async function initSdwanTab() {
+		loadFiltersFromUrl();
 		await loadStoreSiglas();
 		populateLojaDatalist();
 		updateExportLinks();
 		await loadAccessLinks();
-		await loadEntries(1);
+		await loadEntries(currentPage);
 	})();
+
+	settingsForm?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!canManage) return;
+		const formData = new FormData(settingsForm);
+		formData.append('csrf_token', getCsrfToken());
+		try {
+			const res = await fetch('/dashboard/sdwan-settings', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+			const data = await res.json();
+			if (data.success) {
+				if (typeof showToast === 'function') showToast(data.message || 'Configurações salvas', 'success');
+				renderGoalProgress(data.settings || {});
+			} else if (typeof showToast === 'function') showToast(data.message || 'Erro ao salvar');
+		} catch (error) {
+			if (typeof showToast === 'function') showToast('Erro ao conectar com o servidor');
+		}
+	});
+
+	document.getElementById('sdwan-import-form')?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!canManage) return;
+		const fileInput = document.getElementById('sdwan-import-file');
+		if (!fileInput?.files?.[0]) return;
+		const formData = new FormData();
+		formData.append('file', fileInput.files[0]);
+		formData.append('csrf_token', getCsrfToken());
+		try {
+			const res = await fetch('/dashboard/sdwan-import', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+			const data = await res.json();
+			if (data.success) {
+				if (typeof showToast === 'function') showToast(data.message || 'Importação concluída', 'success');
+				fileInput.value = '';
+				await loadEntries(1);
+			} else if (typeof showToast === 'function') showToast(data.message || 'Erro na importação');
+		} catch (error) {
+			if (typeof showToast === 'function') showToast('Erro ao conectar com o servidor');
+		}
+	});
+
+	document.getElementById('sdwan-stores-upload-form')?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!canManage) return;
+		const fileInput = document.getElementById('sdwan-stores-file');
+		if (!fileInput?.files?.[0]) return;
+		const formData = new FormData();
+		formData.append('file', fileInput.files[0]);
+		formData.append('csrf_token', getCsrfToken());
+		try {
+			const res = await fetch('/dashboard/sdwan-stores/upload', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+			const data = await res.json();
+			if (data.success) {
+				if (typeof showToast === 'function') showToast(data.message || 'Lojas atualizadas', 'success');
+				fileInput.value = '';
+				await loadStoreSiglas();
+				populateLojaDatalist();
+			} else if (typeof showToast === 'function') showToast(data.message || 'Erro ao enviar arquivo');
+		} catch (error) {
+			if (typeof showToast === 'function') showToast('Erro ao conectar com o servidor');
+		}
+	});
+
+	document.getElementById('sdwan-cleanup-btn')?.addEventListener('click', async () => {
+		if (!canManage || !window.confirm('Executar limpeza de imagens órfãs e links expirados?')) return;
+		const formData = new FormData();
+		formData.append('csrf_token', getCsrfToken());
+		try {
+			const res = await fetch('/dashboard/sdwan-cleanup', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+			const data = await res.json();
+			if (data.success && typeof showToast === 'function') showToast(data.message || 'Limpeza concluída', 'success');
+			else if (typeof showToast === 'function') showToast(data.message || 'Erro na limpeza');
+		} catch (error) {
+			if (typeof showToast === 'function') showToast('Erro ao conectar com o servidor');
+		}
+	});
 });

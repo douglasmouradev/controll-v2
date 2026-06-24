@@ -18,6 +18,13 @@ use App\Services\DatabaseSchema;
 use App\Services\SdwanEntryService;
 use App\Services\SdwanExportService;
 use App\Services\SdwanImageService;
+use App\Services\SdwanImportService;
+use App\Services\SdwanCleanupService;
+use App\Services\SdwanAudit;
+use App\Services\SdwanPermission;
+use App\Services\SdwanQrService;
+use App\Services\SdwanSettings;
+use App\Services\StoreAddressService;
 use App\Services\PurchasedDailies;
 use App\Services\AuditLog;
 use App\Services\InventoryService;
@@ -848,6 +855,10 @@ final class DashboardController extends Controller
 	public function sdwanEntries(): void
 	{
 		$this->requireAuth([]);
+		if (!SdwanPermission::canView()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão'], 403);
+			return;
+		}
 
 		if (!SdwanEntry::tableReady()) {
 			$this->json([
@@ -867,6 +878,9 @@ final class DashboardController extends Controller
 			'summary' => SdwanEntry::summary($filters),
 			'chart' => SdwanEntry::pieChartByStore($filters),
 			'progress' => SdwanEntry::progressChart($filters),
+			'store_panel' => SdwanEntry::storePanel($filters),
+			'settings' => SdwanSettings::apiPayload(),
+			'can_manage' => SdwanPermission::canManage(),
 		]);
 	}
 
@@ -929,6 +943,10 @@ final class DashboardController extends Controller
 	public function sdwanEntryCreate(): void
 	{
 		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão para cadastrar no Projeto SDWAN'], 403);
+			return;
+		}
 
 		$validation = SdwanEntry::validateInput($_POST);
 		if (!$validation['success']) {
@@ -951,6 +969,7 @@ final class DashboardController extends Controller
 			if (!empty($validation['warning'])) {
 				$response['warning'] = $validation['warning'];
 			}
+			SdwanAudit::record('create', 'entry:' . $id);
 			$this->json($response);
 		} catch (\InvalidArgumentException $e) {
 			if (!empty($id) && $id > 0) {
@@ -966,6 +985,10 @@ final class DashboardController extends Controller
 	public function sdwanEntryUpdate(): void
 	{
 		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão para editar no Projeto SDWAN'], 403);
+			return;
+		}
 
 		$id = (int) ($_POST['id'] ?? 0);
 		$existing = SdwanEntry::findRawById($id);
@@ -1003,6 +1026,7 @@ final class DashboardController extends Controller
 			if (!empty($validation['warning'])) {
 				$response['warning'] = $validation['warning'];
 			}
+			SdwanAudit::record('update', 'entry:' . $id);
 			$this->json($response);
 		} catch (\InvalidArgumentException $e) {
 			$this->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -1015,6 +1039,10 @@ final class DashboardController extends Controller
 	public function sdwanEntryDelete(): void
 	{
 		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão para excluir no Projeto SDWAN'], 403);
+			return;
+		}
 
 		$id = (int) ($_POST['id'] ?? 0);
 		if ($id <= 0 || !SdwanEntry::findRawById($id)) {
@@ -1026,6 +1054,8 @@ final class DashboardController extends Controller
 			$this->json(['success' => false, 'message' => 'Erro ao excluir registro SDWAN'], 500);
 			return;
 		}
+
+		SdwanAudit::record('delete', 'entry:' . $id);
 
 		$this->json([
 			'success' => true,
@@ -1084,17 +1114,17 @@ final class DashboardController extends Controller
 			return;
 		}
 
-		$image = SdwanAccessLink::fetchQrImage(SdwanAccessLink::buildPublicUrl($code));
+		$image = SdwanQrService::render(SdwanAccessLink::buildPublicUrl($code));
 		if ($image === null) {
 			http_response_code(502);
 			echo 'Não foi possível gerar o QR Code';
 			return;
 		}
 
-		header('Content-Type: image/png');
+		header('Content-Type: ' . $image['content_type']);
 		header('Cache-Control: private, max-age=3600');
-		header('Content-Length: ' . (string) strlen($image));
-		echo $image;
+		header('Content-Length: ' . (string) strlen($image['body']));
+		echo $image['body'];
 		exit;
 	}
 
@@ -1125,6 +1155,10 @@ final class DashboardController extends Controller
 	public function sdwanAccessLinkRevoke(): void
 	{
 		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão'], 403);
+			return;
+		}
 
 		$id = (int) ($_POST['id'] ?? 0);
 		if ($id <= 0) {
@@ -1139,6 +1173,8 @@ final class DashboardController extends Controller
 			return;
 		}
 
+		SdwanAudit::record('link_revoke', 'link:' . $id);
+
 		$this->json([
 			'success' => true,
 			'message' => 'Link revogado com sucesso',
@@ -1149,6 +1185,10 @@ final class DashboardController extends Controller
 	public function sdwanAccessLinkGenerate(): void
 	{
 		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão'], 403);
+			return;
+		}
 
 		$user = Auth::instance()->user();
 		$userId = isset($user['id']) ? (int) $user['id'] : null;
@@ -1159,11 +1199,84 @@ final class DashboardController extends Controller
 			return;
 		}
 
+		SdwanAudit::record('link_generate', 'user:' . ($userId ?? 0));
+
 		$this->json([
 			'success' => true,
 			'message' => 'Link gerado com sucesso. Válido por 24 horas.',
 			'link' => $result['link'] ?? null,
 			'links' => $userId ? SdwanAccessLink::listActive($userId) : SdwanAccessLink::listActive(),
+		]);
+	}
+
+	public function sdwanSettingsUpdate(): void
+	{
+		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão'], 403);
+			return;
+		}
+
+		$goal = max(0, (int) ($_POST['xpads_goal'] ?? 0));
+		$maxSub = max(1, min(500, (int) ($_POST['link_max_submissions'] ?? 50)));
+		SdwanSettings::setXpadsGoal($goal);
+		SdwanSettings::setLinkMaxSubmissions($maxSub);
+		SdwanAudit::record('settings_update', 'goal:' . $goal);
+
+		$this->json([
+			'success' => true,
+			'message' => 'Configurações SDWAN salvas',
+			'settings' => SdwanSettings::apiPayload(),
+		]);
+	}
+
+	public function sdwanImportCsv(): void
+	{
+		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão'], 403);
+			return;
+		}
+
+		if (!isset($_FILES['file'])) {
+			$this->json(['success' => false, 'message' => 'Arquivo não enviado'], 400);
+			return;
+		}
+
+		$user = Auth::instance()->user();
+		$userId = isset($user['id']) ? (int) $user['id'] : null;
+		$result = SdwanImportService::importCsvFile($_FILES['file'], $userId);
+		$this->json($result, ($result['success'] ?? false) ? 200 : 422);
+	}
+
+	public function sdwanUploadStores(): void
+	{
+		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão'], 403);
+			return;
+		}
+
+		if (!isset($_FILES['file'])) {
+			$this->json(['success' => false, 'message' => 'Arquivo não enviado'], 400);
+			return;
+		}
+
+		$result = StoreAddressService::uploadAddressesFile($_FILES['file']);
+		if ($result['success'] ?? false) {
+			SdwanAudit::record('stores_upload', 'total:' . ($result['total'] ?? 0));
+		}
+		$this->json($result, ($result['success'] ?? false) ? 200 : 422);
+	}
+
+	public function sdwanCleanup(): void
+	{
+		$this->requireAuth(['admin']);
+		$result = SdwanCleanupService::run();
+		$this->json([
+			'success' => true,
+			'message' => sprintf('Limpeza concluída: %d imagem(ns) órfã(s), %d link(s) antigo(s) removido(s).', $result['orphan_images'], $result['expired_links']),
+			'result' => $result,
 		]);
 	}
 }
