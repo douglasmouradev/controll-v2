@@ -29,6 +29,7 @@ final class Database
 		];
 		try {
 			self::$pdo = new PDO($dsn, $user, $pass, $options);
+			self::configureSessionTimezone(self::$pdo);
 			return self::$pdo;
 		} catch (PDOException $e) {
 			$debug = getenv('APP_DEBUG') ?: getenv('DEBUG_DB');
@@ -44,6 +45,26 @@ final class Database
 			http_response_code(500);
 			echo $showDetails ? htmlspecialchars($message) : $message;
 			exit;
+		}
+	}
+
+	private static function configureSessionTimezone(PDO $pdo): void
+	{
+		$tz = trim((string) (getenv('TIMEZONE') ?: 'America/Sao_Paulo'));
+		if ($tz === '') {
+			$tz = 'America/Sao_Paulo';
+		}
+
+		try {
+			$stmt = $pdo->prepare('SET time_zone = :tz');
+			$stmt->execute([':tz' => $tz]);
+		} catch (PDOException $e) {
+			try {
+				$offset = DateFormatter::mysqlTimezoneOffset();
+				$pdo->exec("SET time_zone = '{$offset}'");
+			} catch (PDOException $ignored) {
+				// Mantém timezone padrão do MySQL se não for possível ajustar.
+			}
 		}
 	}
 }

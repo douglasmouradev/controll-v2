@@ -28,8 +28,8 @@ final class SdwanExportService
 	{
 		$rows = self::rows();
 		$summary = SdwanEntry::summary();
-		$date = date('d/m/Y H:i');
-		$filename = 'projeto-sdwan-' . date('Y-m-d') . '.pdf';
+		$date = DateFormatter::now();
+		$filename = 'projeto-sdwan-' . DateFormatter::now('Y-m-d') . '.pdf';
 
 		if (class_exists(\FPDF::class)) {
 			$pdf = new \FPDF();
@@ -85,8 +85,8 @@ final class SdwanExportService
 	{
 		$rows = self::rows();
 		$summary = SdwanEntry::summary();
-		$date = date('d/m/Y H:i');
-		$filename = 'projeto-sdwan-' . date('Y-m-d') . '.xlsx';
+		$date = DateFormatter::now();
+		$filename = 'projeto-sdwan-' . DateFormatter::now('Y-m-d') . '.xlsx';
 
 		header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
 		header('Content-Disposition: attachment; filename="' . $filename . '"');
@@ -131,15 +131,7 @@ final class SdwanExportService
 
 	private static function formatDate(string $value): string
 	{
-		if ($value === '') {
-			return '';
-		}
-		$timestamp = strtotime($value);
-		if ($timestamp === false) {
-			return $value;
-		}
-
-		return date('d/m/Y H:i', $timestamp);
+		return DateFormatter::formatDateTime($value);
 	}
 
 	private static function pdfText(string $text): string
