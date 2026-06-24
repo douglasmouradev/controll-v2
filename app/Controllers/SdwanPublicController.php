@@ -8,6 +8,7 @@ use App\Models\SdwanAccessLink;
 use App\Models\SdwanEntry;
 use App\Services\Cache;
 use App\Services\SdwanEntryService;
+use App\Services\StoreAddressService;
 
 final class SdwanPublicController extends Controller
 {
@@ -51,12 +52,23 @@ final class SdwanPublicController extends Controller
 		$id = 0;
 		try {
 			$createdBy = isset($link['created_by']) ? (int) $link['created_by'] : null;
-			$id = SdwanEntry::create($validation['data'], $createdBy > 0 ? $createdBy : null);
+			$id = SdwanEntry::create(
+				$validation['data'],
+				$createdBy > 0 ? $createdBy : null,
+				[
+					'entry_source' => 'public',
+					'access_link_id' => (int) ($link['id'] ?? 0) ?: null,
+				]
+			);
 			SdwanEntryService::applyImageUpload($id, $_POST, $_FILES);
-			$this->json([
+			$response = [
 				'success' => true,
 				'message' => 'Registro enviado com sucesso. Obrigado!',
-			]);
+			];
+			if (!empty($validation['warning'])) {
+				$response['warning'] = $validation['warning'];
+			}
+			$this->json($response);
 		} catch (\InvalidArgumentException $e) {
 			if ($id > 0) {
 				SdwanEntry::delete($id);
@@ -76,7 +88,7 @@ final class SdwanPublicController extends Controller
 			return;
 		}
 
-		$path = BASE_PATH . '/endereco.json';
+		$path = StoreAddressService::addressesFile();
 		if (!is_file($path) || !is_readable($path)) {
 			$this->json(['success' => false, 'message' => 'Arquivo de endereços não encontrado'], 500);
 			return;
@@ -90,35 +102,7 @@ final class SdwanPublicController extends Controller
 			return;
 		}
 
-		$raw = trim((string) file_get_contents($path));
-		if ($raw === '') {
-			$payload = ['success' => true, 'data' => []];
-			Cache::set($cacheKey, $payload, 3600);
-			$this->json($payload);
-			return;
-		}
-
-		$json = '[' . rtrim($raw, ", \n\r\t") . ']';
-		$data = json_decode($json, true);
-		if (!is_array($data)) {
-			$this->json(['success' => false, 'message' => 'Erro ao ler arquivo de endereços'], 500);
-			return;
-		}
-
-		$result = [];
-		foreach ($data as $row) {
-			if (!is_array($row)) {
-				continue;
-			}
-			$sigla = trim((string) ($row['SIGLA'] ?? ''));
-			$endereco = trim((string) ($row['ENDEREÇO'] ?? ($row['ENDERECO'] ?? '')));
-			if ($sigla === '' || $endereco === '') {
-				continue;
-			}
-			$result[] = ['sigla' => $sigla, 'endereco' => $endereco];
-		}
-
-		$payload = ['success' => true, 'data' => $result];
+		$payload = StoreAddressService::apiPayload();
 		Cache::set($cacheKey, $payload, 3600);
 		$this->json($payload);
 	}

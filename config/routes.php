@@ -81,6 +81,7 @@ return [
 		'/dashboard/sdwan-entries/update' => [DashboardController::class, 'sdwanEntryUpdate'],
 		'/dashboard/sdwan-entries/delete' => [DashboardController::class, 'sdwanEntryDelete'],
 		'/dashboard/sdwan-access-link/generate' => [DashboardController::class, 'sdwanAccessLinkGenerate'],
+		'/dashboard/sdwan-access-link/revoke' => [DashboardController::class, 'sdwanAccessLinkRevoke'],
 		'/settings/maintenance' => [SettingsController::class, 'maintenanceToggle'],
 		'/settings/update' => [SettingsController::class, 'update'],
 		'/notifications/read' => [NotificationController::class, 'markRead'],

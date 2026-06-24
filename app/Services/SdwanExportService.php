@@ -7,27 +7,24 @@ use App\Models\SdwanEntry;
 
 final class SdwanExportService
 {
-	/** @return array<int, array<string, mixed>> */
-	private static function rows(): array
+	/** @param array<string, mixed> $filters */
+	private static function rows(array $filters = []): array
 	{
-		if (!SdwanEntry::tableReady()) {
-			return [];
-		}
+		return SdwanEntry::exportRows($filters);
+	}
 
-		$pdo = \App\Services\Database::pdo();
-		$stmt = $pdo->query('
-			SELECT loja, xpads_previsto, quantidade_localizada, pdv_numero, pdv_serie, created_at
-			FROM sdwan_entries
-			ORDER BY created_at DESC, id DESC
-		');
+	private static function sourceLabel(array $row): string
+	{
+		$source = (string) ($row['entry_source'] ?? 'dashboard');
 
-		return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+		return $source === 'public' ? 'Link técnico' : 'Dashboard';
 	}
 
 	public static function exportPdf(): void
 	{
-		$rows = self::rows();
-		$summary = SdwanEntry::summary();
+		$filters = SdwanEntry::filtersFromRequest();
+		$rows = self::rows($filters);
+		$summary = SdwanEntry::summary($filters);
 		$date = DateFormatter::now();
 		$filename = 'projeto-sdwan-' . DateFormatter::now('Y-m-d') . '.pdf';
 
@@ -41,10 +38,11 @@ final class SdwanExportService
 			$pdf->Ln(2);
 			$pdf->SetFont('Arial', '', 9);
 			$pdf->Cell(0, 6, self::pdfText(sprintf(
-				'Registros: %d | XPads previstos: %d | Quantidade localizada: %d',
+				'Registros: %d | XPads previstos: %d | Quantidade localizada: %d | Lojas: %d',
 				(int) ($summary['total'] ?? 0),
 				(int) ($summary['xpads_previsto'] ?? 0),
-				(int) ($summary['quantidade_localizada'] ?? 0)
+				(int) ($summary['quantidade_localizada'] ?? 0),
+				(int) ($summary['total_lojas'] ?? 0)
 			)), 0, 1);
 			$pdf->Ln(4);
 
@@ -83,35 +81,48 @@ final class SdwanExportService
 
 	public static function exportXlsx(): void
 	{
-		$rows = self::rows();
-		$summary = SdwanEntry::summary();
+		$filters = SdwanEntry::filtersFromRequest();
+		$rows = self::rows($filters);
+		$summary = SdwanEntry::summary($filters);
 		$date = DateFormatter::now();
 		$filename = 'projeto-sdwan-' . DateFormatter::now('Y-m-d') . '.xlsx';
+		$hasSource = SdwanEntry::hasSourceColumns();
 
 		$dataRows = [];
 		foreach ($rows as $row) {
-			$dataRows[] = [
+			$line = [
 				(string) ($row['loja'] ?? ''),
 				(string) (int) ($row['xpads_previsto'] ?? 0),
 				(string) (int) ($row['quantidade_localizada'] ?? 0),
 				(string) ($row['pdv_numero'] ?? ''),
 				(string) ($row['pdv_serie'] ?? ''),
 				self::formatDate((string) ($row['created_at'] ?? '')),
+				(string) ($row['created_by_name'] ?? '-'),
 			];
+			if ($hasSource) {
+				$line[] = self::sourceLabel($row);
+			}
+			$dataRows[] = $line;
+		}
+
+		$headers = ['Loja', 'XPads previstos', 'Quantidade localizada', 'N PDV', 'N Serie PDV', 'Data cadastro', 'Cadastrado por'];
+		if ($hasSource) {
+			$headers[] = 'Origem';
 		}
 
 		SimpleXlsxWriter::download(
 			$filename,
-			['Loja', 'XPads previstos', 'Quantidade localizada', 'N PDV', 'N Serie PDV', 'Data cadastro'],
+			$headers,
 			$dataRows,
 			[
 				'Projeto SDWAN',
 				'Gerado em ' . $date,
 				sprintf(
-					'Registros: %d | XPads previstos: %d | Quantidade localizada: %d',
+					'Registros: %d | XPads previstos: %d | Quantidade localizada: %d | Lojas: %d',
 					(int) ($summary['total'] ?? 0),
 					(int) ($summary['xpads_previsto'] ?? 0),
-					(int) ($summary['quantidade_localizada'] ?? 0)
+					(int) ($summary['quantidade_localizada'] ?? 0),
+					(int) ($summary['total_lojas'] ?? 0)
 				),
 			]
 		);

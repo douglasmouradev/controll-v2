@@ -857,11 +857,16 @@ final class DashboardController extends Controller
 			return;
 		}
 
+		$filters = SdwanEntry::filtersFromRequest();
+		$list = SdwanEntry::listFiltered($filters);
+
 		$this->json([
 			'success' => true,
-			'entries' => SdwanEntry::listAll(),
-			'summary' => SdwanEntry::summary(),
-			'chart' => SdwanEntry::pieChartByStore(),
+			'entries' => $list['entries'],
+			'pagination' => $list['pagination'],
+			'summary' => SdwanEntry::summary($filters),
+			'chart' => SdwanEntry::pieChartByStore($filters),
+			'progress' => SdwanEntry::progressChart($filters),
 		]);
 	}
 
@@ -877,7 +882,8 @@ final class DashboardController extends Controller
 			return;
 		}
 
-		$this->json(SdwanEntry::chartPayload());
+		$filters = SdwanEntry::filtersFromRequest();
+		$this->json(SdwanEntry::chartPayload($filters));
 	}
 
 	public function sdwanExportPdf(): void
@@ -934,16 +940,18 @@ final class DashboardController extends Controller
 		try {
 			$user = Auth::instance()->user();
 			$data = $validation['data'];
-			$id = SdwanEntry::create($data, isset($user['id']) ? (int) $user['id'] : null);
+			$id = SdwanEntry::create($data, isset($user['id']) ? (int) $user['id'] : null, ['entry_source' => 'dashboard']);
 			SdwanEntryService::applyImageUpload($id, $_POST, $_FILES);
 			$entry = SdwanEntry::findById($id);
-			$this->json([
+			$response = [
 				'success' => true,
 				'message' => 'Registro SDWAN salvo com sucesso',
 				'entry' => $entry,
-				'summary' => SdwanEntry::summary(),
-				'chart' => SdwanEntry::pieChartByStore(),
-			]);
+			];
+			if (!empty($validation['warning'])) {
+				$response['warning'] = $validation['warning'];
+			}
+			$this->json($response);
 		} catch (\InvalidArgumentException $e) {
 			if (!empty($id) && $id > 0) {
 				SdwanEntry::delete((int) $id);
@@ -966,7 +974,7 @@ final class DashboardController extends Controller
 			return;
 		}
 
-		$validation = SdwanEntry::validateInput($_POST);
+		$validation = SdwanEntry::validateInput($_POST, $id);
 		if (!$validation['success']) {
 			$this->json(['success' => false, 'message' => $validation['message'] ?? 'Dados inválidos'], 422);
 			return;
@@ -987,13 +995,15 @@ final class DashboardController extends Controller
 			}
 
 			SdwanEntryService::applyImageUpload($id, $_POST, $_FILES);
-			$this->json([
+			$response = [
 				'success' => true,
 				'message' => 'Registro SDWAN atualizado com sucesso',
 				'entry' => SdwanEntry::findById($id),
-				'summary' => SdwanEntry::summary(),
-				'chart' => SdwanEntry::pieChartByStore(),
-			]);
+			];
+			if (!empty($validation['warning'])) {
+				$response['warning'] = $validation['warning'];
+			}
+			$this->json($response);
 		} catch (\InvalidArgumentException $e) {
 			$this->json(['success' => false, 'message' => $e->getMessage()], 422);
 		} catch (\Throwable $e) {
@@ -1020,8 +1030,6 @@ final class DashboardController extends Controller
 		$this->json([
 			'success' => true,
 			'message' => 'Registro SDWAN excluído com sucesso',
-			'summary' => SdwanEntry::summary(),
-			'chart' => SdwanEntry::pieChartByStore(),
 		]);
 	}
 
@@ -1072,10 +1080,36 @@ final class DashboardController extends Controller
 		$user = Auth::instance()->user();
 		$userId = isset($user['id']) ? (int) $user['id'] : 0;
 		$link = $userId > 0 ? SdwanAccessLink::getLatestActiveForUser($userId) : null;
+		$links = $userId > 0 ? SdwanAccessLink::listActive($userId) : SdwanAccessLink::listActive();
 
 		$this->json([
 			'success' => true,
 			'link' => $link,
+			'links' => $links,
+		]);
+	}
+
+	public function sdwanAccessLinkRevoke(): void
+	{
+		$this->requireAuth([]);
+
+		$id = (int) ($_POST['id'] ?? 0);
+		if ($id <= 0) {
+			$this->json(['success' => false, 'message' => 'Link inválido'], 422);
+			return;
+		}
+
+		$user = Auth::instance()->user();
+		$userId = isset($user['id']) ? (int) $user['id'] : 0;
+		if (!SdwanAccessLink::revoke($id, $userId > 0 ? $userId : null)) {
+			$this->json(['success' => false, 'message' => 'Não foi possível revogar o link'], 404);
+			return;
+		}
+
+		$this->json([
+			'success' => true,
+			'message' => 'Link revogado com sucesso',
+			'links' => $userId > 0 ? SdwanAccessLink::listActive($userId) : SdwanAccessLink::listActive(),
 		]);
 	}
 
@@ -1096,6 +1130,7 @@ final class DashboardController extends Controller
 			'success' => true,
 			'message' => 'Link gerado com sucesso. Válido por 24 horas.',
 			'link' => $result['link'] ?? null,
+			'links' => $userId ? SdwanAccessLink::listActive($userId) : SdwanAccessLink::listActive(),
 		]);
 	}
 }

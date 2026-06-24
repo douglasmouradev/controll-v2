@@ -36,6 +36,11 @@ final class SdwanAccessLink
 		return self::appBaseUrl() . '/sdwan/cadastro/' . $code;
 	}
 
+	public static function qrCodeUrl(string $url): string
+	{
+		return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . rawurlencode($url);
+	}
+
 	/** @return array<string, mixed>|null */
 	public static function findActiveByCode(string $code): ?array
 	{
@@ -83,6 +88,54 @@ final class SdwanAccessLink
 		return $row ? self::present($row) : null;
 	}
 
+	/** @return array<int, array<string, mixed>> */
+	public static function listActive(?int $createdBy = null, int $limit = 20): array
+	{
+		if (!self::tableReady()) {
+			return [];
+		}
+
+		$pdo = Database::pdo();
+		$sql = 'SELECT * FROM sdwan_access_links WHERE expires_at > NOW()';
+		$params = [];
+		if ($createdBy !== null && $createdBy > 0) {
+			$sql .= ' AND created_by = :created_by';
+			$params[':created_by'] = $createdBy;
+		}
+		$sql .= ' ORDER BY id DESC LIMIT :limit';
+
+		$stmt = $pdo->prepare($sql);
+		foreach ($params as $key => $value) {
+			$stmt->bindValue($key, $value, PDO::PARAM_INT);
+		}
+		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+		$stmt->execute();
+
+		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+		return array_map([self::class, 'present'], $rows);
+	}
+
+	public static function revoke(int $id, ?int $userId = null): bool
+	{
+		if (!self::tableReady() || $id <= 0) {
+			return false;
+		}
+
+		$pdo = Database::pdo();
+		$sql = 'UPDATE sdwan_access_links SET expires_at = NOW() WHERE id = :id AND expires_at > NOW()';
+		$params = [':id' => $id];
+		if ($userId !== null && $userId > 0) {
+			$sql .= ' AND created_by = :created_by';
+			$params[':created_by'] = $userId;
+		}
+
+		$stmt = $pdo->prepare($sql);
+		$stmt->execute($params);
+
+		return $stmt->rowCount() > 0;
+	}
+
 	/** @return array{success: bool, message?: string, link?: array<string, mixed>} */
 	public static function generate(?int $createdBy = null): array
 	{
@@ -122,6 +175,7 @@ final class SdwanAccessLink
 				'link' => $row ? self::present($row) : [
 					'code' => $code,
 					'url' => self::buildPublicUrl($code),
+					'qr_url' => self::qrCodeUrl(self::buildPublicUrl($code)),
 					'expires_at' => $expiresAt,
 				],
 			];
@@ -145,11 +199,13 @@ final class SdwanAccessLink
 	{
 		$code = self::normalizeCode((string) ($row['code'] ?? ''));
 		$expiresAt = (string) ($row['expires_at'] ?? '');
+		$url = self::buildPublicUrl($code);
 
 		return [
 			'id' => (int) ($row['id'] ?? 0),
 			'code' => $code,
-			'url' => self::buildPublicUrl($code),
+			'url' => $url,
+			'qr_url' => self::qrCodeUrl($url),
 			'expires_at' => $expiresAt,
 			'created_at' => (string) ($row['created_at'] ?? ''),
 		];
