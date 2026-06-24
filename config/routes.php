@@ -9,12 +9,15 @@ use App\Controllers\ReportController;
 use App\Controllers\SettingsController;
 use App\Controllers\HealthController;
 use App\Controllers\NotificationController;
+use App\Controllers\SdwanPublicController;
 use App\Controllers\SecurityController;
 
 return [
 	'GET' => [
 		'/' => [DashboardController::class, 'index'],
 		'/login' => [AuthController::class, 'loginForm'],
+		'/sdwan/cadastro' => [SdwanPublicController::class, 'form'],
+		'/sdwan/enderecos' => [SdwanPublicController::class, 'storeAddresses'],
 		'/two-factor' => [AuthController::class, 'twoFactorForm'],
 		'/auditoria' => [AuthController::class, 'auditoria'],
 		'/logout' => [AuthController::class, 'logout'],
@@ -33,6 +36,7 @@ return [
 		'/dashboard/purchased-dailies-download' => [DashboardController::class, 'downloadPurchasedDailiesFile'],
 		'/dashboard/sdwan-entries' => [DashboardController::class, 'sdwanEntries'],
 		'/dashboard/sdwan-entries/image' => [DashboardController::class, 'sdwanEntryImage'],
+		'/dashboard/sdwan-access-link' => [DashboardController::class, 'sdwanAccessLinkStatus'],
 		'/dashboard/enderecos' => [DashboardController::class, 'storeAddresses'],
 		'/tickets' => [TicketController::class, 'index'],
 		'/tickets/view' => [TicketController::class, 'show'],
@@ -50,6 +54,7 @@ return [
 	],
 	'POST' => [
 		'/login' => [AuthController::class, 'login'],
+		'/sdwan/cadastro' => [SdwanPublicController::class, 'submit'],
 		'/two-factor' => [AuthController::class, 'twoFactorVerify'],
 		'/change-password-first-update' => [AuthController::class, 'updatePasswordFirst'],
 		'/tickets/create' => [TicketController::class, 'create'],
@@ -72,6 +77,7 @@ return [
 		'/dashboard/sdwan-entries/create' => [DashboardController::class, 'sdwanEntryCreate'],
 		'/dashboard/sdwan-entries/update' => [DashboardController::class, 'sdwanEntryUpdate'],
 		'/dashboard/sdwan-entries/delete' => [DashboardController::class, 'sdwanEntryDelete'],
+		'/dashboard/sdwan-access-link/generate' => [DashboardController::class, 'sdwanAccessLinkGenerate'],
 		'/settings/maintenance' => [SettingsController::class, 'maintenanceToggle'],
 		'/settings/update' => [SettingsController::class, 'update'],
 		'/notifications/read' => [NotificationController::class, 'markRead'],

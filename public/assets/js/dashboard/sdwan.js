@@ -356,9 +356,91 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	});
 
+	function formatDateTime(value) {
+		if (!value) return '';
+		const normalized = String(value).includes('T') ? value : String(value).replace(' ', 'T');
+		const date = new Date(normalized);
+		if (Number.isNaN(date.getTime())) return value;
+		return date.toLocaleString('pt-BR');
+	}
+
+	function renderAccessLink(link) {
+		const box = document.getElementById('sdwan-access-link-box');
+		const codeEl = document.getElementById('sdwan-access-code');
+		const urlEl = document.getElementById('sdwan-access-url');
+		const expiresEl = document.getElementById('sdwan-access-expires');
+		if (!box || !link) return;
+		if (codeEl) codeEl.textContent = link.code || '----';
+		if (urlEl) {
+			urlEl.textContent = link.url || '';
+			urlEl.href = link.url || '#';
+		}
+		if (expiresEl) expiresEl.textContent = formatDateTime(link.expires_at || '');
+		box.classList.remove('hidden');
+	}
+
+	async function loadAccessLink() {
+		try {
+			const res = await fetch('/dashboard/sdwan-access-link', {
+				headers: { 'X-Requested-With': 'XMLHttpRequest' },
+			});
+			const data = await res.json();
+			if (data.success && data.link) {
+				renderAccessLink(data.link);
+			}
+		} catch (error) {
+			console.error('Erro ao carregar link SDWAN:', error);
+		}
+	}
+
+	document.getElementById('btn-sdwan-generate-link')?.addEventListener('click', async () => {
+		const btn = document.getElementById('btn-sdwan-generate-link');
+		if (!btn) return;
+		btn.disabled = true;
+		const originalText = btn.textContent;
+		btn.textContent = 'Gerando...';
+		try {
+			const formData = new FormData();
+			formData.append('csrf_token', getCsrfToken());
+			const res = await fetch('/dashboard/sdwan-access-link/generate', {
+				method: 'POST',
+				body: formData,
+				headers: { 'X-Requested-With': 'XMLHttpRequest' },
+			});
+			const data = await res.json();
+			if (data.success && data.link) {
+				renderAccessLink(data.link);
+				if (typeof showToast === 'function') {
+					showToast(data.message || 'Link gerado com sucesso', 'success');
+				}
+			} else if (typeof showToast === 'function') {
+				showToast(data.message || 'Erro ao gerar link');
+			}
+		} catch (error) {
+			console.error('Erro ao gerar link SDWAN:', error);
+			if (typeof showToast === 'function') showToast('Erro ao conectar com o servidor');
+		} finally {
+			btn.disabled = false;
+			btn.textContent = originalText;
+		}
+	});
+
+	document.getElementById('btn-sdwan-copy-link')?.addEventListener('click', async () => {
+		const urlEl = document.getElementById('sdwan-access-url');
+		const url = urlEl?.href || urlEl?.textContent || '';
+		if (!url || url === '#') return;
+		try {
+			await navigator.clipboard.writeText(url);
+			if (typeof showToast === 'function') showToast('Link copiado', 'success');
+		} catch (error) {
+			if (typeof showToast === 'function') showToast('Não foi possível copiar o link');
+		}
+	});
+
 	(async function initSdwanTab() {
 		await loadStoreSiglas();
 		populateLojaDatalist();
+		await loadAccessLink();
 		await loadEntries();
 	})();
 });

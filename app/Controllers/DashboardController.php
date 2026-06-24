@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Models\SdwanAccessLink;
 use App\Models\SdwanEntry;
 use App\Models\Ticket;
 use App\Models\User;
@@ -14,6 +15,7 @@ use App\Services\DashboardCache;
 use App\Services\DashboardStatsService;
 use App\Services\Database;
 use App\Services\DatabaseSchema;
+use App\Services\SdwanEntryService;
 use App\Services\SdwanImageService;
 use App\Services\PurchasedDailies;
 use App\Services\AuditLog;
@@ -876,7 +878,7 @@ final class DashboardController extends Controller
 			$user = Auth::instance()->user();
 			$data = $validation['data'];
 			$id = SdwanEntry::create($data, isset($user['id']) ? (int) $user['id'] : null);
-			$this->applySdwanImageUpload($id);
+			SdwanEntryService::applyImageUpload($id, $_POST, $_FILES);
 			$entry = SdwanEntry::findById($id);
 			$this->json([
 				'success' => true,
@@ -926,7 +928,7 @@ final class DashboardController extends Controller
 				return;
 			}
 
-			$this->applySdwanImageUpload($id);
+			SdwanEntryService::applyImageUpload($id, $_POST, $_FILES);
 			$this->json([
 				'success' => true,
 				'message' => 'Registro SDWAN atualizado com sucesso',
@@ -995,62 +997,46 @@ final class DashboardController extends Controller
 		exit;
 	}
 
-	private function applySdwanImageUpload(int $entryId): void
+	public function sdwanAccessLinkStatus(): void
 	{
-		if (!SdwanEntry::hasImageColumns()) {
+		$this->requireAuth([]);
+
+		if (!SdwanAccessLink::tableReady()) {
+			$this->json([
+				'success' => false,
+				'message' => 'Tabela de links SDWAN não configurada. Execute as migrations.',
+			], 503);
 			return;
 		}
 
-		$existing = SdwanEntry::findRawById($entryId);
-		if (!$existing) {
+		$user = Auth::instance()->user();
+		$userId = isset($user['id']) ? (int) $user['id'] : 0;
+		$link = $userId > 0 ? SdwanAccessLink::getLatestActiveForUser($userId) : null;
+
+		$this->json([
+			'success' => true,
+			'link' => $link,
+		]);
+	}
+
+	public function sdwanAccessLinkGenerate(): void
+	{
+		$this->requireAuth([]);
+
+		$user = Auth::instance()->user();
+		$userId = isset($user['id']) ? (int) $user['id'] : null;
+		$result = SdwanAccessLink::generate($userId);
+
+		if (!$result['success']) {
+			$this->json(['success' => false, 'message' => $result['message'] ?? 'Erro ao gerar link'], 500);
 			return;
 		}
 
-		$removeImage = !empty($_POST['remove_image']);
-		$hasUpload = isset($_FILES['image']) && is_array($_FILES['image'])
-			&& (($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE);
-
-		if (!$hasUpload && !$removeImage) {
-			return;
-		}
-
-		$current = SdwanEntry::findRawById($entryId);
-		if (!$current) {
-			return;
-		}
-
-		$data = [
-			'xpads_previsto' => (int) ($current['xpads_previsto'] ?? 0),
-			'quantidade_localizada' => (int) ($current['quantidade_localizada'] ?? 0),
-			'pdv_numero' => (string) ($current['pdv_numero'] ?? ''),
-			'pdv_serie' => (string) ($current['pdv_serie'] ?? ''),
-			'loja' => (string) ($current['loja'] ?? ''),
-			'image_path' => $current['image_path'] ?? null,
-			'image_name' => $current['image_name'] ?? null,
-			'image_type' => $current['image_type'] ?? null,
-			'image_size' => $current['image_size'] ?? null,
-		];
-
-		if ($removeImage && !$hasUpload) {
-			SdwanImageService::deleteImage((string) ($current['image_path'] ?? ''));
-			$data['image_path'] = null;
-			$data['image_name'] = null;
-			$data['image_type'] = null;
-			$data['image_size'] = null;
-			SdwanEntry::update($entryId, $data);
-			return;
-		}
-
-		if ($hasUpload) {
-			if (!empty($current['image_path'])) {
-				SdwanImageService::deleteImage((string) $current['image_path']);
-			}
-			$imageData = SdwanImageService::saveUploadedFile($_FILES['image'], $entryId);
-			if ($imageData !== null) {
-				$data = array_merge($data, $imageData);
-				SdwanEntry::update($entryId, $data);
-			}
-		}
+		$this->json([
+			'success' => true,
+			'message' => 'Link gerado com sucesso. Válido por 24 horas.',
+			'link' => $result['link'] ?? null,
+		]);
 	}
 }
 

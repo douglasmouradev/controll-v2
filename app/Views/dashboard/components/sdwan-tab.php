@@ -22,6 +22,32 @@
 	</div>
 
 	<section class="ui-card ui-card-body mb-6">
+		<div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+			<div>
+				<h3 class="text-lg font-bold text-slate-800 mb-1">Link para técnicos</h3>
+				<p class="text-sm text-slate-600">Gere um link com código de 4 dígitos válido por 24 horas. Após expirar, os cadastros já enviados permanecem salvos abaixo.</p>
+			</div>
+			<button type="button" id="btn-sdwan-generate-link" class="btn btn-secondary shrink-0">Gerar novo link</button>
+		</div>
+		<div id="sdwan-access-link-box" class="hidden mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+				<div>
+					<p class="text-slate-500">Código</p>
+					<p class="text-2xl font-bold tracking-widest text-slate-900" id="sdwan-access-code">----</p>
+				</div>
+				<div class="md:col-span-2">
+					<p class="text-slate-500">Link de cadastro</p>
+					<div class="flex flex-wrap items-center gap-2 mt-1">
+						<a href="#" id="sdwan-access-url" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-semibold break-all hover:underline"></a>
+						<button type="button" id="btn-sdwan-copy-link" class="btn btn-ghost btn-sm">Copiar link</button>
+					</div>
+				</div>
+			</div>
+			<p class="text-xs text-slate-500 mt-3">Expira em: <span id="sdwan-access-expires" class="font-semibold text-slate-700"></span></p>
+		</div>
+	</section>
+
+	<section class="ui-card ui-card-body mb-6">
 		<h3 class="text-lg font-bold text-slate-800 mb-4" id="sdwan-form-title">Novo registro</h3>
 		<form id="sdwan-entry-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" enctype="multipart/form-data">
 			<?php echo \App\Services\Csrf::field(); ?>
