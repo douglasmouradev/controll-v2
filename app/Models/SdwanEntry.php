@@ -5,6 +5,7 @@ namespace App\Models;
 
 use App\Services\Database;
 use App\Services\DatabaseSchema;
+use App\Services\SdwanImageService;
 use PDO;
 
 final class SdwanEntry
@@ -17,6 +18,25 @@ final class SdwanEntry
 			error_log('Erro ao verificar tabela sdwan_entries: ' . $e->getMessage());
 			return false;
 		}
+	}
+
+	public static function hasImageColumns(): bool
+	{
+		try {
+			return DatabaseSchema::columnExists(Database::pdo(), 'sdwan_entries', 'image_path');
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
+	/** @param array<string, mixed> $row */
+	public static function enrichRow(array $row): array
+	{
+		$row['has_image'] = self::hasImageColumns() && !empty($row['image_path']);
+		$row['image_url'] = $row['has_image'] ? SdwanImageService::imageUrl((int) ($row['id'] ?? 0)) : null;
+		unset($row['image_path']);
+
+		return $row;
 	}
 
 	/** @return array<int, array<string, mixed>> */
@@ -37,7 +57,9 @@ final class SdwanEntry
 		$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
 		$stmt->execute();
 
-		return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+		return array_map([self::class, 'enrichRow'], $rows);
 	}
 
 	/** @return array{total: int, xpads_previsto: int, quantidade_localizada: int} */
@@ -74,6 +96,20 @@ final class SdwanEntry
 		$stmt->execute([':id' => $id]);
 		$row = $stmt->fetch(PDO::FETCH_ASSOC);
 
+		return $row ? self::enrichRow($row) : null;
+	}
+
+	public static function findRawById(int $id): ?array
+	{
+		if (!self::tableReady() || $id <= 0) {
+			return null;
+		}
+
+		$pdo = Database::pdo();
+		$stmt = $pdo->prepare('SELECT * FROM sdwan_entries WHERE id = :id LIMIT 1');
+		$stmt->execute([':id' => $id]);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
 		return $row ?: null;
 	}
 
@@ -84,20 +120,34 @@ final class SdwanEntry
 		}
 
 		$pdo = Database::pdo();
-		$stmt = $pdo->prepare('
-			INSERT INTO sdwan_entries
+		$hasImage = self::hasImageColumns();
+		$sql = $hasImage
+			? 'INSERT INTO sdwan_entries
+				(xpads_previsto, quantidade_localizada, pdv_numero, pdv_serie, loja, image_path, image_name, image_type, image_size, created_by)
+				VALUES
+				(:xpads_previsto, :quantidade_localizada, :pdv_numero, :pdv_serie, :loja, :image_path, :image_name, :image_type, :image_size, :created_by)'
+			: 'INSERT INTO sdwan_entries
 				(xpads_previsto, quantidade_localizada, pdv_numero, pdv_serie, loja, created_by)
-			VALUES
-				(:xpads_previsto, :quantidade_localizada, :pdv_numero, :pdv_serie, :loja, :created_by)
-		');
-		$stmt->execute([
+				VALUES
+				(:xpads_previsto, :quantidade_localizada, :pdv_numero, :pdv_serie, :loja, :created_by)';
+
+		$params = [
 			':xpads_previsto' => (int) ($data['xpads_previsto'] ?? 0),
 			':quantidade_localizada' => (int) ($data['quantidade_localizada'] ?? 0),
 			':pdv_numero' => (string) ($data['pdv_numero'] ?? ''),
 			':pdv_serie' => (string) ($data['pdv_serie'] ?? ''),
 			':loja' => (string) ($data['loja'] ?? ''),
 			':created_by' => $createdBy,
-		]);
+		];
+		if ($hasImage) {
+			$params[':image_path'] = $data['image_path'] ?? null;
+			$params[':image_name'] = $data['image_name'] ?? null;
+			$params[':image_type'] = $data['image_type'] ?? null;
+			$params[':image_size'] = isset($data['image_size']) ? (int) $data['image_size'] : null;
+		}
+
+		$stmt = $pdo->prepare($sql);
+		$stmt->execute($params);
 
 		return (int) $pdo->lastInsertId();
 	}
@@ -109,31 +159,58 @@ final class SdwanEntry
 		}
 
 		$pdo = Database::pdo();
-		$stmt = $pdo->prepare('
-			UPDATE sdwan_entries
-			SET
-				xpads_previsto = :xpads_previsto,
-				quantidade_localizada = :quantidade_localizada,
-				pdv_numero = :pdv_numero,
-				pdv_serie = :pdv_serie,
-				loja = :loja
-			WHERE id = :id
-		');
+		$hasImage = self::hasImageColumns();
+		$sql = $hasImage
+			? 'UPDATE sdwan_entries
+				SET
+					xpads_previsto = :xpads_previsto,
+					quantidade_localizada = :quantidade_localizada,
+					pdv_numero = :pdv_numero,
+					pdv_serie = :pdv_serie,
+					loja = :loja,
+					image_path = :image_path,
+					image_name = :image_name,
+					image_type = :image_type,
+					image_size = :image_size
+				WHERE id = :id'
+			: 'UPDATE sdwan_entries
+				SET
+					xpads_previsto = :xpads_previsto,
+					quantidade_localizada = :quantidade_localizada,
+					pdv_numero = :pdv_numero,
+					pdv_serie = :pdv_serie,
+					loja = :loja
+				WHERE id = :id';
 
-		return $stmt->execute([
+		$params = [
 			':id' => $id,
 			':xpads_previsto' => (int) ($data['xpads_previsto'] ?? 0),
 			':quantidade_localizada' => (int) ($data['quantidade_localizada'] ?? 0),
 			':pdv_numero' => (string) ($data['pdv_numero'] ?? ''),
 			':pdv_serie' => (string) ($data['pdv_serie'] ?? ''),
 			':loja' => (string) ($data['loja'] ?? ''),
-		]);
+		];
+		if ($hasImage) {
+			$params[':image_path'] = $data['image_path'] ?? null;
+			$params[':image_name'] = $data['image_name'] ?? null;
+			$params[':image_type'] = $data['image_type'] ?? null;
+			$params[':image_size'] = isset($data['image_size']) ? (int) $data['image_size'] : null;
+		}
+
+		$stmt = $pdo->prepare($sql);
+
+		return $stmt->execute($params);
 	}
 
 	public static function delete(int $id): bool
 	{
 		if (!self::tableReady() || $id <= 0) {
 			return false;
+		}
+
+		$entry = self::findRawById($id);
+		if ($entry && self::hasImageColumns() && !empty($entry['image_path'])) {
+			SdwanImageService::deleteImage((string) $entry['image_path']);
 		}
 
 		$pdo = Database::pdo();

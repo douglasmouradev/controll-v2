@@ -23,7 +23,7 @@
 
 	<section class="ui-card ui-card-body mb-6">
 		<h3 class="text-lg font-bold text-slate-800 mb-4" id="sdwan-form-title">Novo registro</h3>
-		<form id="sdwan-entry-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+		<form id="sdwan-entry-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" enctype="multipart/form-data">
 			<?php echo \App\Services\Csrf::field(); ?>
 			<input type="hidden" name="id" id="sdwan-entry-id" value="">
 			<div>
@@ -48,6 +48,25 @@
 				<datalist id="sdwan-loja-list"></datalist>
 				<p class="text-xs text-slate-500 mt-1" id="sdwan-loja-hint">Digite a sigla para buscar na planilha de lojas.</p>
 			</div>
+			<div class="md:col-span-2 lg:col-span-3">
+				<label class="label" for="sdwan-image">Imagem</label>
+				<input class="input" type="file" name="image" id="sdwan-image" accept="image/*">
+				<p class="text-xs text-slate-500 mt-1">JPG, PNG, GIF ou WEBP. Tamanho máximo: 10 MB.</p>
+				<label class="mt-2 hidden items-center gap-2 text-sm text-slate-600" id="sdwan-remove-image-wrap">
+					<input type="checkbox" name="remove_image" id="sdwan-remove-image" value="1">
+					Remover imagem atual
+				</label>
+				<div id="sdwan-image-preview" class="mt-3 hidden">
+					<p class="text-xs font-semibold text-slate-600 mb-2">Pré-visualização</p>
+					<img id="sdwan-image-preview-img" src="" alt="Pré-visualização da imagem" class="max-h-48 rounded-lg border border-slate-200">
+				</div>
+				<div id="sdwan-image-current" class="mt-3 hidden">
+					<p class="text-xs font-semibold text-slate-600 mb-2">Imagem atual</p>
+					<a id="sdwan-image-current-link" href="#" target="_blank" rel="noopener noreferrer" class="inline-block">
+						<img id="sdwan-image-current-img" src="" alt="Imagem do registro" class="max-h-48 rounded-lg border border-slate-200">
+					</a>
+				</div>
+			</div>
 			<div class="md:col-span-2 lg:col-span-3 flex flex-wrap gap-2">
 				<button type="submit" id="sdwan-form-submit" class="btn btn-primary">Salvar registro</button>
 				<button type="button" id="sdwan-form-cancel" class="btn btn-secondary hidden">Cancelar edição</button>
@@ -65,12 +84,13 @@
 						<th>Nº PDV</th>
 						<th>Nº Série PDV</th>
 						<th>Loja</th>
+						<th>Imagem</th>
 						<th class="text-right">Ações</th>
 					</tr>
 				</thead>
 				<tbody id="sdwan-table-body">
 					<tr>
-						<td colspan="6" class="empty-state">Nenhum registro cadastrado.</td>
+						<td colspan="7" class="empty-state">Nenhum registro cadastrado.</td>
 					</tr>
 				</tbody>
 			</table>

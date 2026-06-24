@@ -13,7 +13,16 @@ document.addEventListener('DOMContentLoaded', function () {
 	const lojaInput = document.getElementById('sdwan-loja');
 	const lojaDatalist = document.getElementById('sdwan-loja-list');
 	const lojaHint = document.getElementById('sdwan-loja-hint');
+	const imageInput = document.getElementById('sdwan-image');
+	const imagePreview = document.getElementById('sdwan-image-preview');
+	const imagePreviewImg = document.getElementById('sdwan-image-preview-img');
+	const imageCurrent = document.getElementById('sdwan-image-current');
+	const imageCurrentImg = document.getElementById('sdwan-image-current-img');
+	const imageCurrentLink = document.getElementById('sdwan-image-current-link');
+	const removeImageWrap = document.getElementById('sdwan-remove-image-wrap');
+	const removeImageInput = document.getElementById('sdwan-remove-image');
 	let sdwanEntries = [];
+	let previewObjectUrl = null;
 	let storeSiglas = [];
 
 	async function loadStoreSiglas() {
@@ -100,6 +109,35 @@ document.addEventListener('DOMContentLoaded', function () {
 		return form.querySelector('input[name="csrf_token"]')?.value || '';
 	}
 
+	function clearImagePreview() {
+		if (previewObjectUrl) {
+			URL.revokeObjectURL(previewObjectUrl);
+			previewObjectUrl = null;
+		}
+		if (imagePreview) imagePreview.classList.add('hidden');
+		if (imagePreviewImg) imagePreviewImg.removeAttribute('src');
+	}
+
+	function clearCurrentImage() {
+		if (imageCurrent) imageCurrent.classList.add('hidden');
+		if (imageCurrentImg) imageCurrentImg.removeAttribute('src');
+		if (imageCurrentLink) imageCurrentLink.setAttribute('href', '#');
+		if (removeImageWrap) removeImageWrap.classList.add('hidden');
+		if (removeImageInput) removeImageInput.checked = false;
+	}
+
+	function showCurrentImage(entry) {
+		clearCurrentImage();
+		if (!entry?.has_image || !entry?.image_url) return;
+		if (imageCurrent) imageCurrent.classList.remove('hidden');
+		if (imageCurrentImg) imageCurrentImg.src = entry.image_url;
+		if (imageCurrentLink) imageCurrentLink.href = entry.image_url;
+		if (removeImageWrap) {
+			removeImageWrap.classList.remove('hidden');
+			removeImageWrap.classList.add('flex');
+		}
+	}
+
 	function resetForm() {
 		form.reset();
 		entryIdInput.value = '';
@@ -107,6 +145,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		submitBtn.textContent = 'Salvar registro';
 		cancelBtn.classList.add('hidden');
 		updateLojaHint(null);
+		clearImagePreview();
+		clearCurrentImage();
+		if (imageInput) imageInput.value = '';
 	}
 
 	function fillForm(entry) {
@@ -119,6 +160,9 @@ document.addEventListener('DOMContentLoaded', function () {
 			lojaInput.value = entry.loja || '';
 			updateLojaHint(findStoreBySigla(entry.loja || ''));
 		}
+		clearImagePreview();
+		if (imageInput) imageInput.value = '';
+		showCurrentImage(entry);
 		formTitle.textContent = 'Editar registro';
 		submitBtn.textContent = 'Atualizar registro';
 		cancelBtn.classList.remove('hidden');
@@ -131,6 +175,15 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (totalLocalizadaEl) totalLocalizadaEl.textContent = String(summary.quantidade_localizada ?? 0);
 	}
 
+	function imageCellHtml(entry) {
+		if (!entry?.has_image || !entry?.image_url) {
+			return '<span class="text-slate-400">-</span>';
+		}
+		return `<a href="${escapeHtml(entry.image_url)}" target="_blank" rel="noopener noreferrer" class="inline-block">
+			<img src="${escapeHtml(entry.image_url)}" alt="Imagem da loja ${escapeHtml(entry.loja || '')}" class="h-12 w-12 object-cover rounded border border-slate-200">
+		</a>`;
+	}
+
 	function rowHtml(entry) {
 		return `
 			<tr data-sdwan-id="${escapeHtml(String(entry.id))}">
@@ -139,6 +192,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${escapeHtml(entry.pdv_numero || '-')}</td>
 				<td>${escapeHtml(entry.pdv_serie || '-')}</td>
 				<td>${escapeHtml(entry.loja || '-')}</td>
+				<td>${imageCellHtml(entry)}</td>
 				<td class="text-right whitespace-nowrap">
 					<button type="button" class="btn btn-secondary btn-sm" data-sdwan-edit="${escapeHtml(String(entry.id))}">Editar</button>
 					<button type="button" class="btn btn-ghost btn-sm text-red-600" data-sdwan-delete="${escapeHtml(String(entry.id))}">Excluir</button>
@@ -149,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	function renderTable(entries) {
 		if (!Array.isArray(entries) || entries.length === 0) {
-			tableBody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum registro cadastrado.</td></tr>';
+			tableBody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum registro cadastrado.</td></tr>';
 			return;
 		}
 		tableBody.innerHTML = entries.map(rowHtml).join('');
@@ -229,6 +283,30 @@ document.addEventListener('DOMContentLoaded', function () {
 	lojaInput?.addEventListener('blur', completeLojaSigla);
 
 	lojaInput?.addEventListener('change', completeLojaSigla);
+
+	imageInput?.addEventListener('change', () => {
+		clearImagePreview();
+		const file = imageInput.files && imageInput.files[0];
+		if (!file) return;
+		if (!file.type.startsWith('image/')) {
+			if (typeof showToast === 'function') {
+				showToast('Selecione um arquivo de imagem válido');
+			}
+			imageInput.value = '';
+			return;
+		}
+		if (removeImageInput) removeImageInput.checked = false;
+		previewObjectUrl = URL.createObjectURL(file);
+		if (imagePreviewImg) imagePreviewImg.src = previewObjectUrl;
+		if (imagePreview) imagePreview.classList.remove('hidden');
+	});
+
+	removeImageInput?.addEventListener('change', () => {
+		if (removeImageInput.checked && imageInput) {
+			imageInput.value = '';
+			clearImagePreview();
+		}
+	});
 
 	tableBody.addEventListener('click', async (event) => {
 		const editBtn = event.target.closest('[data-sdwan-edit]');

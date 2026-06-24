@@ -14,6 +14,7 @@ use App\Services\DashboardCache;
 use App\Services\DashboardStatsService;
 use App\Services\Database;
 use App\Services\DatabaseSchema;
+use App\Services\SdwanImageService;
 use App\Services\PurchasedDailies;
 use App\Services\AuditLog;
 use App\Services\InventoryService;
@@ -870,9 +871,12 @@ final class DashboardController extends Controller
 			return;
 		}
 
+		$id = 0;
 		try {
 			$user = Auth::instance()->user();
-			$id = SdwanEntry::create($validation['data'], isset($user['id']) ? (int) $user['id'] : null);
+			$data = $validation['data'];
+			$id = SdwanEntry::create($data, isset($user['id']) ? (int) $user['id'] : null);
+			$this->applySdwanImageUpload($id);
 			$entry = SdwanEntry::findById($id);
 			$this->json([
 				'success' => true,
@@ -880,6 +884,11 @@ final class DashboardController extends Controller
 				'entry' => $entry,
 				'summary' => SdwanEntry::summary(),
 			]);
+		} catch (\InvalidArgumentException $e) {
+			if (!empty($id) && $id > 0) {
+				SdwanEntry::delete((int) $id);
+			}
+			$this->json(['success' => false, 'message' => $e->getMessage()], 422);
 		} catch (\Throwable $e) {
 			error_log('Erro ao criar registro SDWAN: ' . $e->getMessage());
 			$this->json(['success' => false, 'message' => 'Erro ao salvar registro SDWAN'], 500);
@@ -891,7 +900,8 @@ final class DashboardController extends Controller
 		$this->requireAuth([]);
 
 		$id = (int) ($_POST['id'] ?? 0);
-		if ($id <= 0 || !SdwanEntry::findById($id)) {
+		$existing = SdwanEntry::findRawById($id);
+		if ($id <= 0 || !$existing) {
 			$this->json(['success' => false, 'message' => 'Registro não encontrado'], 404);
 			return;
 		}
@@ -902,17 +912,33 @@ final class DashboardController extends Controller
 			return;
 		}
 
-		if (!SdwanEntry::update($id, $validation['data'])) {
-			$this->json(['success' => false, 'message' => 'Erro ao atualizar registro SDWAN'], 500);
-			return;
-		}
+		try {
+			$data = $validation['data'];
+			if (SdwanEntry::hasImageColumns()) {
+				$data['image_path'] = $existing['image_path'] ?? null;
+				$data['image_name'] = $existing['image_name'] ?? null;
+				$data['image_type'] = $existing['image_type'] ?? null;
+				$data['image_size'] = $existing['image_size'] ?? null;
+			}
 
-		$this->json([
-			'success' => true,
-			'message' => 'Registro SDWAN atualizado com sucesso',
-			'entry' => SdwanEntry::findById($id),
-			'summary' => SdwanEntry::summary(),
-		]);
+			if (!SdwanEntry::update($id, $data)) {
+				$this->json(['success' => false, 'message' => 'Erro ao atualizar registro SDWAN'], 500);
+				return;
+			}
+
+			$this->applySdwanImageUpload($id);
+			$this->json([
+				'success' => true,
+				'message' => 'Registro SDWAN atualizado com sucesso',
+				'entry' => SdwanEntry::findById($id),
+				'summary' => SdwanEntry::summary(),
+			]);
+		} catch (\InvalidArgumentException $e) {
+			$this->json(['success' => false, 'message' => $e->getMessage()], 422);
+		} catch (\Throwable $e) {
+			error_log('Erro ao atualizar registro SDWAN: ' . $e->getMessage());
+			$this->json(['success' => false, 'message' => 'Erro ao atualizar registro SDWAN'], 500);
+		}
 	}
 
 	public function sdwanEntryDelete(): void
@@ -920,7 +946,7 @@ final class DashboardController extends Controller
 		$this->requireAuth([]);
 
 		$id = (int) ($_POST['id'] ?? 0);
-		if ($id <= 0 || !SdwanEntry::findById($id)) {
+		if ($id <= 0 || !SdwanEntry::findRawById($id)) {
 			$this->json(['success' => false, 'message' => 'Registro não encontrado'], 404);
 			return;
 		}
@@ -935,6 +961,96 @@ final class DashboardController extends Controller
 			'message' => 'Registro SDWAN excluído com sucesso',
 			'summary' => SdwanEntry::summary(),
 		]);
+	}
+
+	public function sdwanEntryImage(): void
+	{
+		$this->requireAuth([]);
+
+		$id = (int) ($_GET['id'] ?? 0);
+		$entry = SdwanEntry::findRawById($id);
+		if ($id <= 0 || !$entry || empty($entry['image_path'])) {
+			http_response_code(404);
+			echo 'Imagem não encontrada';
+			return;
+		}
+
+		$fsPath = SdwanImageService::resolveFilesystemPath((string) $entry['image_path']);
+		if ($fsPath === null) {
+			http_response_code(404);
+			echo 'Arquivo não encontrado';
+			return;
+		}
+
+		$mime = (string) ($entry['image_type'] ?? '');
+		if ($mime === '' || $mime === 'application/octet-stream') {
+			$mime = mime_content_type($fsPath) ?: 'application/octet-stream';
+		}
+
+		header('Content-Type: ' . $mime);
+		header('Content-Disposition: inline; filename="' . basename((string) ($entry['image_name'] ?? 'imagem')) . '"');
+		header('Content-Length: ' . (string) filesize($fsPath));
+		header('Cache-Control: private, max-age=3600');
+		readfile($fsPath);
+		exit;
+	}
+
+	private function applySdwanImageUpload(int $entryId): void
+	{
+		if (!SdwanEntry::hasImageColumns()) {
+			return;
+		}
+
+		$existing = SdwanEntry::findRawById($entryId);
+		if (!$existing) {
+			return;
+		}
+
+		$removeImage = !empty($_POST['remove_image']);
+		$hasUpload = isset($_FILES['image']) && is_array($_FILES['image'])
+			&& (($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE);
+
+		if (!$hasUpload && !$removeImage) {
+			return;
+		}
+
+		$current = SdwanEntry::findRawById($entryId);
+		if (!$current) {
+			return;
+		}
+
+		$data = [
+			'xpads_previsto' => (int) ($current['xpads_previsto'] ?? 0),
+			'quantidade_localizada' => (int) ($current['quantidade_localizada'] ?? 0),
+			'pdv_numero' => (string) ($current['pdv_numero'] ?? ''),
+			'pdv_serie' => (string) ($current['pdv_serie'] ?? ''),
+			'loja' => (string) ($current['loja'] ?? ''),
+			'image_path' => $current['image_path'] ?? null,
+			'image_name' => $current['image_name'] ?? null,
+			'image_type' => $current['image_type'] ?? null,
+			'image_size' => $current['image_size'] ?? null,
+		];
+
+		if ($removeImage && !$hasUpload) {
+			SdwanImageService::deleteImage((string) ($current['image_path'] ?? ''));
+			$data['image_path'] = null;
+			$data['image_name'] = null;
+			$data['image_type'] = null;
+			$data['image_size'] = null;
+			SdwanEntry::update($entryId, $data);
+			return;
+		}
+
+		if ($hasUpload) {
+			if (!empty($current['image_path'])) {
+				SdwanImageService::deleteImage((string) $current['image_path']);
+			}
+			$imageData = SdwanImageService::saveUploadedFile($_FILES['image'], $entryId);
+			if ($imageData !== null) {
+				$data = array_merge($data, $imageData);
+				SdwanEntry::update($entryId, $data);
+			}
+		}
 	}
 }
 

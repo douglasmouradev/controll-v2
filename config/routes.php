@@ -32,6 +32,7 @@ return [
 		'/dashboard/purchased-dailies' => [DashboardController::class, 'purchasedDailiesStats'],
 		'/dashboard/purchased-dailies-download' => [DashboardController::class, 'downloadPurchasedDailiesFile'],
 		'/dashboard/sdwan-entries' => [DashboardController::class, 'sdwanEntries'],
+		'/dashboard/sdwan-entries/image' => [DashboardController::class, 'sdwanEntryImage'],
 		'/dashboard/enderecos' => [DashboardController::class, 'storeAddresses'],
 		'/tickets' => [TicketController::class, 'index'],
 		'/tickets/view' => [TicketController::class, 'show'],
