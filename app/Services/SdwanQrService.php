@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Models\SdwanAccessLink;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 
