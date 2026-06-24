@@ -1065,6 +1065,39 @@ final class DashboardController extends Controller
 		exit;
 	}
 
+	public function sdwanAccessLinkQr(): void
+	{
+		$this->requireAuth([]);
+
+		$id = (int) ($_GET['id'] ?? 0);
+		$row = SdwanAccessLink::findById($id);
+		if ($row === null || strtotime((string) ($row['expires_at'] ?? '')) <= time()) {
+			http_response_code(404);
+			echo 'QR Code não disponível';
+			return;
+		}
+
+		$code = SdwanAccessLink::normalizeCode((string) ($row['code'] ?? ''));
+		if ($code === '') {
+			http_response_code(404);
+			echo 'QR Code não disponível';
+			return;
+		}
+
+		$image = SdwanAccessLink::fetchQrImage(SdwanAccessLink::buildPublicUrl($code));
+		if ($image === null) {
+			http_response_code(502);
+			echo 'Não foi possível gerar o QR Code';
+			return;
+		}
+
+		header('Content-Type: image/png');
+		header('Cache-Control: private, max-age=3600');
+		header('Content-Length: ' . (string) strlen($image));
+		echo $image;
+		exit;
+	}
+
 	public function sdwanAccessLinkStatus(): void
 	{
 		$this->requireAuth([]);

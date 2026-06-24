@@ -36,9 +36,56 @@ final class SdwanAccessLink
 		return self::appBaseUrl() . '/sdwan/cadastro/' . $code;
 	}
 
-	public static function qrCodeUrl(string $url): string
+	public static function qrCodeUrl(int $linkId): string
 	{
-		return 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . rawurlencode($url);
+		return '/dashboard/sdwan-access-link/qr?id=' . max(0, $linkId);
+	}
+
+	public static function fetchQrImage(string $url): ?string
+	{
+		$endpoint = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' . rawurlencode($url);
+		$context = stream_context_create([
+			'http' => [
+				'timeout' => 8,
+				'user_agent' => 'ControllIT-SDWAN/1.0',
+			],
+		]);
+		$image = @file_get_contents($endpoint, false, $context);
+		if ($image !== false && $image !== '') {
+			return $image;
+		}
+
+		if (!function_exists('curl_init')) {
+			return null;
+		}
+
+		$ch = curl_init($endpoint);
+		curl_setopt_array($ch, [
+			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_FOLLOWLOCATION => true,
+			CURLOPT_TIMEOUT => 8,
+			CURLOPT_USERAGENT => 'ControllIT-SDWAN/1.0',
+		]);
+		$image = curl_exec($ch);
+		$status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+		curl_close($ch);
+
+		return ($image !== false && $status >= 200 && $status < 300) ? (string) $image : null;
+	}
+
+	/** @return array<string, mixed>|null */
+	public static function findById(int $id): ?array
+	{
+		if (!self::tableReady() || $id <= 0) {
+			return null;
+		}
+
+		$pdo = Database::pdo();
+		$stmt = $pdo->prepare('SELECT * FROM sdwan_access_links WHERE id = :id LIMIT 1');
+		$stmt->execute([':id' => $id]);
+		$row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		return $row ?: null;
 	}
 
 	/** @return array<string, mixed>|null */
@@ -173,9 +220,10 @@ final class SdwanAccessLink
 			return [
 				'success' => true,
 				'link' => $row ? self::present($row) : [
+					'id' => $id,
 					'code' => $code,
 					'url' => self::buildPublicUrl($code),
-					'qr_url' => self::qrCodeUrl(self::buildPublicUrl($code)),
+					'qr_url' => self::qrCodeUrl($id),
 					'expires_at' => $expiresAt,
 				],
 			];
@@ -205,7 +253,7 @@ final class SdwanAccessLink
 			'id' => (int) ($row['id'] ?? 0),
 			'code' => $code,
 			'url' => $url,
-			'qr_url' => self::qrCodeUrl($url),
+			'qr_url' => self::qrCodeUrl((int) ($row['id'] ?? 0)),
 			'expires_at' => $expiresAt,
 			'created_at' => (string) ($row['created_at'] ?? ''),
 		];

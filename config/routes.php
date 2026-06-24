@@ -40,6 +40,7 @@ return [
 		'/dashboard/sdwan-entries/export/xlsx' => [DashboardController::class, 'sdwanExportXlsx'],
 		'/dashboard/sdwan-entries/image' => [DashboardController::class, 'sdwanEntryImage'],
 		'/dashboard/sdwan-access-link' => [DashboardController::class, 'sdwanAccessLinkStatus'],
+		'/dashboard/sdwan-access-link/qr' => [DashboardController::class, 'sdwanAccessLinkQr'],
 		'/dashboard/enderecos' => [DashboardController::class, 'storeAddresses'],
 		'/tickets' => [TicketController::class, 'index'],
 		'/tickets/view' => [TicketController::class, 'show'],
