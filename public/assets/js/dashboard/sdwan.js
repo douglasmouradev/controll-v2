@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const totalRowsEl = document.getElementById('sdwan-total-rows');
 	const totalXpadsEl = document.getElementById('sdwan-total-xpads');
 	const totalLocalizadaEl = document.getElementById('sdwan-total-localizada');
+	const totalLojasEl = document.getElementById('sdwan-total-lojas');
 	const lojaInput = document.getElementById('sdwan-loja');
 	const lojaDatalist = document.getElementById('sdwan-loja-list');
 	const lojaHint = document.getElementById('sdwan-loja-hint');
@@ -174,6 +175,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (totalRowsEl) totalRowsEl.textContent = String(summary.total ?? 0);
 		if (totalXpadsEl) totalXpadsEl.textContent = String(summary.xpads_previsto ?? 0);
 		if (totalLocalizadaEl) totalLocalizadaEl.textContent = String(summary.quantidade_localizada ?? 0);
+		if (totalLojasEl) totalLojasEl.textContent = String(summary.total_lojas ?? 0);
 	}
 
 	function renderSdwanPieChart(chart) {

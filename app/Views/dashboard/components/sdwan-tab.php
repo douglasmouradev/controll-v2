@@ -10,7 +10,7 @@
 		</div>
 	</div>
 
-	<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
 		<div class="ui-card ui-stat-card">
 			<p class="ui-stat-label">Registros</p>
 			<p class="ui-stat-value text-blue-900" id="sdwan-total-rows">0</p>
@@ -22,6 +22,10 @@
 		<div class="ui-card ui-stat-card">
 			<p class="ui-stat-label">Quantidade localizada</p>
 			<p class="ui-stat-value text-orange-600" id="sdwan-total-localizada">0</p>
+		</div>
+		<div class="ui-card ui-stat-card">
+			<p class="ui-stat-label">Lojas</p>
+			<p class="ui-stat-value text-emerald-600" id="sdwan-total-lojas">0</p>
 		</div>
 	</div>
 
