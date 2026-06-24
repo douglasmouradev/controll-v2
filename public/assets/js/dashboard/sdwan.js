@@ -243,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			return '<span class="text-slate-400">-</span>';
 		}
 		return `<a href="${escapeHtml(entry.image_url)}" target="_blank" rel="noopener noreferrer" class="inline-block">
-			<img src="${escapeHtml(entry.image_url)}" alt="Imagem da loja ${escapeHtml(entry.loja || '')}" class="h-12 w-12 object-cover rounded border border-slate-200">
+			<img src="${escapeHtml(entry.image_url)}" alt="Imagem da loja ${escapeHtml(entry.loja || '')}" class="sdwan-table-thumb">
 		</a>`;
 	}
 
@@ -255,7 +255,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${escapeHtml(entry.pdv_numero || '-')}</td>
 				<td>${escapeHtml(entry.pdv_serie || '-')}</td>
 				<td>${escapeHtml(entry.loja || '-')}</td>
-				<td>${imageCellHtml(entry)}</td>
+				<td class="sdwan-image-cell">${imageCellHtml(entry)}</td>
 				<td class="text-right whitespace-nowrap">
 					<button type="button" class="btn btn-secondary btn-sm" data-sdwan-edit="${escapeHtml(String(entry.id))}">Editar</button>
 					<button type="button" class="btn btn-ghost btn-sm text-red-600" data-sdwan-delete="${escapeHtml(String(entry.id))}">Excluir</button>
