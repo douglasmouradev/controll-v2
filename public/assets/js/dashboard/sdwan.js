@@ -22,8 +22,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	const imageCurrentLink = document.getElementById('sdwan-image-current-link');
 	const removeImageWrap = document.getElementById('sdwan-remove-image-wrap');
 	const removeImageInput = document.getElementById('sdwan-remove-image');
+	const imageSizeHint = document.getElementById('sdwan-image-size-hint');
 	let sdwanEntries = [];
 	let previewObjectUrl = null;
+	let compressedImageFile = null;
 	let storeSiglas = [];
 	let sdwanPieChart = null;
 
@@ -116,8 +118,35 @@ document.addEventListener('DOMContentLoaded', function () {
 			URL.revokeObjectURL(previewObjectUrl);
 			previewObjectUrl = null;
 		}
+		compressedImageFile = null;
 		if (imagePreview) imagePreview.classList.add('hidden');
 		if (imagePreviewImg) imagePreviewImg.removeAttribute('src');
+		if (imageSizeHint) {
+			imageSizeHint.textContent = 'A imagem será otimizada automaticamente antes do envio.';
+		}
+	}
+
+	function updateImageSizeHint(result) {
+		if (!imageSizeHint || !result) return;
+		const formatSize = typeof formatFileSize === 'function' ? formatFileSize : (bytes) => String(bytes);
+		if (result.optimized && result.compressedSize < result.originalSize) {
+			imageSizeHint.textContent = `Imagem otimizada: ${formatSize(result.originalSize)} → ${formatSize(result.compressedSize)}`;
+			return;
+		}
+		imageSizeHint.textContent = `Tamanho da imagem: ${formatSize(result.compressedSize || result.originalSize || 0)}`;
+	}
+
+	async function prepareSelectedImage(file) {
+		if (imageSizeHint) imageSizeHint.textContent = 'Otimizando imagem...';
+		if (typeof compressImageFile !== 'function') {
+			compressedImageFile = file;
+			updateImageSizeHint({ originalSize: file.size, compressedSize: file.size, optimized: false });
+			return file;
+		}
+		const result = await compressImageFile(file);
+		compressedImageFile = result.file;
+		updateImageSizeHint(result);
+		return result.file;
 	}
 
 	function clearCurrentImage() {
@@ -301,6 +330,18 @@ document.addEventListener('DOMContentLoaded', function () {
 		completeLojaSigla();
 
 		const formData = new FormData(form);
+		if (compressedImageFile) {
+			formData.set('image', compressedImageFile, compressedImageFile.name);
+		} else if (imageInput?.files?.[0] && typeof compressImageFile === 'function') {
+			submitBtn.disabled = true;
+			const originalText = submitBtn.textContent;
+			submitBtn.textContent = 'Otimizando imagem...';
+			const result = await compressImageFile(imageInput.files[0]);
+			compressedImageFile = result.file;
+			formData.set('image', result.file, result.file.name);
+			submitBtn.textContent = originalText;
+		}
+
 		const editingId = entryIdInput.value.trim();
 		const url = editingId ? '/dashboard/sdwan-entries/update' : '/dashboard/sdwan-entries/create';
 
@@ -350,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	lojaInput?.addEventListener('change', completeLojaSigla);
 
-	imageInput?.addEventListener('change', () => {
+	imageInput?.addEventListener('change', async () => {
 		clearImagePreview();
 		const file = imageInput.files && imageInput.files[0];
 		if (!file) return;
@@ -362,9 +403,20 @@ document.addEventListener('DOMContentLoaded', function () {
 			return;
 		}
 		if (removeImageInput) removeImageInput.checked = false;
-		previewObjectUrl = URL.createObjectURL(file);
-		if (imagePreviewImg) imagePreviewImg.src = previewObjectUrl;
-		if (imagePreview) imagePreview.classList.remove('hidden');
+
+		try {
+			const prepared = await prepareSelectedImage(file);
+			previewObjectUrl = URL.createObjectURL(prepared);
+			if (imagePreviewImg) imagePreviewImg.src = previewObjectUrl;
+			if (imagePreview) imagePreview.classList.remove('hidden');
+		} catch (error) {
+			console.error('Erro ao otimizar imagem:', error);
+			if (typeof showToast === 'function') {
+				showToast('Não foi possível otimizar a imagem. Tente outra foto.');
+			}
+			imageInput.value = '';
+			clearImagePreview();
+		}
 	});
 
 	removeImageInput?.addEventListener('change', () => {

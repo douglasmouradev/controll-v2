@@ -93,8 +93,8 @@
 			</div>
 			<div class="md:col-span-2 lg:col-span-3">
 				<label class="label" for="sdwan-image">Imagem</label>
-				<input class="input" type="file" name="image" id="sdwan-image" accept="image/*">
-				<p class="text-xs text-slate-500 mt-1">JPG, PNG, GIF ou WEBP. Tamanho máximo: 10 MB.</p>
+				<input class="input" type="file" name="image" id="sdwan-image" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment">
+				<p class="text-xs text-slate-500 mt-1" id="sdwan-image-size-hint">A imagem será otimizada automaticamente antes do envio.</p>
 				<label class="mt-2 hidden items-center gap-2 text-sm text-slate-600" id="sdwan-remove-image-wrap">
 					<input type="checkbox" name="remove_image" id="sdwan-remove-image" value="1">
 					Remover imagem atual

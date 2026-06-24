@@ -37,8 +37,8 @@
 			</div>
 			<div class="md:col-span-2">
 				<label class="label" for="sdwan-public-image">Imagem</label>
-				<input class="input" type="file" name="image" id="sdwan-public-image" accept="image/*">
-				<p class="text-xs text-slate-500 mt-1">JPG, PNG, GIF ou WEBP. Tamanho máximo: 10 MB.</p>
+				<input class="input" type="file" name="image" id="sdwan-public-image" accept="image/jpeg,image/png,image/webp,image/gif" capture="environment">
+				<p class="text-xs text-slate-500 mt-1" id="sdwan-public-image-size-hint">A imagem será otimizada automaticamente antes do envio.</p>
 				<div id="sdwan-public-image-preview" class="mt-3 hidden">
 					<p class="text-xs font-semibold text-slate-600 mb-2">Pré-visualização</p>
 					<img id="sdwan-public-image-preview-img" src="" alt="Pré-visualização da imagem" class="max-h-48 rounded-lg border border-slate-200">
@@ -53,4 +53,5 @@
 <script>
 	window.SDWAN_PUBLIC_CODE = <?php echo json_encode($code ?? '', JSON_UNESCAPED_UNICODE); ?>;
 </script>
+<script src="<?php echo htmlspecialchars(asset_url('/assets/js/utils/image-compress.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <script src="<?php echo htmlspecialchars(asset_url('/assets/js/sdwan-public.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>

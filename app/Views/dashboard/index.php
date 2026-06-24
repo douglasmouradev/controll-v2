@@ -337,6 +337,7 @@ $access_logs = $access_logs ?? [];
 <?php include __DIR__ . '/components/sidebar-script.php'; ?>
 <script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/utils.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/charts.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
+<script src="<?php echo htmlspecialchars(asset_url('/assets/js/utils/image-compress.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/sdwan.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/credits.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>
 <script src="<?php echo htmlspecialchars(asset_url('/assets/js/dashboard/notifications.js'), ENT_QUOTES, 'UTF-8'); ?>"></script>

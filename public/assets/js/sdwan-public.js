@@ -9,10 +9,12 @@ document.addEventListener('DOMContentLoaded', function () {
 	const imageInput = document.getElementById('sdwan-public-image');
 	const imagePreview = document.getElementById('sdwan-public-image-preview');
 	const imagePreviewImg = document.getElementById('sdwan-public-image-preview-img');
+	const imageSizeHint = document.getElementById('sdwan-public-image-size-hint');
 	const submitBtn = document.getElementById('sdwan-public-submit');
 	const expiresEl = document.getElementById('sdwan-public-expires-at');
 	let storeSiglas = [];
 	let previewObjectUrl = null;
+	let compressedImageFile = null;
 
 	function escapeHtml(text) {
 		const div = document.createElement('div');
@@ -104,8 +106,35 @@ document.addEventListener('DOMContentLoaded', function () {
 			URL.revokeObjectURL(previewObjectUrl);
 			previewObjectUrl = null;
 		}
+		compressedImageFile = null;
 		if (imagePreview) imagePreview.classList.add('hidden');
 		if (imagePreviewImg) imagePreviewImg.removeAttribute('src');
+		if (imageSizeHint) {
+			imageSizeHint.textContent = 'A imagem será otimizada automaticamente antes do envio.';
+		}
+	}
+
+	function updateImageSizeHint(result) {
+		if (!imageSizeHint || !result) return;
+		const formatSize = typeof formatFileSize === 'function' ? formatFileSize : (bytes) => String(bytes);
+		if (result.optimized && result.compressedSize < result.originalSize) {
+			imageSizeHint.textContent = `Imagem otimizada: ${formatSize(result.originalSize)} → ${formatSize(result.compressedSize)}`;
+			return;
+		}
+		imageSizeHint.textContent = `Tamanho da imagem: ${formatSize(result.compressedSize || result.originalSize || 0)}`;
+	}
+
+	async function prepareSelectedImage(file) {
+		if (imageSizeHint) imageSizeHint.textContent = 'Otimizando imagem...';
+		if (typeof compressImageFile !== 'function') {
+			compressedImageFile = file;
+			updateImageSizeHint({ originalSize: file.size, compressedSize: file.size, optimized: false });
+			return file;
+		}
+		const result = await compressImageFile(file);
+		compressedImageFile = result.file;
+		updateImageSizeHint(result);
+		return result.file;
 	}
 
 	lojaInput?.addEventListener('input', () => {
@@ -115,7 +144,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	lojaInput?.addEventListener('blur', completeLojaSigla);
 	lojaInput?.addEventListener('change', completeLojaSigla);
 
-	imageInput?.addEventListener('change', () => {
+	imageInput?.addEventListener('change', async () => {
 		clearImagePreview();
 		const file = imageInput.files && imageInput.files[0];
 		if (!file) return;
@@ -124,9 +153,18 @@ document.addEventListener('DOMContentLoaded', function () {
 			imageInput.value = '';
 			return;
 		}
-		previewObjectUrl = URL.createObjectURL(file);
-		if (imagePreviewImg) imagePreviewImg.src = previewObjectUrl;
-		if (imagePreview) imagePreview.classList.remove('hidden');
+
+		try {
+			const prepared = await prepareSelectedImage(file);
+			previewObjectUrl = URL.createObjectURL(prepared);
+			if (imagePreviewImg) imagePreviewImg.src = previewObjectUrl;
+			if (imagePreview) imagePreview.classList.remove('hidden');
+		} catch (error) {
+			console.error('Erro ao otimizar imagem:', error);
+			if (typeof showToast === 'function') showToast('Não foi possível otimizar a imagem. Tente outra foto.');
+			imageInput.value = '';
+			clearImagePreview();
+		}
 	});
 
 	form.addEventListener('submit', async (event) => {
@@ -138,9 +176,20 @@ document.addEventListener('DOMContentLoaded', function () {
 		submitBtn.textContent = 'Enviando...';
 
 		try {
+			const formData = new FormData(form);
+			if (compressedImageFile) {
+				formData.set('image', compressedImageFile, compressedImageFile.name);
+			} else if (imageInput?.files?.[0] && typeof compressImageFile === 'function') {
+				submitBtn.textContent = 'Otimizando imagem...';
+				const result = await compressImageFile(imageInput.files[0]);
+				compressedImageFile = result.file;
+				formData.set('image', result.file, result.file.name);
+			}
+
+			submitBtn.textContent = 'Enviando...';
 			const res = await fetch('/sdwan/cadastro', {
 				method: 'POST',
-				body: new FormData(form),
+				body: formData,
 				headers: { 'X-Requested-With': 'XMLHttpRequest' },
 			});
 			const data = await res.json();
