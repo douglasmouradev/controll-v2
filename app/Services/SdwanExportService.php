@@ -88,10 +88,33 @@ final class SdwanExportService
 		$date = DateFormatter::now();
 		$filename = 'projeto-sdwan-' . DateFormatter::now('Y-m-d') . '.xlsx';
 
-		header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
-		header('Content-Disposition: attachment; filename="' . $filename . '"');
-		header('Cache-Control: no-cache, no-store, must-revalidate');
-		echo self::buildHtmlTable($rows, $summary, $date);
+		$dataRows = [];
+		foreach ($rows as $row) {
+			$dataRows[] = [
+				(string) ($row['loja'] ?? ''),
+				(string) (int) ($row['xpads_previsto'] ?? 0),
+				(string) (int) ($row['quantidade_localizada'] ?? 0),
+				(string) ($row['pdv_numero'] ?? ''),
+				(string) ($row['pdv_serie'] ?? ''),
+				self::formatDate((string) ($row['created_at'] ?? '')),
+			];
+		}
+
+		SimpleXlsxWriter::download(
+			$filename,
+			['Loja', 'XPads previstos', 'Quantidade localizada', 'N PDV', 'N Serie PDV', 'Data cadastro'],
+			$dataRows,
+			[
+				'Projeto SDWAN',
+				'Gerado em ' . $date,
+				sprintf(
+					'Registros: %d | XPads previstos: %d | Quantidade localizada: %d',
+					(int) ($summary['total'] ?? 0),
+					(int) ($summary['xpads_previsto'] ?? 0),
+					(int) ($summary['quantidade_localizada'] ?? 0)
+				),
+			]
+		);
 	}
 
 	/** @param array<int, array<string, mixed>> $rows */
