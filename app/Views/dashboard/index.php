@@ -76,6 +76,7 @@ $access_logs = $access_logs ?? [];
 		<?php include __DIR__ . '/components/diarias-compradas-tab.php'; ?>
 	<?php endif; ?>
 	<?php include __DIR__ . '/components/inventario-tab.php'; ?>
+	<?php include __DIR__ . '/components/sdwan-tab.php'; ?>
 </div>
 
 <!-- Modal de Abrir Chamado -->

@@ -78,6 +78,10 @@ $roleLabel = $roleLabels[$user['role'] ?? ''] ?? ($user['role'] ?? 'Usuário');
 			<svg fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v2h16V5a2 2 0 00-2-2H4zM18 9H2v6a2 2 0 002 2h12a2 2 0 002-2V9zm-11 2h6a1 1 0 110 2H7a1 1 0 110-2z"/></svg>
 			Projeto RFID
 		</button>
+		<button type="button" class="sidebar-menu-item sidebar-item" data-tab="sdwan" data-title="Projeto SDWAN">
+			<svg fill="currentColor" viewBox="0 0 20 20"><path d="M4 3a2 2 0 00-2 2v2h16V5a2 2 0 00-2-2H4zM18 9H2v6a2 2 0 002 2h12a2 2 0 002-2V9zm-11 2h6a1 1 0 110 2H7a1 1 0 110-2z"/></svg>
+			Projeto SDWAN
+		</button>
 	</nav>
 
 	<div class="sidebar-footer">
