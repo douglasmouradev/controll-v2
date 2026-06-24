@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	let sdwanEntries = [];
 	let previewObjectUrl = null;
 	let storeSiglas = [];
+	let sdwanPieChart = null;
 
 	async function loadStoreSiglas() {
 		try {
@@ -175,6 +176,66 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (totalLocalizadaEl) totalLocalizadaEl.textContent = String(summary.quantidade_localizada ?? 0);
 	}
 
+	function renderSdwanPieChart(chart) {
+		const canvas = document.getElementById('sdwan-pie-chart');
+		const emptyEl = document.getElementById('sdwan-chart-empty');
+		if (!canvas || typeof Chart === 'undefined') return;
+
+		const labels = Array.isArray(chart?.labels) ? chart.labels : [];
+		const dataValues = Array.isArray(chart?.data) ? chart.data : [];
+		const total = dataValues.reduce((acc, value) => acc + Number(value || 0), 0);
+
+		if (total === 0) {
+			if (sdwanPieChart) {
+				sdwanPieChart.destroy();
+				sdwanPieChart = null;
+			}
+			canvas.classList.add('hidden');
+			if (emptyEl) emptyEl.classList.remove('hidden');
+			return;
+		}
+
+		canvas.classList.remove('hidden');
+		if (emptyEl) emptyEl.classList.add('hidden');
+
+		const palette = ['#1d4ed8', '#7c3aed', '#0891b2', '#dc2626', '#059669', '#f59e0b', '#6366f1', '#db2777', '#0f766e'];
+		const data = {
+			labels,
+			datasets: [{
+				label: 'Quantidade localizada',
+				data: dataValues,
+				backgroundColor: labels.map((_, idx) => palette[idx % palette.length]),
+				borderColor: '#fff',
+				borderWidth: 2,
+			}],
+		};
+		const options = {
+			responsive: true,
+			maintainAspectRatio: false,
+			plugins: {
+				legend: { position: 'bottom' },
+				tooltip: {
+					callbacks: {
+						label(ctx) {
+							const value = Number(ctx.parsed || 0);
+							const percent = total > 0 ? ((value / total) * 100).toFixed(1) : '0.0';
+							return ` ${ctx.label}: ${value} (${percent}%)`;
+						},
+					},
+				},
+			},
+		};
+
+		if (sdwanPieChart) {
+			sdwanPieChart.data = data;
+			sdwanPieChart.options = options;
+			sdwanPieChart.update();
+			return;
+		}
+
+		sdwanPieChart = new Chart(canvas.getContext('2d'), { type: 'pie', data, options });
+	}
+
 	function imageCellHtml(entry) {
 		if (!entry?.has_image || !entry?.image_url) {
 			return '<span class="text-slate-400">-</span>';
@@ -224,6 +285,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			renderTable(data.entries || []);
 			sdwanEntries = data.entries || [];
 			updateSummary(data.summary || {});
+			renderSdwanPieChart(data.chart || {});
 		} catch (error) {
 			console.error('Erro ao carregar SDWAN:', error);
 			if (typeof showToast === 'function') {
@@ -257,6 +319,8 @@ document.addEventListener('DOMContentLoaded', function () {
 					showToast(data.message || 'Registro salvo com sucesso', 'success');
 				}
 				resetForm();
+				if (data.chart) renderSdwanPieChart(data.chart);
+				if (data.summary) updateSummary(data.summary);
 				await loadEntries();
 			} else if (typeof showToast === 'function') {
 				showToast(data.message || 'Erro ao salvar registro');
@@ -343,6 +407,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				if (entryIdInput.value === id) {
 					resetForm();
 				}
+				if (data.chart) renderSdwanPieChart(data.chart);
 				updateSummary(data.summary || {});
 				await loadEntries();
 			} else if (typeof showToast === 'function') {

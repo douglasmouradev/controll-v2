@@ -16,6 +16,7 @@ use App\Services\DashboardStatsService;
 use App\Services\Database;
 use App\Services\DatabaseSchema;
 use App\Services\SdwanEntryService;
+use App\Services\SdwanExportService;
 use App\Services\SdwanImageService;
 use App\Services\PurchasedDailies;
 use App\Services\AuditLog;
@@ -860,7 +861,63 @@ final class DashboardController extends Controller
 			'success' => true,
 			'entries' => SdwanEntry::listAll(),
 			'summary' => SdwanEntry::summary(),
+			'chart' => SdwanEntry::pieChartByStore(),
 		]);
+	}
+
+	public function sdwanChartStats(): void
+	{
+		$this->requireAuth([]);
+
+		if (!SdwanEntry::tableReady()) {
+			$this->json([
+				'success' => false,
+				'message' => 'Tabela SDWAN não configurada. Execute as migrations do banco.',
+			], 503);
+			return;
+		}
+
+		$this->json(SdwanEntry::chartPayload());
+	}
+
+	public function sdwanExportPdf(): void
+	{
+		$this->requireAuth([]);
+
+		if (!SdwanEntry::tableReady()) {
+			http_response_code(503);
+			echo 'Tabela SDWAN não configurada';
+			return;
+		}
+
+		try {
+			SdwanExportService::exportPdf();
+		} catch (\Throwable $e) {
+			error_log('Erro ao exportar PDF SDWAN: ' . $e->getMessage());
+			http_response_code(500);
+			echo 'Erro ao gerar PDF';
+		}
+		exit;
+	}
+
+	public function sdwanExportXlsx(): void
+	{
+		$this->requireAuth([]);
+
+		if (!SdwanEntry::tableReady()) {
+			http_response_code(503);
+			echo 'Tabela SDWAN não configurada';
+			return;
+		}
+
+		try {
+			SdwanExportService::exportXlsx();
+		} catch (\Throwable $e) {
+			error_log('Erro ao exportar Excel SDWAN: ' . $e->getMessage());
+			http_response_code(500);
+			echo 'Erro ao gerar Excel';
+		}
+		exit;
 	}
 
 	public function sdwanEntryCreate(): void
@@ -885,6 +942,7 @@ final class DashboardController extends Controller
 				'message' => 'Registro SDWAN salvo com sucesso',
 				'entry' => $entry,
 				'summary' => SdwanEntry::summary(),
+				'chart' => SdwanEntry::pieChartByStore(),
 			]);
 		} catch (\InvalidArgumentException $e) {
 			if (!empty($id) && $id > 0) {
@@ -934,6 +992,7 @@ final class DashboardController extends Controller
 				'message' => 'Registro SDWAN atualizado com sucesso',
 				'entry' => SdwanEntry::findById($id),
 				'summary' => SdwanEntry::summary(),
+				'chart' => SdwanEntry::pieChartByStore(),
 			]);
 		} catch (\InvalidArgumentException $e) {
 			$this->json(['success' => false, 'message' => $e->getMessage()], 422);
@@ -962,6 +1021,7 @@ final class DashboardController extends Controller
 			'success' => true,
 			'message' => 'Registro SDWAN excluído com sucesso',
 			'summary' => SdwanEntry::summary(),
+			'chart' => SdwanEntry::pieChartByStore(),
 		]);
 	}
 

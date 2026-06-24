@@ -4,6 +4,10 @@
 			<h2 class="page-title">Projeto SDWAN</h2>
 			<p class="page-subtitle">Cadastre manualmente os dados de XPads e PDVs por loja</p>
 		</div>
+		<div class="flex flex-wrap gap-2">
+			<a href="/dashboard/sdwan-entries/export/pdf" class="btn btn-secondary btn-sm">Exportar PDF</a>
+			<a href="/dashboard/sdwan-entries/export/xlsx" class="btn btn-secondary btn-sm">Exportar Excel</a>
+		</div>
 	</div>
 
 	<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
@@ -20,6 +24,15 @@
 			<p class="ui-stat-value text-orange-600" id="sdwan-total-localizada">0</p>
 		</div>
 	</div>
+
+	<section class="ui-card ui-card-body mb-6">
+		<h3 class="text-lg font-bold text-slate-800 mb-1">Distribuição por loja</h3>
+		<p class="text-sm text-slate-600 mb-4">Gráfico atualizado automaticamente conforme novos registros são inseridos.</p>
+		<div class="h-80">
+			<canvas id="sdwan-pie-chart" class="w-full h-full"></canvas>
+		</div>
+		<p id="sdwan-chart-empty" class="hidden text-sm text-slate-500 text-center py-8">Cadastre registros para visualizar o gráfico.</p>
+	</section>
 
 	<section class="ui-card ui-card-body mb-6">
 		<div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">

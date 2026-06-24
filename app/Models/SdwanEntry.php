@@ -85,6 +85,68 @@ final class SdwanEntry
 		];
 	}
 
+	/** @return array{labels: array<int, string>, data: array<int, int>, metric: string} */
+	public static function pieChartByStore(int $maxSlices = 8): array
+	{
+		if (!self::tableReady()) {
+			return ['labels' => [], 'data' => [], 'metric' => 'quantidade_localizada'];
+		}
+
+		$pdo = Database::pdo();
+		$stmt = $pdo->query('
+			SELECT
+				loja,
+				COALESCE(SUM(quantidade_localizada), 0) AS total
+			FROM sdwan_entries
+			GROUP BY loja
+			HAVING total > 0
+			ORDER BY total DESC, loja ASC
+		');
+		$rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+		if ($rows === []) {
+			return ['labels' => [], 'data' => [], 'metric' => 'quantidade_localizada'];
+		}
+
+		$labels = [];
+		$data = [];
+		$others = 0;
+
+		foreach ($rows as $index => $row) {
+			$value = (int) ($row['total'] ?? 0);
+			if ($index < $maxSlices) {
+				$labels[] = (string) ($row['loja'] ?? '');
+				$data[] = $value;
+			} else {
+				$others += $value;
+			}
+		}
+
+		if ($others > 0) {
+			$labels[] = 'Outras';
+			$data[] = $others;
+		}
+
+		return [
+			'labels' => $labels,
+			'data' => $data,
+			'metric' => 'quantidade_localizada',
+		];
+	}
+
+	public static function chartPayload(): array
+	{
+		$chart = self::pieChartByStore();
+
+		return [
+			'success' => true,
+			'labels' => $chart['labels'],
+			'data' => $chart['data'],
+			'metric' => $chart['metric'],
+			'summary' => self::summary(),
+		];
+	}
+
 	public static function findById(int $id): ?array
 	{
 		if (!self::tableReady() || $id <= 0) {
