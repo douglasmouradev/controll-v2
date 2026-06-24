@@ -117,7 +117,7 @@
 						<th>Código</th>
 						<th>Link</th>
 						<th>Expira em</th>
-						<th class="text-right">Ações</th>
+						<th class="sdwan-actions-col">Ações</th>
 					</tr>
 				</thead>
 				<tbody id="sdwan-links-table-body">
@@ -193,7 +193,7 @@
 						<th>Nº Série PDV</th>
 						<th>Loja</th>
 						<th>Imagem</th>
-						<th class="text-right">Ações</th>
+						<th class="sdwan-actions-col">Ações</th>
 					</tr>
 				</thead>
 				<tbody id="sdwan-table-body">

@@ -153,6 +153,11 @@ body.layout-dashboard main { max-width: none; padding: 0; }
 .data-table td.text-right {
 	text-align: right;
 }
+.data-table th.sdwan-actions-col,
+.data-table td.sdwan-actions-col {
+	text-align: left;
+	white-space: nowrap;
+}
 .data-table td {
 	padding: 0.75rem 1rem;
 	border-bottom: 1px solid var(--border-soft);

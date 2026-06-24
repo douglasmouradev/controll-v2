@@ -408,7 +408,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${escapeHtml(entry.pdv_serie || '-')}</td>
 				<td>${escapeHtml(entry.loja || '-')}</td>
 				<td class="sdwan-image-cell">${imageCellHtml(entry)}</td>
-				<td class="text-right whitespace-nowrap">
+				<td class="sdwan-actions-col whitespace-nowrap">
 					<button type="button" class="btn btn-secondary btn-sm" data-sdwan-edit="${escapeHtml(String(entry.id))}">Editar</button>
 					<button type="button" class="btn btn-ghost btn-sm text-red-600" data-sdwan-delete="${escapeHtml(String(entry.id))}">Excluir</button>
 				</td>
@@ -669,7 +669,7 @@ document.addEventListener('DOMContentLoaded', function () {
 					<a href="${escapeHtml(link.url || '#')}" target="_blank" rel="noopener noreferrer" class="text-blue-700 break-all hover:underline">${escapeHtml(link.url || '')}</a>
 				</td>
 				<td class="whitespace-nowrap text-sm">${escapeHtml(formatDateTime(link.expires_at || ''))}</td>
-				<td class="text-right whitespace-nowrap">
+				<td class="sdwan-actions-col whitespace-nowrap">
 					<button type="button" class="btn btn-ghost btn-sm" data-sdwan-copy-link-row="${escapeHtml(String(link.id))}" data-url="${escapeHtml(link.url || '')}">Copiar</button>
 					<a href="${escapeHtml(link.qr_url || '#')}" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">QR</a>
 					<button type="button" class="btn btn-ghost btn-sm text-red-600" data-sdwan-revoke-link="${escapeHtml(String(link.id))}">Revogar</button>
