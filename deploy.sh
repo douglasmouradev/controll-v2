@@ -66,8 +66,9 @@ if [ -f bin/migrate.php ]; then
 	fi
 fi
 
-chmod +x bin/backup.sh bin/process-mail-queue.php deploy.sh 2>/dev/null || true
+chmod +x bin/backup.sh bin/process-mail-queue.php bin/sdwan-cleanup.php deploy.sh 2>/dev/null || true
 echo "==> Fila de e-mail: */5 * * * * ${PHP_BIN} ${APP_DIR}/bin/process-mail-queue.php"
+echo "==> Limpeza ACUPAD: 0 3 * * * ${PHP_BIN} ${APP_DIR}/bin/sdwan-cleanup.php"
 
 chown -R www:www storage public/uploads 2>/dev/null || true
 chmod -R 775 storage public/uploads 2>/dev/null || true

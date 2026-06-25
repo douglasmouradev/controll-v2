@@ -1203,7 +1203,7 @@ final class DashboardController extends Controller
 
 		$this->json([
 			'success' => true,
-			'message' => 'Link gerado com sucesso. Válido por 24 horas.',
+			'message' => 'Link gerado com sucesso. Válido por ' . SdwanSettings::linkTtlHours() . ' hora(s).',
 			'link' => $result['link'] ?? null,
 			'links' => $userId ? SdwanAccessLink::listActive($userId) : SdwanAccessLink::listActive(),
 		]);
@@ -1219,8 +1219,10 @@ final class DashboardController extends Controller
 
 		$goal = max(0, (int) ($_POST['xpads_goal'] ?? 0));
 		$maxSub = max(1, min(500, (int) ($_POST['link_max_submissions'] ?? 50)));
+		$ttlHours = max(1, min(168, (int) ($_POST['link_ttl_hours'] ?? 24)));
 		SdwanSettings::setXpadsGoal($goal);
 		SdwanSettings::setLinkMaxSubmissions($maxSub);
+		SdwanSettings::setLinkTtlHours($ttlHours);
 		SdwanAudit::record('settings_update', 'goal:' . $goal);
 
 		$this->json([
@@ -1278,6 +1280,48 @@ final class DashboardController extends Controller
 			'message' => sprintf('Limpeza concluída: %d imagem(ns) órfã(s), %d link(s) antigo(s) removido(s).', $result['orphan_images'], $result['expired_links']),
 			'result' => $result,
 		]);
+	}
+
+	public function sdwanAuditLogs(): void
+	{
+		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão'], 403);
+			return;
+		}
+
+		$logs = SdwanAudit::recent(50);
+		$items = array_map(static function (array $row): array {
+			$action = (string) ($row['action'] ?? '');
+
+			return [
+				'id' => (int) ($row['id'] ?? 0),
+				'action' => $action,
+				'action_label' => SdwanAudit::actionLabel($action),
+				'resource' => (string) ($row['resource'] ?? ''),
+				'user_name' => (string) ($row['user_name'] ?? 'Sistema'),
+				'success' => (int) ($row['success'] ?? 0) === 1,
+				'created_at' => (string) ($row['created_at'] ?? ''),
+			];
+		}, $logs);
+
+		$this->json(['success' => true, 'logs' => $items]);
+	}
+
+	public function sdwanImportTemplate(): void
+	{
+		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			http_response_code(403);
+			echo 'Sem permissão';
+			return;
+		}
+
+		header('Content-Type: text/csv; charset=UTF-8');
+		header('Content-Disposition: attachment; filename="modelo-importacao-acupad.csv"');
+		echo "loja;xpads_previsto;quantidade_localizada;pdv_numero;pdv_serie\n";
+		echo "ABC;10;8;001;\n";
+		exit;
 	}
 }
 

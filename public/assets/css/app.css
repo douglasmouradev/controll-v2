@@ -228,6 +228,21 @@ body.layout-dashboard main { max-width: none; padding: 0; }
 	min-width: 2.5rem;
 	font-weight: 600;
 }
+.sdwan-row-highlight {
+	background: #fef9c3 !important;
+}
+.sdwan-sort-btn {
+	font: inherit;
+	font-weight: 600;
+	color: inherit;
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+}
+.sdwan-sort-btn:hover {
+	color: var(--brand, #2563eb);
+}
 
 /* Sidebar */
 .sidebar {

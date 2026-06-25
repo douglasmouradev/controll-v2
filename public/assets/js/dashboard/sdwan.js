@@ -47,6 +47,8 @@ document.addEventListener('DOMContentLoaded', function () {
 	const settingsForm = document.getElementById('sdwan-settings-form');
 	const settingGoalInput = document.getElementById('sdwan-setting-goal');
 	const settingLinkMaxInput = document.getElementById('sdwan-setting-link-max');
+	const settingLinkTtlInput = document.getElementById('sdwan-setting-link-ttl');
+	const auditBody = document.getElementById('sdwan-audit-body');
 
 	let sdwanEntries = [];
 	let canManage = false;
@@ -56,6 +58,10 @@ document.addEventListener('DOMContentLoaded', function () {
 	let sdwanPieChart = null;
 	let sdwanProgressChart = null;
 	let currentPage = 1;
+	let tabInitialized = false;
+	let storePanelRows = [];
+	let storePanelSort = { key: 'loja', dir: 'asc' };
+	let highlightEntryId = null;
 
 	async function loadStoreSiglas() {
 		try {
@@ -166,9 +172,18 @@ document.addEventListener('DOMContentLoaded', function () {
 	}
 
 	function syncFiltersToUrl() {
-		const query = buildFilterQuery();
-		const base = `${window.location.pathname}${window.location.hash || ''}`;
-		const newUrl = query ? `${window.location.pathname}${query}${window.location.hash || ''}` : base;
+		const params = new URLSearchParams();
+		params.set('tab', 'sdwan');
+		const filters = getFilters();
+		if (filters.loja) params.set('loja', filters.loja);
+		if (filters.pdv) params.set('pdv', filters.pdv);
+		if (filters.source) params.set('source', filters.source);
+		if (filters.date_from) params.set('date_from', filters.date_from);
+		if (filters.date_to) params.set('date_to', filters.date_to);
+		if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+		const query = params.toString();
+		const hash = window.location.hash || '';
+		const newUrl = query ? `${window.location.pathname}?${query}${hash}` : `${window.location.pathname}${hash}`;
 		window.history.replaceState({}, '', newUrl);
 	}
 
@@ -347,7 +362,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		const emptyEl = document.getElementById('sdwan-progress-empty');
 		if (!canvas || typeof Chart === 'undefined') return;
 
-		const labels = Array.isArray(chart?.labels) ? chart.labels : ['acupad previstos', 'Quantidade localizada'];
+		const labels = Array.isArray(chart?.labels) ? chart.labels : ['Acupad previstos', 'Quantidade localizada'];
 		const dataValues = Array.isArray(chart?.data) ? chart.data : [0, 0];
 		const total = dataValues.reduce((acc, value) => acc + Number(value || 0), 0);
 
@@ -453,13 +468,28 @@ document.addEventListener('DOMContentLoaded', function () {
 		tableBody.innerHTML = entries.map(rowHtml).join('');
 	}
 
+	function sortStorePanelRows(rows) {
+		const key = storePanelSort.key;
+		const dir = storePanelSort.dir === 'desc' ? -1 : 1;
+		return [...rows].sort((a, b) => {
+			const av = a[key];
+			const bv = b[key];
+			if (typeof av === 'number' && typeof bv === 'number') {
+				return (av - bv) * dir;
+			}
+			return String(av || '').localeCompare(String(bv || ''), 'pt-BR') * dir;
+		});
+	}
+
 	function renderStorePanel(rows) {
 		if (!storePanelBody) return;
-		if (!Array.isArray(rows) || rows.length === 0) {
+		storePanelRows = Array.isArray(rows) ? rows : [];
+		const sorted = sortStorePanelRows(storePanelRows);
+		if (sorted.length === 0) {
 			storePanelBody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum dado por loja.</td></tr>';
 			return;
 		}
-		storePanelBody.innerHTML = rows.map((row) => `
+		storePanelBody.innerHTML = sorted.map((row) => `
 			<tr>
 				<td class="font-semibold">${escapeHtml(row.loja || '')}</td>
 				<td>${escapeHtml(String(row.registros ?? 0))}</td>
@@ -471,6 +501,16 @@ document.addEventListener('DOMContentLoaded', function () {
 		`).join('');
 	}
 
+	function highlightEntryRow(entryId) {
+		if (!entryId || !tableBody) return;
+		tableBody.querySelectorAll('.sdwan-row-highlight').forEach((el) => el.classList.remove('sdwan-row-highlight'));
+		const row = tableBody.querySelector(`[data-sdwan-id="${String(entryId)}"]`);
+		if (row) {
+			row.classList.add('sdwan-row-highlight');
+			row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		}
+	}
+
 	function renderGoalProgress(settings) {
 		const progress = settings?.goal_progress || {};
 		const goal = Number(progress.goal || 0);
@@ -480,11 +520,12 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (goalBarFill) goalBarFill.style.width = `${percent}%`;
 		if (goalDetailEl) {
 			goalDetailEl.textContent = goal > 0
-				? `${localizada.toLocaleString('pt-BR')} de ${goal.toLocaleString('pt-BR')} acupad localizados`
-				: `${localizada.toLocaleString('pt-BR')} acupad localizados (defina uma meta nas configurações)`;
+				? `${localizada.toLocaleString('pt-BR')} de ${goal.toLocaleString('pt-BR')} Acupad localizados`
+				: `${localizada.toLocaleString('pt-BR')} Acupad localizados (defina uma meta nas configurações)`;
 		}
 		if (settingGoalInput) settingGoalInput.value = String(settings?.xpads_goal ?? goal);
 		if (settingLinkMaxInput) settingLinkMaxInput.value = String(settings?.link_max_submissions ?? 50);
+		if (settingLinkTtlInput) settingLinkTtlInput.value = String(settings?.link_ttl_hours ?? 24);
 	}
 
 	function applyManageUi() {
@@ -512,6 +553,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		applyManageUi();
 		updateExportLinks();
 		syncFiltersToUrl();
+		if (highlightEntryId) {
+			highlightEntryRow(highlightEntryId);
+		}
 	}
 
 	async function loadEntries(page) {
@@ -880,14 +924,85 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	});
 
-	(async function initSdwanTab() {
+	async function loadAuditLogs() {
+		if (!auditBody || !canManage) return;
+		try {
+			const res = await fetch('/dashboard/sdwan-audit', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+			const data = await res.json();
+			if (!data.success || !Array.isArray(data.logs) || data.logs.length === 0) {
+				auditBody.innerHTML = '<tr><td colspan="4" class="empty-state">Nenhum registro de auditoria.</td></tr>';
+				return;
+			}
+			auditBody.innerHTML = data.logs.map((log) => `
+				<tr>
+					<td class="whitespace-nowrap text-xs">${escapeHtml(formatDateTime(log.created_at || ''))}</td>
+					<td class="text-xs">${escapeHtml(log.action_label || log.action || '')}</td>
+					<td class="text-xs">${escapeHtml(log.resource || '-')}</td>
+					<td class="text-xs">${escapeHtml(log.user_name || 'Sistema')}</td>
+				</tr>
+			`).join('');
+		} catch (error) {
+			console.error('Erro ao carregar auditoria ACUPAD:', error);
+		}
+	}
+
+	async function initAcupadTab(options = {}) {
+		if (options.loja && filterLoja) {
+			filterLoja.value = String(options.loja).trim().toUpperCase();
+		}
+		if (options.entryId) {
+			highlightEntryId = Number(options.entryId) || null;
+		}
+
+		if (tabInitialized) {
+			await loadEntries(currentPage);
+			if (highlightEntryId) highlightEntryRow(highlightEntryId);
+			return;
+		}
+
+		tabInitialized = true;
 		loadFiltersFromUrl();
+		if (options.loja && filterLoja) {
+			filterLoja.value = String(options.loja).trim().toUpperCase();
+		}
 		await loadStoreSiglas();
 		populateLojaDatalist();
 		updateExportLinks();
 		await loadAccessLinks();
 		await loadEntries(currentPage);
-	})();
+		await loadAuditLogs();
+	}
+
+	window.openAcupadTab = function (options) {
+		if (typeof window.switchDashboardTab === 'function') {
+			window.switchDashboardTab('sdwan', { skipAcupadEvent: true });
+		} else {
+			document.querySelector('[data-tab="sdwan"]')?.click();
+		}
+		initAcupadTab(options || {});
+	};
+
+	document.addEventListener('acupad-tab-open', () => {
+		const params = new URLSearchParams(window.location.search);
+		initAcupadTab({
+			loja: params.get('loja') || '',
+			entryId: params.get('entry_id') || params.get('entry') || null,
+		});
+	});
+
+	document.getElementById('sdwan-store-panel-table')?.addEventListener('click', (event) => {
+		const btn = event.target.closest('[data-sort]');
+		if (!btn) return;
+		const key = btn.getAttribute('data-sort');
+		if (!key) return;
+		if (storePanelSort.key === key) {
+			storePanelSort.dir = storePanelSort.dir === 'asc' ? 'desc' : 'asc';
+		} else {
+			storePanelSort.key = key;
+			storePanelSort.dir = 'asc';
+		}
+		renderStorePanel(storePanelRows);
+	});
 
 	settingsForm?.addEventListener('submit', async (event) => {
 		event.preventDefault();

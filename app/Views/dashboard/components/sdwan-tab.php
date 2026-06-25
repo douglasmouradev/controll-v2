@@ -2,7 +2,7 @@
 	<div class="page-header flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
 		<div>
 			<h2 class="page-title">Projeto ACUPAD</h2>
-			<p class="page-subtitle">Cadastre manualmente os dados de acupad e PDVs por loja</p>
+			<p class="page-subtitle">Cadastre manualmente os dados de Acupad e PDVs por loja</p>
 		</div>
 		<div class="flex flex-wrap gap-2">
 			<a href="/dashboard/sdwan-entries/export/pdf" id="sdwan-export-pdf" class="btn btn-secondary btn-sm">Exportar PDF</a>
@@ -16,7 +16,7 @@
 			<p class="ui-stat-value text-blue-900" id="sdwan-total-rows">0</p>
 		</div>
 		<div class="ui-card ui-stat-card">
-			<p class="ui-stat-label">acupad previstos</p>
+			<p class="ui-stat-label">Acupad previstos</p>
 			<p class="ui-stat-value text-purple-700" id="sdwan-total-xpads">0</p>
 		</div>
 		<div class="ui-card ui-stat-card">
@@ -33,14 +33,15 @@
 		<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
 			<div>
 				<h3 class="text-lg font-bold text-slate-800">Meta do projeto</h3>
-				<p class="text-sm text-slate-600" id="sdwan-goal-label">Progresso em relação à meta de acupad</p>
+				<p class="text-sm text-slate-600" id="sdwan-goal-label">Progresso em relação à meta global de Acupad</p>
+				<p class="text-xs text-slate-500 mt-1">A meta é global; os totais acima respeitam os filtros aplicados.</p>
 			</div>
 			<p class="text-sm font-semibold text-slate-700" id="sdwan-goal-percent">0%</p>
 		</div>
 		<div class="sdwan-goal-bar">
 			<div class="sdwan-goal-bar-fill" id="sdwan-goal-bar-fill" style="width:0%"></div>
 		</div>
-		<p class="text-xs text-slate-500 mt-2" id="sdwan-goal-detail">0 de 0 acupad localizados</p>
+		<p class="text-xs text-slate-500 mt-2" id="sdwan-goal-detail">0 de 0 Acupad localizados</p>
 	</section>
 
 	<section class="ui-card ui-card-body mb-6 hidden" id="sdwan-admin-tools">
@@ -48,12 +49,16 @@
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<form id="sdwan-settings-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div>
-					<label class="label" for="sdwan-setting-goal">Meta global de acupad</label>
+					<label class="label" for="sdwan-setting-goal">Meta global de Acupad</label>
 					<input class="input" type="number" min="0" id="sdwan-setting-goal" name="xpads_goal" placeholder="0">
 				</div>
 				<div>
 					<label class="label" for="sdwan-setting-link-max">Limite por link técnico</label>
 					<input class="input" type="number" min="1" max="500" id="sdwan-setting-link-max" name="link_max_submissions" placeholder="50">
+				</div>
+				<div>
+					<label class="label" for="sdwan-setting-link-ttl">Validade do link (horas)</label>
+					<input class="input" type="number" min="1" max="168" id="sdwan-setting-link-ttl" name="link_ttl_hours" placeholder="24">
 				</div>
 				<div class="sm:col-span-2">
 					<button type="submit" class="btn btn-primary btn-sm">Salvar configurações</button>
@@ -65,6 +70,7 @@
 						<label class="label" for="sdwan-import-file">Importar CSV</label>
 						<input class="input" type="file" id="sdwan-import-file" name="file" accept=".csv,.txt">
 					</div>
+					<a href="/dashboard/sdwan-import/template" class="btn btn-ghost btn-sm">Modelo CSV</a>
 					<button type="submit" class="btn btn-secondary btn-sm">Importar</button>
 				</form>
 				<form id="sdwan-stores-upload-form" class="flex flex-wrap items-end gap-2">
@@ -75,6 +81,24 @@
 					<button type="submit" class="btn btn-secondary btn-sm">Enviar</button>
 				</form>
 				<button type="button" id="sdwan-cleanup-btn" class="btn btn-ghost btn-sm text-red-600">Executar limpeza de arquivos</button>
+			</div>
+		</div>
+		<div class="mt-6 border-t border-slate-200 pt-4">
+			<h4 class="text-sm font-bold text-slate-800 mb-3">Auditoria recente</h4>
+			<div class="overflow-x-auto max-h-56 overflow-y-auto">
+				<table class="data-table text-sm">
+					<thead>
+						<tr>
+							<th>Data</th>
+							<th>Ação</th>
+							<th>Recurso</th>
+							<th>Usuário</th>
+						</tr>
+					</thead>
+					<tbody id="sdwan-audit-body">
+						<tr><td colspan="4" class="empty-state">Carregue a aba para ver a auditoria.</td></tr>
+					</tbody>
+				</table>
 			</div>
 		</div>
 	</section>
@@ -113,99 +137,13 @@
 		</form>
 	</section>
 
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-		<section class="ui-card ui-card-body">
-			<h3 class="text-lg font-bold text-slate-800 mb-1">Distribuição por loja</h3>
-			<p class="text-sm text-slate-600 mb-4">Quantidade localizada por loja.</p>
-			<div class="h-72">
-				<canvas id="sdwan-pie-chart" class="w-full h-full"></canvas>
-			</div>
-			<p id="sdwan-chart-empty" class="hidden text-sm text-slate-500 text-center py-8">Nenhum dado para o gráfico.</p>
-		</section>
-		<section class="ui-card ui-card-body">
-			<h3 class="text-lg font-bold text-slate-800 mb-1">Previsto vs localizado</h3>
-			<p class="text-sm text-slate-600 mb-4">Comparativo geral dos registros filtrados.</p>
-			<div class="h-72">
-				<canvas id="sdwan-progress-chart" class="w-full h-full"></canvas>
-			</div>
-			<p id="sdwan-progress-empty" class="hidden text-sm text-slate-500 text-center py-8">Nenhum dado para o gráfico.</p>
-		</section>
-	</div>
-
-	<section class="ui-card ui-card-body mb-6">
-		<h3 class="text-lg font-bold text-slate-800 mb-4">Painel por loja</h3>
-		<div class="overflow-x-auto">
-			<table class="data-table">
-				<thead>
-					<tr>
-						<th>Loja</th>
-						<th>Registros</th>
-						<th>acupad previstos</th>
-						<th>Localizado</th>
-						<th>Pendente</th>
-						<th>%</th>
-					</tr>
-				</thead>
-				<tbody id="sdwan-store-panel-body">
-					<tr><td colspan="6" class="empty-state">Nenhum dado por loja.</td></tr>
-				</tbody>
-			</table>
-		</div>
-	</section>
-
-	<section class="ui-card ui-card-body mb-6" id="sdwan-links-section">
-		<div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-			<div>
-				<h3 class="text-lg font-bold text-slate-800 mb-1">Links para técnicos</h3>
-				<p class="text-sm text-slate-600">Gere links com código de 4 dígitos válidos por 24 horas. Revogue links que não devem mais ser usados.</p>
-			</div>
-			<button type="button" id="btn-sdwan-generate-link" class="btn btn-secondary shrink-0">Gerar novo link</button>
-		</div>
-		<div id="sdwan-access-link-box" class="hidden mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-				<div>
-					<p class="text-slate-500">Código</p>
-					<p class="text-2xl font-bold tracking-widest text-slate-900" id="sdwan-access-code">----</p>
-				</div>
-				<div class="md:col-span-2">
-					<p class="text-slate-500">Link de cadastro</p>
-					<div class="flex flex-wrap items-center gap-2 mt-1">
-						<a href="#" id="sdwan-access-url" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-semibold break-all hover:underline"></a>
-						<button type="button" id="btn-sdwan-copy-link" class="btn btn-ghost btn-sm">Copiar link</button>
-					</div>
-					<p class="text-xs text-slate-500 mt-2">Expira em: <span id="sdwan-access-expires" class="font-semibold text-slate-700"></span></p>
-				</div>
-				<div class="text-center">
-					<p class="text-slate-500 mb-2">QR Code</p>
-					<img id="sdwan-access-qr" src="" alt="QR Code do link" class="mx-auto h-28 w-28 border border-slate-200 rounded-lg bg-white">
-				</div>
-			</div>
-		</div>
-		<div class="mt-4 overflow-x-auto">
-			<table class="data-table">
-				<thead>
-					<tr>
-						<th>Código</th>
-						<th>Link</th>
-						<th>Expira em</th>
-						<th>Cadastros</th>
-						<th class="sdwan-actions-col">Ações</th>
-					</tr>
-				</thead>
-				<tbody id="sdwan-links-table-body">
-					<tr><td colspan="5" class="empty-state">Nenhum link ativo.</td></tr>
-				</tbody>
-			</table>
-		</div>
-	</section>
-
 	<section class="ui-card ui-card-body mb-6" id="sdwan-form-section">
 		<h3 class="text-lg font-bold text-slate-800 mb-4" id="sdwan-form-title">Novo registro</h3>
 		<form id="sdwan-entry-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" enctype="multipart/form-data">
 			<?php echo \App\Services\Csrf::field(); ?>
 			<input type="hidden" name="id" id="sdwan-entry-id" value="">
 			<div>
-				<label class="label" for="sdwan-xpads-previsto">Quantidade prevista de acupad</label>
+				<label class="label" for="sdwan-xpads-previsto">Quantidade prevista de Acupad</label>
 				<input class="input" type="number" min="0" step="1" name="xpads_previsto" id="sdwan-xpads-previsto" placeholder="0" required>
 			</div>
 			<div>
@@ -252,6 +190,92 @@
 		</form>
 	</section>
 
+	<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+		<section class="ui-card ui-card-body">
+			<h3 class="text-lg font-bold text-slate-800 mb-1">Distribuição por loja</h3>
+			<p class="text-sm text-slate-600 mb-4">Top 10 lojas por quantidade localizada (demais agrupadas em Outras).</p>
+			<div class="h-72">
+				<canvas id="sdwan-pie-chart" class="w-full h-full"></canvas>
+			</div>
+			<p id="sdwan-chart-empty" class="hidden text-sm text-slate-500 text-center py-8">Nenhum dado para o gráfico.</p>
+		</section>
+		<section class="ui-card ui-card-body">
+			<h3 class="text-lg font-bold text-slate-800 mb-1">Previsto vs localizado</h3>
+			<p class="text-sm text-slate-600 mb-4">Comparativo geral dos registros filtrados.</p>
+			<div class="h-72">
+				<canvas id="sdwan-progress-chart" class="w-full h-full"></canvas>
+			</div>
+			<p id="sdwan-progress-empty" class="hidden text-sm text-slate-500 text-center py-8">Nenhum dado para o gráfico.</p>
+		</section>
+	</div>
+
+	<section class="ui-card ui-card-body mb-6">
+		<h3 class="text-lg font-bold text-slate-800 mb-4">Painel por loja</h3>
+		<div class="overflow-x-auto">
+			<table class="data-table" id="sdwan-store-panel-table">
+				<thead>
+					<tr>
+						<th><button type="button" class="sdwan-sort-btn" data-sort="loja">Loja</button></th>
+						<th><button type="button" class="sdwan-sort-btn" data-sort="registros">Registros</button></th>
+						<th><button type="button" class="sdwan-sort-btn" data-sort="xpads_previsto">Acupad previstos</button></th>
+						<th><button type="button" class="sdwan-sort-btn" data-sort="quantidade_localizada">Localizado</button></th>
+						<th><button type="button" class="sdwan-sort-btn" data-sort="pendente">Pendente</button></th>
+						<th><button type="button" class="sdwan-sort-btn" data-sort="percent">%</button></th>
+					</tr>
+				</thead>
+				<tbody id="sdwan-store-panel-body">
+					<tr><td colspan="6" class="empty-state">Nenhum dado por loja.</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
+	<section class="ui-card ui-card-body mb-6" id="sdwan-links-section">
+		<div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+			<div>
+				<h3 class="text-lg font-bold text-slate-800 mb-1">Links para técnicos</h3>
+				<p class="text-sm text-slate-600">Gere links com código de 4 dígitos. A validade é configurável nas ferramentas administrativas.</p>
+			</div>
+			<button type="button" id="btn-sdwan-generate-link" class="btn btn-secondary shrink-0">Gerar novo link</button>
+		</div>
+		<div id="sdwan-access-link-box" class="hidden mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+				<div>
+					<p class="text-slate-500">Código</p>
+					<p class="text-2xl font-bold tracking-widest text-slate-900" id="sdwan-access-code">----</p>
+				</div>
+				<div class="md:col-span-2">
+					<p class="text-slate-500">Link de cadastro</p>
+					<div class="flex flex-wrap items-center gap-2 mt-1">
+						<a href="#" id="sdwan-access-url" target="_blank" rel="noopener noreferrer" class="text-blue-700 font-semibold break-all hover:underline"></a>
+						<button type="button" id="btn-sdwan-copy-link" class="btn btn-ghost btn-sm">Copiar link</button>
+					</div>
+					<p class="text-xs text-slate-500 mt-2">Expira em: <span id="sdwan-access-expires" class="font-semibold text-slate-700"></span></p>
+				</div>
+				<div class="text-center">
+					<p class="text-slate-500 mb-2">QR Code</p>
+					<img id="sdwan-access-qr" src="" alt="QR Code do link" class="mx-auto h-28 w-28 border border-slate-200 rounded-lg bg-white">
+				</div>
+			</div>
+		</div>
+		<div class="mt-4 overflow-x-auto">
+			<table class="data-table">
+				<thead>
+					<tr>
+						<th>Código</th>
+						<th>Link</th>
+						<th>Expira em</th>
+						<th>Cadastros</th>
+						<th class="sdwan-actions-col">Ações</th>
+					</tr>
+				</thead>
+				<tbody id="sdwan-links-table-body">
+					<tr><td colspan="5" class="empty-state">Nenhum link ativo.</td></tr>
+				</tbody>
+			</table>
+		</div>
+	</section>
+
 	<div class="ui-card overflow-hidden">
 		<div class="overflow-x-auto">
 			<table class="data-table">
@@ -259,7 +283,7 @@
 					<tr>
 						<th>Data</th>
 						<th>Origem</th>
-						<th>acupad previstos</th>
+						<th>Acupad previstos</th>
 						<th>Qtd. localizada</th>
 						<th>Nº PDV</th>
 						<th>Nº Série PDV</th>

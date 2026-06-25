@@ -237,7 +237,7 @@ final class SdwanEntry
 	}
 
 	/** @param array<string, mixed> $filters @return array{labels: array<int, string>, data: array<int, int>, metric: string} */
-	public static function pieChartByStore(array $filters = [], int $maxSlices = 8): array
+	public static function pieChartByStore(array $filters = [], int $maxSlices = 10): array
 	{
 		if (!self::tableReady()) {
 			return ['labels' => [], 'data' => [], 'metric' => 'quantidade_localizada'];
@@ -290,7 +290,7 @@ final class SdwanEntry
 		$summary = self::summary($filters);
 
 		return [
-			'labels' => ['acupad previstos', 'Quantidade localizada'],
+			'labels' => ['Acupad previstos', 'Quantidade localizada'],
 			'data' => [
 				(int) ($summary['xpads_previsto'] ?? 0),
 				(int) ($summary['quantidade_localizada'] ?? 0),
@@ -507,7 +507,7 @@ final class SdwanEntry
 		];
 
 		if ($quantidadeLocalizada > $xpadsPrevisto && $xpadsPrevisto > 0) {
-			$result['warning'] = 'A quantidade localizada é maior que a quantidade prevista de acupad.';
+			$result['warning'] = 'A quantidade localizada é maior que a quantidade prevista de Acupad.';
 		}
 
 		return $result;

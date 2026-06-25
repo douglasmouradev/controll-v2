@@ -24,7 +24,7 @@
 			<?php echo \App\Services\Csrf::field(); ?>
 			<input type="hidden" name="code" value="<?php echo htmlspecialchars($code ?? '', ENT_QUOTES, 'UTF-8'); ?>">
 			<div>
-				<label class="label" for="sdwan-public-xpads-previsto">Quantidade prevista de acupad</label>
+				<label class="label" for="sdwan-public-xpads-previsto">Quantidade prevista de Acupad</label>
 				<input class="input" type="number" min="0" step="1" name="xpads_previsto" id="sdwan-public-xpads-previsto" placeholder="0" required>
 			</div>
 			<div>

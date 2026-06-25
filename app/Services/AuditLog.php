@@ -72,4 +72,38 @@ final class AuditLog
 			return [];
 		}
 	}
+
+	/** @return array<int, array<string, mixed>> */
+	public static function recentByActionPrefix(string $prefix, int $limit = 50): array
+	{
+		$prefix = trim($prefix);
+		if ($prefix === '') {
+			return [];
+		}
+
+		$limit = max(1, min($limit, 200));
+
+		try {
+			$pdo = Database::pdo();
+			if (!DatabaseSchema::tableExists($pdo, 'access_logs')) {
+				return [];
+			}
+
+			$stmt = $pdo->prepare(
+				'SELECT al.id, al.user_id, al.ip_address, al.action, al.resource, al.success, al.created_at, u.name AS user_name
+				 FROM access_logs al
+				 LEFT JOIN users u ON u.id = al.user_id
+				 WHERE al.action LIKE :prefix
+				 ORDER BY al.created_at DESC
+				 LIMIT ' . $limit
+			);
+			$stmt->execute([':prefix' => $prefix . '%']);
+
+			return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+		} catch (\Throwable $e) {
+			error_log('AuditLog::recentByActionPrefix: ' . $e->getMessage());
+
+			return [];
+		}
+	}
 }

@@ -9,6 +9,7 @@ final class SdwanSettings
 {
 	public const KEY_XPADS_GOAL = 'sdwan_xpads_goal';
 	public const KEY_LINK_MAX_SUBMISSIONS = 'sdwan_link_max_submissions';
+	public const KEY_LINK_TTL_HOURS = 'sdwan_link_ttl_hours';
 
 	public static function xpadsGoal(): int
 	{
@@ -22,9 +23,16 @@ final class SdwanSettings
 		return max(1, min($value, 500));
 	}
 
+	public static function linkTtlHours(): int
+	{
+		$value = (int) SystemSetting::get(self::KEY_LINK_TTL_HOURS, '24');
+
+		return max(1, min($value, 168));
+	}
+
 	public static function setXpadsGoal(int $goal): bool
 	{
-		return SystemSetting::set(self::KEY_XPADS_GOAL, (string) max(0, $goal), 'Meta global de acupad do Projeto ACUPAD');
+		return SystemSetting::set(self::KEY_XPADS_GOAL, (string) max(0, $goal), 'Meta global de Acupad do Projeto ACUPAD');
 	}
 
 	public static function setLinkMaxSubmissions(int $max): bool
@@ -34,7 +42,14 @@ final class SdwanSettings
 		return SystemSetting::set(self::KEY_LINK_MAX_SUBMISSIONS, (string) $max, 'Limite de cadastros por link técnico ACUPAD');
 	}
 
-	/** @return array{xpads_goal: int, link_max_submissions: int, can_manage: bool} */
+	public static function setLinkTtlHours(int $hours): bool
+	{
+		$hours = max(1, min($hours, 168));
+
+		return SystemSetting::set(self::KEY_LINK_TTL_HOURS, (string) $hours, 'Validade do link técnico ACUPAD em horas');
+	}
+
+	/** @return array{xpads_goal: int, link_max_submissions: int, link_ttl_hours: int, can_manage: bool, goal_progress: array<string, int>} */
 	public static function apiPayload(): array
 	{
 		$summary = \App\Models\SdwanEntry::summary();
@@ -45,6 +60,7 @@ final class SdwanSettings
 		return [
 			'xpads_goal' => $goal,
 			'link_max_submissions' => self::linkMaxSubmissions(),
+			'link_ttl_hours' => self::linkTtlHours(),
 			'goal_progress' => [
 				'localizada' => $localizada,
 				'goal' => $goal,

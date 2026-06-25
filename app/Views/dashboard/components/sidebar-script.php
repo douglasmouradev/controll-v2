@@ -15,6 +15,18 @@
 		}
 	}
 
+	window.switchDashboardTab = function (tabId, options) {
+		const btn = document.querySelector('[data-tab="' + tabId + '"]');
+		if (!btn) return;
+		setActiveSidebarItem(btn);
+		document.querySelectorAll('.tab-content').forEach((content) => content.classList.add('hidden'));
+		const selectedTab = document.getElementById('tab-' + tabId);
+		if (selectedTab) selectedTab.classList.remove('hidden');
+		if (tabId === 'sdwan' && !(options && options.skipAcupadEvent)) {
+			document.dispatchEvent(new CustomEvent('acupad-tab-open'));
+		}
+	};
+
 	function openSidebar() {
 		sidebar.classList.remove('-translate-x-full');
 		sidebarOverlay.classList.remove('hidden');
@@ -50,10 +62,7 @@
 	document.querySelectorAll('.sidebar-menu-item').forEach((btn) => {
 		btn.addEventListener('click', function () {
 			const tab = this.dataset.tab;
-			setActiveSidebarItem(this);
-			document.querySelectorAll('.tab-content').forEach((content) => content.classList.add('hidden'));
-			const selectedTab = document.getElementById('tab-' + tab);
-			if (selectedTab) selectedTab.classList.remove('hidden');
+			window.switchDashboardTab(tab);
 			if (window.innerWidth < 768) closeSidebar();
 		});
 	});
@@ -74,6 +83,9 @@
 		if (selectedTab) selectedTab.classList.remove('hidden');
 		const activeBtn = document.querySelector('[data-tab="' + tabToShow + '"]');
 		if (activeBtn) setActiveSidebarItem(activeBtn);
+		if (tabToShow === 'sdwan') {
+			document.dispatchEvent(new CustomEvent('acupad-tab-open'));
+		}
 		if (window.innerWidth >= 768) {
 			if (sessionStorage.getItem(SIDEBAR_DESKTOP_KEY) === 'closed') closeSidebar();
 			else openSidebar();

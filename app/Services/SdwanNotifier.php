@@ -20,7 +20,7 @@ final class SdwanNotifier
 			'sdwan_public_entry',
 			'Novo cadastro ACUPAD via link',
 			'Loja ' . $loja . ' — PDV ' . $pdv . ' (registro #' . $entryId . ')',
-			null,
+			$entryId,
 			'normal'
 		);
 	}

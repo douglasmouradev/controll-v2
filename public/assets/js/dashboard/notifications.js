@@ -8,6 +8,11 @@
 	const badge = document.getElementById('notifications-badge');
 	const markAllBtn = document.getElementById('notifications-mark-all');
 
+	function parseLojaFromMessage(message) {
+		const match = String(message || '').match(/Loja\s+([A-Z0-9]+)\s+—/);
+		return match ? match[1] : '';
+	}
+
 	async function loadNotifications() {
 		try {
 			const res = await fetch('/notifications');
@@ -33,8 +38,15 @@
 					? 'bg-blue-50/60'
 					: '';
 				const date = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '';
+				const type = String(item.type || '');
+				const entryId = item.ticket_id ? String(item.ticket_id) : '';
+				const loja = parseLojaFromMessage(item.message || '');
 				return `
-					<button type="button" class="w-full text-left px-4 py-3 hover:bg-slate-50 ${unreadClass}" data-notification-id="${item.id}">
+					<button type="button" class="w-full text-left px-4 py-3 hover:bg-slate-50 ${unreadClass}"
+						data-notification-id="${item.id}"
+						data-notification-type="${escapeHtml(type)}"
+						data-notification-entry="${escapeHtml(entryId)}"
+						data-notification-loja="${escapeHtml(loja)}">
 						<p class="text-sm font-medium text-slate-800">${escapeHtml(item.title || '')}</p>
 						<p class="text-xs text-slate-600 mt-1">${escapeHtml(item.message || '')}</p>
 						<p class="text-[11px] text-slate-400 mt-1">${escapeHtml(date)}</p>
@@ -63,9 +75,24 @@
 		const target = e.target.closest('[data-notification-id]');
 		if (!target) return;
 		const id = target.getAttribute('data-notification-id');
+		const type = target.getAttribute('data-notification-type') || '';
+		const entryId = target.getAttribute('data-notification-entry') || '';
+		const loja = target.getAttribute('data-notification-loja') || '';
+
 		const form = new FormData();
 		form.append('id', id);
 		await fetch('/notifications/read', { method: 'POST', body: form });
+
+		if (type === 'sdwan_public_entry' && typeof window.openAcupadTab === 'function') {
+			panel?.classList.add('hidden');
+			window.openAcupadTab({
+				loja,
+				entryId: entryId || null,
+			});
+			loadNotifications();
+			return;
+		}
+
 		loadNotifications();
 	});
 

@@ -76,7 +76,7 @@ final class SdwanAccessLink
 
 	public static function buildPublicUrl(string $code): string
 	{
-		return self::appBaseUrl() . '/sdwan/cadastro/' . $code;
+		return self::appBaseUrl() . '/acupad/cadastro/' . $code;
 	}
 
 	public static function qrCodeUrl(int $linkId): string
@@ -234,7 +234,8 @@ final class SdwanAccessLink
 		}
 
 		$pdo = Database::pdo();
-		$expiresAt = (new \DateTimeImmutable('+24 hours'))->format('Y-m-d H:i:s');
+		$ttlHours = SdwanSettings::linkTtlHours();
+		$expiresAt = (new \DateTimeImmutable('+' . $ttlHours . ' hours'))->format('Y-m-d H:i:s');
 		$maxSubmissions = SdwanSettings::linkMaxSubmissions();
 		$hasSubmission = self::hasSubmissionColumns();
 

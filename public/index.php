@@ -81,9 +81,9 @@ $routes = require $routesFile;
 // Simple Router
 $router = new App\Core\Router($routes);
 $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
-if (preg_match('#^/sdwan/cadastro/(\d{4})$#', $requestPath, $sdwanMatches)) {
+if (preg_match('#^/(?:sdwan|acupad)/cadastro/(\d{4})$#', $requestPath, $sdwanMatches)) {
 	$_GET['code'] = $sdwanMatches[1];
-	$requestPath = '/sdwan/cadastro';
+	$requestPath = str_starts_with($requestPath, '/acupad/') ? '/acupad/cadastro' : '/sdwan/cadastro';
 }
 $router->dispatch($_SERVER['REQUEST_METHOD'] ?? 'GET', $requestPath);
 

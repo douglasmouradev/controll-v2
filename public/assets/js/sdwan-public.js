@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	async function loadStoreSiglas() {
 		try {
-			const res = await fetch('/sdwan/enderecos?code=' + encodeURIComponent(code), {
+			const res = await fetch('/acupad/enderecos?code=' + encodeURIComponent(code), {
 				headers: { 'X-Requested-With': 'XMLHttpRequest' },
 			});
 			const data = await res.json();
@@ -215,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			}
 
 			submitBtn.textContent = 'Enviando...';
-			const res = await fetch('/sdwan/cadastro', {
+			const res = await fetch('/acupad/cadastro', {
 				method: 'POST',
 				body: formData,
 				headers: { 'X-Requested-With': 'XMLHttpRequest' },
