@@ -523,13 +523,13 @@ document.addEventListener('DOMContentLoaded', function () {
 			const data = await res.json();
 			if (!data.success) {
 				if (typeof showToast === 'function') {
-					showToast(data.message || 'Erro ao carregar registros SDWAN');
+					showToast(data.message || 'Erro ao carregar registros ACUPAD');
 				}
 				return;
 			}
 			applyListResponse(data);
 		} catch (error) {
-			console.error('Erro ao carregar SDWAN:', error);
+			console.error('Erro ao carregar ACUPAD:', error);
 			if (typeof showToast === 'function') {
 				showToast('Erro ao conectar com o servidor');
 			}
@@ -584,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				showToast(data.message || 'Erro ao salvar registro');
 			}
 		} catch (error) {
-			console.error('Erro ao salvar SDWAN:', error);
+			console.error('Erro ao salvar ACUPAD:', error);
 			if (typeof showToast === 'function') {
 				showToast('Erro ao conectar com o servidor');
 			}
@@ -706,7 +706,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				showToast(data.message || 'Erro ao excluir registro');
 			}
 		} catch (error) {
-			console.error('Erro ao excluir SDWAN:', error);
+			console.error('Erro ao excluir ACUPAD:', error);
 			if (typeof showToast === 'function') {
 				showToast('Erro ao conectar com o servidor');
 			}
@@ -778,7 +778,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			if (data.link) renderAccessLink(data.link);
 			renderLinksList(data.links || []);
 		} catch (error) {
-			console.error('Erro ao carregar links SDWAN:', error);
+			console.error('Erro ao carregar links ACUPAD:', error);
 		}
 	}
 
@@ -829,7 +829,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				showToast(data.message || 'Erro ao revogar link');
 			}
 		} catch (error) {
-			console.error('Erro ao revogar link SDWAN:', error);
+			console.error('Erro ao revogar link ACUPAD:', error);
 			if (typeof showToast === 'function') showToast('Erro ao conectar com o servidor');
 		}
 	});
@@ -860,7 +860,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				showToast(data.message || 'Erro ao gerar link');
 			}
 		} catch (error) {
-			console.error('Erro ao gerar link SDWAN:', error);
+			console.error('Erro ao gerar link ACUPAD:', error);
 			if (typeof showToast === 'function') showToast('Erro ao conectar com o servidor');
 		} finally {
 			btn.disabled = false;

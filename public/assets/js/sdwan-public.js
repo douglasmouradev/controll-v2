@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				showToast(data.message || 'Erro ao enviar registro');
 			}
 		} catch (error) {
-			console.error('Erro ao enviar SDWAN público:', error);
+			console.error('Erro ao enviar ACUPAD público:', error);
 			if (typeof showToast === 'function') showToast('Erro ao conectar com o servidor');
 		} finally {
 			submitBtn.disabled = false;

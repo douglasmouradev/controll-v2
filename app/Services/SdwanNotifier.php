@@ -18,7 +18,7 @@ final class SdwanNotifier
 		Notification::create(
 			$notifyUserId,
 			'sdwan_public_entry',
-			'Novo cadastro SDWAN via link',
+			'Novo cadastro ACUPAD via link',
 			'Loja ' . $loja . ' — PDV ' . $pdv . ' (registro #' . $entryId . ')',
 			null,
 			'normal'

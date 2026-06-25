@@ -1,7 +1,7 @@
 <div class="auth-card max-w-3xl w-full">
 	<div class="auth-card-header">
 		<?php $variant = 'auth'; include BASE_PATH . '/app/Views/components/brand-logos.php'; ?>
-		<h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-4">Cadastro Projeto SDWAN</h1>
+		<h1 class="text-2xl font-extrabold text-slate-900 tracking-tight mt-4">Cadastro Projeto ACUPAD</h1>
 		<p class="text-slate-500 mt-2 text-sm">Preencha os dados do atendimento na loja</p>
 		<?php if (!empty($expiresAt)): ?>
 			<p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 mt-3">

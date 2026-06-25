@@ -31,7 +31,7 @@ final class SdwanPublicController extends Controller
 		$presented = SdwanAccessLink::present($link);
 		$this->view('sdwan/public-form', [
 			'layout' => 'auth',
-			'title' => 'Cadastro SDWAN',
+			'title' => 'Cadastro ACUPAD',
 			'code' => $code,
 			'expiresAt' => (string) ($link['expires_at'] ?? ''),
 			'linkInfo' => $presented,

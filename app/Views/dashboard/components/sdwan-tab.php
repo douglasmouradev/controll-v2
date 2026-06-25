@@ -1,7 +1,7 @@
 <div id="tab-sdwan" class="tab-content hidden">
 	<div class="page-header flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
 		<div>
-			<h2 class="page-title">Projeto SDWAN</h2>
+			<h2 class="page-title">Projeto ACUPAD</h2>
 			<p class="page-subtitle">Cadastre manualmente os dados de XPads e PDVs por loja</p>
 		</div>
 		<div class="flex flex-wrap gap-2">

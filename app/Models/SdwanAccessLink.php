@@ -90,7 +90,7 @@ final class SdwanAccessLink
 		$context = stream_context_create([
 			'http' => [
 				'timeout' => 8,
-				'user_agent' => 'ControllIT-SDWAN/1.0',
+				'user_agent' => 'ControllIT-ACUPAD/1.0',
 			],
 		]);
 		$image = @file_get_contents($endpoint, false, $context);
@@ -107,7 +107,7 @@ final class SdwanAccessLink
 			CURLOPT_RETURNTRANSFER => true,
 			CURLOPT_FOLLOWLOCATION => true,
 			CURLOPT_TIMEOUT => 8,
-			CURLOPT_USERAGENT => 'ControllIT-SDWAN/1.0',
+			CURLOPT_USERAGENT => 'ControllIT-ACUPAD/1.0',
 		]);
 		$image = curl_exec($ch);
 		$status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -230,7 +230,7 @@ final class SdwanAccessLink
 	public static function generate(?int $createdBy = null): array
 	{
 		if (!self::tableReady()) {
-			return ['success' => false, 'message' => 'Tabela de links SDWAN não configurada. Execute as migrations.'];
+			return ['success' => false, 'message' => 'Tabela de links ACUPAD não configurada. Execute as migrations.'];
 		}
 
 		$pdo = Database::pdo();

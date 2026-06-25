@@ -24,14 +24,14 @@ final class SdwanSettings
 
 	public static function setXpadsGoal(int $goal): bool
 	{
-		return SystemSetting::set(self::KEY_XPADS_GOAL, (string) max(0, $goal), 'Meta global de XPads do Projeto SDWAN');
+		return SystemSetting::set(self::KEY_XPADS_GOAL, (string) max(0, $goal), 'Meta global de XPads do Projeto ACUPAD');
 	}
 
 	public static function setLinkMaxSubmissions(int $max): bool
 	{
 		$max = max(1, min($max, 500));
 
-		return SystemSetting::set(self::KEY_LINK_MAX_SUBMISSIONS, (string) $max, 'Limite de cadastros por link técnico SDWAN');
+		return SystemSetting::set(self::KEY_LINK_MAX_SUBMISSIONS, (string) $max, 'Limite de cadastros por link técnico ACUPAD');
 	}
 
 	/** @return array{xpads_goal: int, link_max_submissions: int, can_manage: bool} */

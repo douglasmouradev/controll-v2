@@ -34,7 +34,7 @@ final class SdwanExportService
 		$rows = self::rows($filters);
 		$summary = SdwanEntry::summary($filters);
 		$date = DateFormatter::now();
-		$filename = 'projeto-sdwan-' . DateFormatter::now('Y-m-d') . '.pdf';
+		$filename = 'projeto-acupad-' . DateFormatter::now('Y-m-d') . '.pdf';
 		$hasSource = SdwanEntry::hasSourceColumns();
 		$hasImage = SdwanEntry::hasImageColumns();
 
@@ -42,7 +42,7 @@ final class SdwanExportService
 			$pdf = new \FPDF('L', 'mm', 'A4');
 			$pdf->AddPage();
 			$pdf->SetFont('Arial', 'B', 16);
-			$pdf->Cell(0, 10, self::pdfText('Projeto SDWAN'), 0, 1, 'C');
+			$pdf->Cell(0, 10, self::pdfText('Projeto ACUPAD'), 0, 1, 'C');
 			$pdf->SetFont('Arial', '', 10);
 			$pdf->Cell(0, 8, self::pdfText('Gerado em ' . $date), 0, 1, 'C');
 			$pdf->Ln(2);
@@ -134,7 +134,7 @@ final class SdwanExportService
 		$rows = self::rows($filters);
 		$summary = SdwanEntry::summary($filters);
 		$date = DateFormatter::now();
-		$filename = 'projeto-sdwan-' . DateFormatter::now('Y-m-d') . '.xlsx';
+		$filename = 'projeto-acupad-' . DateFormatter::now('Y-m-d') . '.xlsx';
 		$hasSource = SdwanEntry::hasSourceColumns();
 
 		$dataRows = [];
@@ -168,7 +168,7 @@ final class SdwanExportService
 			$headers,
 			$dataRows,
 			[
-				'Projeto SDWAN',
+				'Projeto ACUPAD',
 				'Gerado em ' . $date,
 				sprintf(
 					'Registros: %d | XPads previstos: %d | Quantidade localizada: %d | Lojas: %d',
@@ -190,7 +190,7 @@ final class SdwanExportService
 			th,td{border:1px solid #000;padding:5px;text-align:left}
 			th{background:#2563eb;color:#fff;font-weight:bold}
 		</style></head><body>';
-		$html .= '<h2>Projeto SDWAN</h2>';
+		$html .= '<h2>Projeto ACUPAD</h2>';
 		$html .= '<p>Gerado em ' . htmlspecialchars($date) . '</p>';
 		$html .= '<p>Registros: ' . (int) ($summary['total'] ?? 0)
 			. ' | XPads previstos: ' . (int) ($summary['xpads_previsto'] ?? 0)

@@ -5,7 +5,7 @@ namespace App\Services;
 
 final class SdwanPermission
 {
-	/** Qualquer usuário autenticado pode visualizar o SDWAN. */
+	/** Qualquer usuário autenticado pode visualizar o ACUPAD. */
 	public static function canView(): bool
 	{
 		return Auth::instance()->check();
@@ -37,7 +37,7 @@ final class SdwanPermission
 		if (!self::canManage()) {
 			http_response_code(403);
 			header('Content-Type: application/json; charset=UTF-8');
-			echo json_encode(['success' => false, 'message' => 'Sem permissão para esta ação no Projeto SDWAN']);
+			echo json_encode(['success' => false, 'message' => 'Sem permissão para esta ação no Projeto ACUPAD']);
 			exit;
 		}
 	}

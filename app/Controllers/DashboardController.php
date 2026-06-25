@@ -863,7 +863,7 @@ final class DashboardController extends Controller
 		if (!SdwanEntry::tableReady()) {
 			$this->json([
 				'success' => false,
-				'message' => 'Tabela SDWAN não configurada. Execute as migrations do banco.',
+				'message' => 'Tabela ACUPAD não configurada. Execute as migrations do banco.',
 			], 503);
 			return;
 		}
@@ -891,7 +891,7 @@ final class DashboardController extends Controller
 		if (!SdwanEntry::tableReady()) {
 			$this->json([
 				'success' => false,
-				'message' => 'Tabela SDWAN não configurada. Execute as migrations do banco.',
+				'message' => 'Tabela ACUPAD não configurada. Execute as migrations do banco.',
 			], 503);
 			return;
 		}
@@ -906,7 +906,7 @@ final class DashboardController extends Controller
 
 		if (!SdwanEntry::tableReady()) {
 			http_response_code(503);
-			echo 'Tabela SDWAN não configurada';
+			echo 'Tabela ACUPAD não configurada';
 			return;
 		}
 
@@ -926,7 +926,7 @@ final class DashboardController extends Controller
 
 		if (!SdwanEntry::tableReady()) {
 			http_response_code(503);
-			echo 'Tabela SDWAN não configurada';
+			echo 'Tabela ACUPAD não configurada';
 			return;
 		}
 
@@ -944,7 +944,7 @@ final class DashboardController extends Controller
 	{
 		$this->requireAuth([]);
 		if (!SdwanPermission::canManage()) {
-			$this->json(['success' => false, 'message' => 'Sem permissão para cadastrar no Projeto SDWAN'], 403);
+			$this->json(['success' => false, 'message' => 'Sem permissão para cadastrar no Projeto ACUPAD'], 403);
 			return;
 		}
 
@@ -963,7 +963,7 @@ final class DashboardController extends Controller
 			$entry = SdwanEntry::findById($id);
 			$response = [
 				'success' => true,
-				'message' => 'Registro SDWAN salvo com sucesso',
+				'message' => 'Registro ACUPAD salvo com sucesso',
 				'entry' => $entry,
 			];
 			if (!empty($validation['warning'])) {
@@ -977,8 +977,8 @@ final class DashboardController extends Controller
 			}
 			$this->json(['success' => false, 'message' => $e->getMessage()], 422);
 		} catch (\Throwable $e) {
-			error_log('Erro ao criar registro SDWAN: ' . $e->getMessage());
-			$this->json(['success' => false, 'message' => 'Erro ao salvar registro SDWAN'], 500);
+			error_log('Erro ao criar registro ACUPAD: ' . $e->getMessage());
+			$this->json(['success' => false, 'message' => 'Erro ao salvar registro ACUPAD'], 500);
 		}
 	}
 
@@ -986,7 +986,7 @@ final class DashboardController extends Controller
 	{
 		$this->requireAuth([]);
 		if (!SdwanPermission::canManage()) {
-			$this->json(['success' => false, 'message' => 'Sem permissão para editar no Projeto SDWAN'], 403);
+			$this->json(['success' => false, 'message' => 'Sem permissão para editar no Projeto ACUPAD'], 403);
 			return;
 		}
 
@@ -1013,14 +1013,14 @@ final class DashboardController extends Controller
 			}
 
 			if (!SdwanEntry::update($id, $data)) {
-				$this->json(['success' => false, 'message' => 'Erro ao atualizar registro SDWAN'], 500);
+				$this->json(['success' => false, 'message' => 'Erro ao atualizar registro ACUPAD'], 500);
 				return;
 			}
 
 			SdwanEntryService::applyImageUpload($id, $_POST, $_FILES);
 			$response = [
 				'success' => true,
-				'message' => 'Registro SDWAN atualizado com sucesso',
+				'message' => 'Registro ACUPAD atualizado com sucesso',
 				'entry' => SdwanEntry::findById($id),
 			];
 			if (!empty($validation['warning'])) {
@@ -1031,8 +1031,8 @@ final class DashboardController extends Controller
 		} catch (\InvalidArgumentException $e) {
 			$this->json(['success' => false, 'message' => $e->getMessage()], 422);
 		} catch (\Throwable $e) {
-			error_log('Erro ao atualizar registro SDWAN: ' . $e->getMessage());
-			$this->json(['success' => false, 'message' => 'Erro ao atualizar registro SDWAN'], 500);
+			error_log('Erro ao atualizar registro ACUPAD: ' . $e->getMessage());
+			$this->json(['success' => false, 'message' => 'Erro ao atualizar registro ACUPAD'], 500);
 		}
 	}
 
@@ -1040,7 +1040,7 @@ final class DashboardController extends Controller
 	{
 		$this->requireAuth([]);
 		if (!SdwanPermission::canManage()) {
-			$this->json(['success' => false, 'message' => 'Sem permissão para excluir no Projeto SDWAN'], 403);
+			$this->json(['success' => false, 'message' => 'Sem permissão para excluir no Projeto ACUPAD'], 403);
 			return;
 		}
 
@@ -1051,7 +1051,7 @@ final class DashboardController extends Controller
 		}
 
 		if (!SdwanEntry::delete($id)) {
-			$this->json(['success' => false, 'message' => 'Erro ao excluir registro SDWAN'], 500);
+			$this->json(['success' => false, 'message' => 'Erro ao excluir registro ACUPAD'], 500);
 			return;
 		}
 
@@ -1059,7 +1059,7 @@ final class DashboardController extends Controller
 
 		$this->json([
 			'success' => true,
-			'message' => 'Registro SDWAN excluído com sucesso',
+			'message' => 'Registro ACUPAD excluído com sucesso',
 		]);
 	}
 
@@ -1135,7 +1135,7 @@ final class DashboardController extends Controller
 		if (!SdwanAccessLink::tableReady()) {
 			$this->json([
 				'success' => false,
-				'message' => 'Tabela de links SDWAN não configurada. Execute as migrations.',
+				'message' => 'Tabela de links ACUPAD não configurada. Execute as migrations.',
 			], 503);
 			return;
 		}
@@ -1225,7 +1225,7 @@ final class DashboardController extends Controller
 
 		$this->json([
 			'success' => true,
-			'message' => 'Configurações SDWAN salvas',
+			'message' => 'Configurações ACUPAD salvas',
 			'settings' => SdwanSettings::apiPayload(),
 		]);
 	}

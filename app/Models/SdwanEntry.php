@@ -375,7 +375,7 @@ final class SdwanEntry
 	public static function create(array $data, ?int $createdBy = null, array $meta = []): int
 	{
 		if (!self::tableReady()) {
-			throw new \RuntimeException('Tabela SDWAN não configurada. Execute as migrations.');
+			throw new \RuntimeException('Tabela ACUPAD não configurada. Execute as migrations.');
 		}
 
 		$pdo = Database::pdo();
