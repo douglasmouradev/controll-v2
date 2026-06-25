@@ -347,7 +347,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		const emptyEl = document.getElementById('sdwan-progress-empty');
 		if (!canvas || typeof Chart === 'undefined') return;
 
-		const labels = Array.isArray(chart?.labels) ? chart.labels : ['XPads previstos', 'Quantidade localizada'];
+		const labels = Array.isArray(chart?.labels) ? chart.labels : ['acupad previstos', 'Quantidade localizada'];
 		const dataValues = Array.isArray(chart?.data) ? chart.data : [0, 0];
 		const total = dataValues.reduce((acc, value) => acc + Number(value || 0), 0);
 
@@ -480,8 +480,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (goalBarFill) goalBarFill.style.width = `${percent}%`;
 		if (goalDetailEl) {
 			goalDetailEl.textContent = goal > 0
-				? `${localizada.toLocaleString('pt-BR')} de ${goal.toLocaleString('pt-BR')} XPads localizados`
-				: `${localizada.toLocaleString('pt-BR')} XPads localizados (defina uma meta nas configurações)`;
+				? `${localizada.toLocaleString('pt-BR')} de ${goal.toLocaleString('pt-BR')} acupad localizados`
+				: `${localizada.toLocaleString('pt-BR')} acupad localizados (defina uma meta nas configurações)`;
 		}
 		if (settingGoalInput) settingGoalInput.value = String(settings?.xpads_goal ?? goal);
 		if (settingLinkMaxInput) settingLinkMaxInput.value = String(settings?.link_max_submissions ?? 50);

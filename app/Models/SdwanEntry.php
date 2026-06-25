@@ -290,7 +290,7 @@ final class SdwanEntry
 		$summary = self::summary($filters);
 
 		return [
-			'labels' => ['XPads previstos', 'Quantidade localizada'],
+			'labels' => ['acupad previstos', 'Quantidade localizada'],
 			'data' => [
 				(int) ($summary['xpads_previsto'] ?? 0),
 				(int) ($summary['quantidade_localizada'] ?? 0),
@@ -507,7 +507,7 @@ final class SdwanEntry
 		];
 
 		if ($quantidadeLocalizada > $xpadsPrevisto && $xpadsPrevisto > 0) {
-			$result['warning'] = 'A quantidade localizada é maior que a quantidade prevista de XPads.';
+			$result['warning'] = 'A quantidade localizada é maior que a quantidade prevista de acupad.';
 		}
 
 		return $result;

@@ -2,7 +2,7 @@
 	<div class="page-header flex flex-col md:flex-row md:items-end md:justify-between gap-4 mb-6">
 		<div>
 			<h2 class="page-title">Projeto ACUPAD</h2>
-			<p class="page-subtitle">Cadastre manualmente os dados de XPads e PDVs por loja</p>
+			<p class="page-subtitle">Cadastre manualmente os dados de acupad e PDVs por loja</p>
 		</div>
 		<div class="flex flex-wrap gap-2">
 			<a href="/dashboard/sdwan-entries/export/pdf" id="sdwan-export-pdf" class="btn btn-secondary btn-sm">Exportar PDF</a>
@@ -16,7 +16,7 @@
 			<p class="ui-stat-value text-blue-900" id="sdwan-total-rows">0</p>
 		</div>
 		<div class="ui-card ui-stat-card">
-			<p class="ui-stat-label">XPads previstos</p>
+			<p class="ui-stat-label">acupad previstos</p>
 			<p class="ui-stat-value text-purple-700" id="sdwan-total-xpads">0</p>
 		</div>
 		<div class="ui-card ui-stat-card">
@@ -33,14 +33,14 @@
 		<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
 			<div>
 				<h3 class="text-lg font-bold text-slate-800">Meta do projeto</h3>
-				<p class="text-sm text-slate-600" id="sdwan-goal-label">Progresso em relação à meta de XPads</p>
+				<p class="text-sm text-slate-600" id="sdwan-goal-label">Progresso em relação à meta de acupad</p>
 			</div>
 			<p class="text-sm font-semibold text-slate-700" id="sdwan-goal-percent">0%</p>
 		</div>
 		<div class="sdwan-goal-bar">
 			<div class="sdwan-goal-bar-fill" id="sdwan-goal-bar-fill" style="width:0%"></div>
 		</div>
-		<p class="text-xs text-slate-500 mt-2" id="sdwan-goal-detail">0 de 0 XPads localizados</p>
+		<p class="text-xs text-slate-500 mt-2" id="sdwan-goal-detail">0 de 0 acupad localizados</p>
 	</section>
 
 	<section class="ui-card ui-card-body mb-6 hidden" id="sdwan-admin-tools">
@@ -48,7 +48,7 @@
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 			<form id="sdwan-settings-form" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div>
-					<label class="label" for="sdwan-setting-goal">Meta global de XPads</label>
+					<label class="label" for="sdwan-setting-goal">Meta global de acupad</label>
 					<input class="input" type="number" min="0" id="sdwan-setting-goal" name="xpads_goal" placeholder="0">
 				</div>
 				<div>
@@ -140,7 +140,7 @@
 					<tr>
 						<th>Loja</th>
 						<th>Registros</th>
-						<th>XPads previstos</th>
+						<th>acupad previstos</th>
 						<th>Localizado</th>
 						<th>Pendente</th>
 						<th>%</th>
@@ -205,7 +205,7 @@
 			<?php echo \App\Services\Csrf::field(); ?>
 			<input type="hidden" name="id" id="sdwan-entry-id" value="">
 			<div>
-				<label class="label" for="sdwan-xpads-previsto">Quantidades prevista de XPad´s</label>
+				<label class="label" for="sdwan-xpads-previsto">Quantidade prevista de acupad</label>
 				<input class="input" type="number" min="0" step="1" name="xpads_previsto" id="sdwan-xpads-previsto" placeholder="0" required>
 			</div>
 			<div>
@@ -259,7 +259,7 @@
 					<tr>
 						<th>Data</th>
 						<th>Origem</th>
-						<th>XPads previstos</th>
+						<th>acupad previstos</th>
 						<th>Qtd. localizada</th>
 						<th>Nº PDV</th>
 						<th>Nº Série PDV</th>

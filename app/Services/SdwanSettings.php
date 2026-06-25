@@ -24,7 +24,7 @@ final class SdwanSettings
 
 	public static function setXpadsGoal(int $goal): bool
 	{
-		return SystemSetting::set(self::KEY_XPADS_GOAL, (string) max(0, $goal), 'Meta global de XPads do Projeto ACUPAD');
+		return SystemSetting::set(self::KEY_XPADS_GOAL, (string) max(0, $goal), 'Meta global de acupad do Projeto ACUPAD');
 	}
 
 	public static function setLinkMaxSubmissions(int $max): bool

@@ -48,7 +48,7 @@ final class SdwanExportService
 			$pdf->Ln(2);
 			$pdf->SetFont('Arial', '', 9);
 			$pdf->Cell(0, 6, self::pdfText(sprintf(
-				'Registros: %d | XPads previstos: %d | Quantidade localizada: %d | Lojas: %d',
+				'Registros: %d | acupad previstos: %d | Quantidade localizada: %d | Lojas: %d',
 				(int) ($summary['total'] ?? 0),
 				(int) ($summary['xpads_previsto'] ?? 0),
 				(int) ($summary['quantidade_localizada'] ?? 0),
@@ -60,7 +60,7 @@ final class SdwanExportService
 			$pdf->SetFillColor(37, 99, 235);
 			$pdf->SetTextColor(255, 255, 255);
 			$pdf->Cell(16, 7, 'Loja', 1, 0, 'C', true);
-			$pdf->Cell(14, 7, 'XPads', 1, 0, 'C', true);
+			$pdf->Cell(14, 7, 'acupad', 1, 0, 'C', true);
 			$pdf->Cell(16, 7, 'Localizada', 1, 0, 'C', true);
 			$pdf->Cell(18, 7, 'N PDV', 1, 0, 'C', true);
 			$pdf->Cell(24, 7, 'N Serie PDV', 1, 0, 'C', true);
@@ -156,7 +156,7 @@ final class SdwanExportService
 			$dataRows[] = $line;
 		}
 
-		$headers = ['Loja', 'XPads previstos', 'Quantidade localizada', 'N PDV', 'N Serie PDV', 'Data cadastro', 'Cadastrado por'];
+		$headers = ['Loja', 'acupad previstos', 'Quantidade localizada', 'N PDV', 'N Serie PDV', 'Data cadastro', 'Cadastrado por'];
 		if ($hasSource) {
 			$headers[] = 'Origem';
 		}
@@ -171,7 +171,7 @@ final class SdwanExportService
 				'Projeto ACUPAD',
 				'Gerado em ' . $date,
 				sprintf(
-					'Registros: %d | XPads previstos: %d | Quantidade localizada: %d | Lojas: %d',
+					'Registros: %d | acupad previstos: %d | Quantidade localizada: %d | Lojas: %d',
 					(int) ($summary['total'] ?? 0),
 					(int) ($summary['xpads_previsto'] ?? 0),
 					(int) ($summary['quantidade_localizada'] ?? 0),
@@ -193,11 +193,11 @@ final class SdwanExportService
 		$html .= '<h2>Projeto ACUPAD</h2>';
 		$html .= '<p>Gerado em ' . htmlspecialchars($date) . '</p>';
 		$html .= '<p>Registros: ' . (int) ($summary['total'] ?? 0)
-			. ' | XPads previstos: ' . (int) ($summary['xpads_previsto'] ?? 0)
+			. ' | acupad previstos: ' . (int) ($summary['xpads_previsto'] ?? 0)
 			. ' | Quantidade localizada: ' . (int) ($summary['quantidade_localizada'] ?? 0)
 			. ' | Lojas: ' . (int) ($summary['total_lojas'] ?? 0) . '</p>';
 		$html .= '<table><tr>
-			<th>Loja</th><th>XPads previstos</th><th>Quantidade localizada</th>
+			<th>Loja</th><th>acupad previstos</th><th>Quantidade localizada</th>
 			<th>N PDV</th><th>N Serie PDV</th><th>Data cadastro</th><th>Cadastrado por</th>';
 		if ($hasSource) {
 			$html .= '<th>Origem</th>';
