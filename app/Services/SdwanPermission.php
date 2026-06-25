@@ -22,6 +22,12 @@ final class SdwanPermission
 		return TicketAccess::isStaff((string) ($user['role'] ?? ''));
 	}
 
+	/** Auditoria e ações exclusivas de administrador. */
+	public static function canAdmin(): bool
+	{
+		return Auth::instance()->isAdmin();
+	}
+
 	public static function requireView(): void
 	{
 		if (!self::canView()) {

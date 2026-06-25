@@ -881,6 +881,7 @@ final class DashboardController extends Controller
 			'store_panel' => SdwanEntry::storePanel($filters),
 			'settings' => SdwanSettings::apiPayload(),
 			'can_manage' => SdwanPermission::canManage(),
+			'can_admin' => SdwanPermission::canAdmin(),
 		]);
 	}
 
@@ -1285,7 +1286,7 @@ final class DashboardController extends Controller
 	public function sdwanAuditLogs(): void
 	{
 		$this->requireAuth([]);
-		if (!SdwanPermission::canManage()) {
+		if (!SdwanPermission::canAdmin()) {
 			$this->json(['success' => false, 'message' => 'Sem permissão'], 403);
 			return;
 		}

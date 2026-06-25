@@ -83,7 +83,8 @@
 				<button type="button" id="sdwan-cleanup-btn" class="btn btn-ghost btn-sm text-red-600">Executar limpeza de arquivos</button>
 			</div>
 		</div>
-		<div class="mt-6 border-t border-slate-200 pt-4">
+		<?php if (view_is_admin($user ?? null)): ?>
+		<div class="mt-6 border-t border-slate-200 pt-4" id="sdwan-audit-section">
 			<h4 class="text-sm font-bold text-slate-800 mb-3">Auditoria recente</h4>
 			<div class="overflow-x-auto max-h-56 overflow-y-auto">
 				<table class="data-table text-sm">
@@ -101,6 +102,7 @@
 				</table>
 			</div>
 		</div>
+		<?php endif; ?>
 	</section>
 
 	<section class="ui-card ui-card-body mb-6">

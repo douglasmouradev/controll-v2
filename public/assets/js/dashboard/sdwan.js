@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	let sdwanEntries = [];
 	let canManage = false;
+	let canAdmin = false;
 	let previewObjectUrl = null;
 	let compressedImageFile = null;
 	let storeSiglas = [];
@@ -542,6 +543,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	function applyListResponse(data) {
 		canManage = !!data.can_manage;
+		canAdmin = !!data.can_admin;
 		renderTable(data.entries || []);
 		sdwanEntries = data.entries || [];
 		updateSummary(data.summary || {});
@@ -925,7 +927,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 
 	async function loadAuditLogs() {
-		if (!auditBody || !canManage) return;
+		if (!auditBody || !canAdmin) return;
 		try {
 			const res = await fetch('/dashboard/sdwan-audit', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
 			const data = await res.json();
