@@ -44,6 +44,11 @@ document.addEventListener('DOMContentLoaded', function () {
 	const goalPercentEl = document.getElementById('sdwan-goal-percent');
 	const goalBarFill = document.getElementById('sdwan-goal-bar-fill');
 	const goalDetailEl = document.getElementById('sdwan-goal-detail');
+	const goalFilteredSummaryEl = document.getElementById('sdwan-filtered-summary');
+	const statsFilterNoteEl = document.getElementById('sdwan-stats-filter-note');
+	const inconsistenciesBody = document.getElementById('sdwan-inconsistencies-body');
+	const inconsistenciesTotalEl = document.getElementById('sdwan-inconsistencies-total');
+	const importResultEl = document.getElementById('sdwan-import-result');
 	const settingsForm = document.getElementById('sdwan-settings-form');
 	const settingGoalInput = document.getElementById('sdwan-setting-goal');
 	const settingLinkMaxInput = document.getElementById('sdwan-setting-link-max');
@@ -296,6 +301,17 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (totalXpadsEl) totalXpadsEl.textContent = String(summary.xpads_previsto ?? 0);
 		if (totalLocalizadaEl) totalLocalizadaEl.textContent = String(summary.quantidade_localizada ?? 0);
 		if (totalLojasEl) totalLojasEl.textContent = String(summary.total_lojas ?? 0);
+		if (goalFilteredSummaryEl) {
+			const previsto = Number(summary.xpads_previsto ?? 0);
+			const localizada = Number(summary.quantidade_localizada ?? 0);
+			goalFilteredSummaryEl.textContent = `Filtrado: ${localizada.toLocaleString('pt-BR')} localizados de ${previsto.toLocaleString('pt-BR')} previstos`;
+		}
+		const hasFilters = !!(filterLoja?.value.trim() || filterPdv?.value.trim() || filterSource?.value || filterDateFrom?.value || filterDateTo?.value);
+		if (statsFilterNoteEl) {
+			statsFilterNoteEl.textContent = hasFilters
+				? 'Totais conforme filtros aplicados.'
+				: 'Totais gerais (sem filtros). A meta do projeto permanece global.';
+		}
 	}
 
 	function renderSdwanPieChart(chart) {
@@ -492,7 +508,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 		storePanelBody.innerHTML = sorted.map((row) => `
 			<tr>
-				<td class="font-semibold">${escapeHtml(row.loja || '')}</td>
+				<td class="font-semibold">
+					<button type="button" class="sdwan-store-loja-btn" data-sdwan-filter-loja="${escapeHtml(row.loja || '')}" title="Filtrar por ${escapeHtml(row.loja || '')}">${escapeHtml(row.loja || '')}</button>
+				</td>
 				<td>${escapeHtml(String(row.registros ?? 0))}</td>
 				<td>${escapeHtml(String(row.xpads_previsto ?? 0))}</td>
 				<td>${escapeHtml(String(row.quantidade_localizada ?? 0))}</td>
@@ -500,6 +518,89 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td><span class="sdwan-store-percent">${escapeHtml(String(row.percent ?? 0))}%</span></td>
 			</tr>
 		`).join('');
+	}
+
+	function renderInconsistencies(payload) {
+		if (!inconsistenciesBody) return;
+		const counts = payload?.counts || {};
+		const totalAlerts = Object.values(counts).reduce((acc, value) => acc + Number(value || 0), 0);
+		if (inconsistenciesTotalEl) {
+			inconsistenciesTotalEl.textContent = `${totalAlerts} alerta(s)`;
+		}
+
+		if (totalAlerts === 0) {
+			inconsistenciesBody.innerHTML = '<p class="text-slate-500 col-span-full">Nenhuma inconsistência nos registros filtrados.</p>';
+			return;
+		}
+
+		const cards = [];
+
+		const storesPending = Array.isArray(payload?.stores_pending) ? payload.stores_pending : [];
+		if ((counts.stores_pending || 0) > 0) {
+			const items = storesPending.map((row) => `<li><button type="button" class="sdwan-store-loja-btn" data-sdwan-filter-loja="${escapeHtml(row.loja || '')}">${escapeHtml(row.loja || '')}</button> — pendente ${escapeHtml(String(row.pendente ?? 0))}</li>`).join('');
+			const more = (counts.stores_pending || 0) > storesPending.length ? `<li class="text-slate-500">+ ${(counts.stores_pending || 0) - storesPending.length} loja(s)</li>` : '';
+			cards.push(`<div class="sdwan-inconsistency-card"><h4>Lojas com pendência (${counts.stores_pending})</h4><ul class="space-y-1">${items}${more}</ul></div>`);
+		}
+
+		const overLocalizada = Array.isArray(payload?.over_localizada) ? payload.over_localizada : [];
+		if ((counts.over_localizada || 0) > 0) {
+			const items = overLocalizada.map((row) => `<li>${escapeHtml(row.loja || '')} — localizado ${escapeHtml(String(row.quantidade_localizada ?? 0))} / previsto ${escapeHtml(String(row.xpads_previsto ?? 0))}</li>`).join('');
+			const more = (counts.over_localizada || 0) > overLocalizada.length ? `<li class="text-slate-500">+ ${(counts.over_localizada || 0) - overLocalizada.length} registro(s)</li>` : '';
+			cards.push(`<div class="sdwan-inconsistency-card"><h4>Localizado acima do previsto (${counts.over_localizada})</h4><ul class="space-y-1">${items}${more}</ul></div>`);
+		}
+
+		const withoutPdv = Array.isArray(payload?.without_pdv) ? payload.without_pdv : [];
+		if ((counts.without_pdv || 0) > 0) {
+			const items = withoutPdv.map((row) => `<li>${escapeHtml(row.loja || '')} — registro #${escapeHtml(String(row.id || ''))}</li>`).join('');
+			const more = (counts.without_pdv || 0) > withoutPdv.length ? `<li class="text-slate-500">+ ${(counts.without_pdv || 0) - withoutPdv.length} registro(s)</li>` : '';
+			cards.push(`<div class="sdwan-inconsistency-card"><h4>Sem número de PDV (${counts.without_pdv})</h4><ul class="space-y-1">${items}${more}</ul></div>`);
+		}
+
+		const withoutImage = Array.isArray(payload?.without_image) ? payload.without_image : [];
+		if ((counts.without_image || 0) > 0) {
+			const items = withoutImage.map((row) => `<li>${escapeHtml(row.loja || '')} — registro #${escapeHtml(String(row.id || ''))}</li>`).join('');
+			const more = (counts.without_image || 0) > withoutImage.length ? `<li class="text-slate-500">+ ${(counts.without_image || 0) - withoutImage.length} registro(s)</li>` : '';
+			cards.push(`<div class="sdwan-inconsistency-card"><h4>Sem imagem (${counts.without_image})</h4><ul class="space-y-1">${items}${more}</ul></div>`);
+		}
+
+		inconsistenciesBody.innerHTML = cards.join('');
+	}
+
+	function renderImportResult(data, mode = 'preview') {
+		if (!importResultEl) return;
+		if (!data) {
+			importResultEl.classList.add('hidden');
+			importResultEl.innerHTML = '';
+			return;
+		}
+
+		const errors = Array.isArray(data.errors) ? data.errors : [];
+		const preview = Array.isArray(data.preview) ? data.preview : [];
+		let html = `<p class="font-semibold ${data.success ? 'text-emerald-700' : 'text-red-700'}">${escapeHtml(data.message || '')}</p>`;
+
+		if (preview.length > 0) {
+			html += '<p class="text-xs text-slate-600 mt-2">Prévia das primeiras linhas válidas:</p><ul class="text-xs text-slate-600 mt-1 space-y-1">';
+			preview.forEach((row) => {
+				html += `<li>${escapeHtml(row.loja || '')} — previsto ${escapeHtml(String(row.xpads_previsto ?? 0))}, localizado ${escapeHtml(String(row.quantidade_localizada ?? 0))}, PDV ${escapeHtml(row.pdv_numero || '-')}</li>`;
+			});
+			html += '</ul>';
+		}
+
+		if (errors.length > 0) {
+			html += `<ul class="sdwan-import-errors">${errors.map((err) => `<li>${escapeHtml(err)}</li>`).join('')}</ul>`;
+		} else if (mode === 'import' && data.success) {
+			html += '<p class="text-xs text-slate-500 mt-1">Nenhum erro reportado.</p>';
+		}
+
+		importResultEl.innerHTML = html;
+		importResultEl.classList.remove('hidden');
+	}
+
+	function applyStoreFilter(loja) {
+		const sigla = String(loja || '').trim().toUpperCase();
+		if (!sigla || !filterLoja) return;
+		filterLoja.value = sigla;
+		loadEntries(1);
 	}
 
 	function highlightEntryRow(entryId) {
@@ -521,7 +622,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (goalBarFill) goalBarFill.style.width = `${percent}%`;
 		if (goalDetailEl) {
 			goalDetailEl.textContent = goal > 0
-				? `${localizada.toLocaleString('pt-BR')} de ${goal.toLocaleString('pt-BR')} Acupad localizados`
+				? `${localizada.toLocaleString('pt-BR')} de ${goal.toLocaleString('pt-BR')} Acupad localizados (meta global)`
 				: `${localizada.toLocaleString('pt-BR')} Acupad localizados (defina uma meta nas configurações)`;
 		}
 		if (settingGoalInput) settingGoalInput.value = String(settings?.xpads_goal ?? goal);
@@ -539,6 +640,8 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 		const generateBtn = document.getElementById('btn-sdwan-generate-link');
 		if (generateBtn) generateBtn.classList.toggle('hidden', !show);
+		const cleanupBtn = document.getElementById('sdwan-cleanup-btn');
+		if (cleanupBtn) cleanupBtn.classList.toggle('hidden', !canAdmin);
 	}
 
 	function applyListResponse(data) {
@@ -551,6 +654,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		renderProgressChart(data.progress || {});
 		renderPagination(data.pagination || {});
 		renderStorePanel(data.store_panel || []);
+		renderInconsistencies(data.inconsistencies || {});
 		renderGoalProgress(data.settings || {});
 		applyManageUi();
 		updateExportLinks();
@@ -993,6 +1097,12 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 
 	document.getElementById('sdwan-store-panel-table')?.addEventListener('click', (event) => {
+		const filterBtn = event.target.closest('[data-sdwan-filter-loja]');
+		if (filterBtn) {
+			applyStoreFilter(filterBtn.dataset.sdwanFilterLoja);
+			return;
+		}
+
 		const btn = event.target.closest('[data-sort]');
 		if (!btn) return;
 		const key = btn.getAttribute('data-sort');
@@ -1004,6 +1114,13 @@ document.addEventListener('DOMContentLoaded', function () {
 			storePanelSort.dir = 'asc';
 		}
 		renderStorePanel(storePanelRows);
+	});
+
+	inconsistenciesBody?.addEventListener('click', (event) => {
+		const filterBtn = event.target.closest('[data-sdwan-filter-loja]');
+		if (filterBtn) {
+			applyStoreFilter(filterBtn.dataset.sdwanFilterLoja);
+		}
 	});
 
 	settingsForm?.addEventListener('submit', async (event) => {
@@ -1023,6 +1140,28 @@ document.addEventListener('DOMContentLoaded', function () {
 		}
 	});
 
+	document.getElementById('sdwan-import-preview-btn')?.addEventListener('click', async () => {
+		if (!canManage) return;
+		const fileInput = document.getElementById('sdwan-import-file');
+		if (!fileInput?.files?.[0]) {
+			if (typeof showToast === 'function') showToast('Selecione um arquivo CSV');
+			return;
+		}
+		const formData = new FormData();
+		formData.append('file', fileInput.files[0]);
+		formData.append('csrf_token', getCsrfToken());
+		try {
+			const res = await fetch('/dashboard/sdwan-import/preview', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+			const data = await res.json();
+			renderImportResult(data, 'preview');
+			if (typeof showToast === 'function') {
+				showToast(data.message || (data.success ? 'Validação concluída' : 'Erro na validação'), data.success ? 'success' : undefined);
+			}
+		} catch (error) {
+			if (typeof showToast === 'function') showToast('Erro ao conectar com o servidor');
+		}
+	});
+
 	document.getElementById('sdwan-import-form')?.addEventListener('submit', async (event) => {
 		event.preventDefault();
 		if (!canManage) return;
@@ -1034,6 +1173,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		try {
 			const res = await fetch('/dashboard/sdwan-import', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
 			const data = await res.json();
+			renderImportResult(data, 'import');
 			if (data.success) {
 				if (typeof showToast === 'function') showToast(data.message || 'Importação concluída', 'success');
 				fileInput.value = '';
@@ -1067,7 +1207,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	});
 
 	document.getElementById('sdwan-cleanup-btn')?.addEventListener('click', async () => {
-		if (!canManage || !window.confirm('Executar limpeza de imagens órfãs e links expirados?')) return;
+		if (!canAdmin || !window.confirm('Executar limpeza de imagens órfãs e links expirados?')) return;
 		const formData = new FormData();
 		formData.append('csrf_token', getCsrfToken());
 		try {

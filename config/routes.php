@@ -90,6 +90,7 @@ return [
 		'/dashboard/sdwan-access-link/revoke' => [DashboardController::class, 'sdwanAccessLinkRevoke'],
 		'/dashboard/sdwan-settings' => [DashboardController::class, 'sdwanSettingsUpdate'],
 		'/dashboard/sdwan-import' => [DashboardController::class, 'sdwanImportCsv'],
+		'/dashboard/sdwan-import/preview' => [DashboardController::class, 'sdwanImportPreview'],
 		'/dashboard/sdwan-stores/upload' => [DashboardController::class, 'sdwanUploadStores'],
 		'/dashboard/sdwan-cleanup' => [DashboardController::class, 'sdwanCleanup'],
 		'/settings/maintenance' => [SettingsController::class, 'maintenanceToggle'],

@@ -513,6 +513,102 @@ final class SdwanEntry
 		return $result;
 	}
 
+	/** @param array<string, mixed> $filters @return array<string, mixed> */
+	public static function inconsistencies(array $filters = [], int $limit = 12): array
+	{
+		if (!self::tableReady()) {
+			return [
+				'stores_pending' => [],
+				'over_localizada' => [],
+				'without_pdv' => [],
+				'without_image' => [],
+				'counts' => [
+					'stores_pending' => 0,
+					'over_localizada' => 0,
+					'without_pdv' => 0,
+					'without_image' => 0,
+				],
+			];
+		}
+
+		$limit = max(1, min($limit, 30));
+		$filter = self::buildFilterWhere($filters);
+		$pdo = Database::pdo();
+
+		$stores = self::storePanel($filters);
+		$storesPendingAll = array_values(array_filter($stores, static fn (array $row): bool => (int) ($row['pendente'] ?? 0) > 0));
+		usort($storesPendingAll, static fn (array $a, array $b): int => (int) ($b['pendente'] ?? 0) <=> (int) ($a['pendente'] ?? 0));
+		$storesPending = array_slice($storesPendingAll, 0, $limit);
+
+		$overStmt = $pdo->prepare('
+			SELECT e.id, e.loja, e.pdv_numero, e.xpads_previsto, e.quantidade_localizada
+			FROM sdwan_entries e
+			WHERE ' . $filter['where'] . ' AND e.quantidade_localizada > e.xpads_previsto AND e.xpads_previsto > 0
+			ORDER BY e.loja ASC, e.id DESC
+			LIMIT ' . $limit
+		);
+		$overStmt->execute($filter['params']);
+		$overLocalizada = $overStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+		$overCountStmt = $pdo->prepare('
+			SELECT COUNT(*) FROM sdwan_entries e
+			WHERE ' . $filter['where'] . ' AND e.quantidade_localizada > e.xpads_previsto AND e.xpads_previsto > 0
+		');
+		$overCountStmt->execute($filter['params']);
+		$overCount = (int) $overCountStmt->fetchColumn();
+
+		$pdvStmt = $pdo->prepare('
+			SELECT e.id, e.loja, e.pdv_numero, e.xpads_previsto, e.quantidade_localizada
+			FROM sdwan_entries e
+			WHERE ' . $filter['where'] . ' AND (e.pdv_numero IS NULL OR e.pdv_numero = \'\')
+			ORDER BY e.loja ASC, e.id DESC
+			LIMIT ' . $limit
+		);
+		$pdvStmt->execute($filter['params']);
+		$withoutPdv = $pdvStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+		$pdvCountStmt = $pdo->prepare('
+			SELECT COUNT(*) FROM sdwan_entries e
+			WHERE ' . $filter['where'] . ' AND (e.pdv_numero IS NULL OR e.pdv_numero = \'\')
+		');
+		$pdvCountStmt->execute($filter['params']);
+		$pdvCount = (int) $pdvCountStmt->fetchColumn();
+
+		$withoutImage = [];
+		$imageCount = 0;
+		if (self::hasImageColumns()) {
+			$imgStmt = $pdo->prepare('
+				SELECT e.id, e.loja, e.pdv_numero, e.xpads_previsto, e.quantidade_localizada
+				FROM sdwan_entries e
+				WHERE ' . $filter['where'] . ' AND (e.image_path IS NULL OR e.image_path = \'\')
+				ORDER BY e.loja ASC, e.id DESC
+				LIMIT ' . $limit
+			);
+			$imgStmt->execute($filter['params']);
+			$withoutImage = $imgStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+			$imgCountStmt = $pdo->prepare('
+				SELECT COUNT(*) FROM sdwan_entries e
+				WHERE ' . $filter['where'] . ' AND (e.image_path IS NULL OR e.image_path = \'\')
+			');
+			$imgCountStmt->execute($filter['params']);
+			$imageCount = (int) $imgCountStmt->fetchColumn();
+		}
+
+		return [
+			'stores_pending' => $storesPending,
+			'over_localizada' => $overLocalizada,
+			'without_pdv' => $withoutPdv,
+			'without_image' => $withoutImage,
+			'counts' => [
+				'stores_pending' => count($storesPendingAll),
+				'over_localizada' => $overCount,
+				'without_pdv' => $pdvCount,
+				'without_image' => $imageCount,
+			],
+		];
+	}
+
 	/** @param array<string, mixed> $filters @return array<int, array<string, mixed>> */
 	public static function exportRows(array $filters = []): array
 	{

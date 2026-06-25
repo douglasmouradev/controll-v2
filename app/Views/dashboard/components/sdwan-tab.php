@@ -10,7 +10,7 @@
 		</div>
 	</div>
 
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-2">
 		<div class="ui-card ui-stat-card">
 			<p class="ui-stat-label">Registros</p>
 			<p class="ui-stat-value text-blue-900" id="sdwan-total-rows">0</p>
@@ -28,6 +28,7 @@
 			<p class="ui-stat-value text-emerald-600" id="sdwan-total-lojas">0</p>
 		</div>
 	</div>
+	<p class="text-xs text-slate-500 mb-6" id="sdwan-stats-filter-note">Totais conforme filtros aplicados.</p>
 
 	<section class="ui-card ui-card-body mb-6" id="sdwan-goal-section">
 		<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
@@ -41,7 +42,8 @@
 		<div class="sdwan-goal-bar">
 			<div class="sdwan-goal-bar-fill" id="sdwan-goal-bar-fill" style="width:0%"></div>
 		</div>
-		<p class="text-xs text-slate-500 mt-2" id="sdwan-goal-detail">0 de 0 Acupad localizados</p>
+		<p class="text-xs text-slate-500 mt-2" id="sdwan-goal-detail">0 de 0 Acupad localizados (meta global)</p>
+		<p class="text-xs text-slate-600 mt-1 font-medium" id="sdwan-filtered-summary">Filtrado: 0 localizados de 0 previstos</p>
 	</section>
 
 	<section class="ui-card ui-card-body mb-6 hidden" id="sdwan-admin-tools">
@@ -65,13 +67,17 @@
 				</div>
 			</form>
 			<div class="space-y-4">
-				<form id="sdwan-import-form" class="flex flex-wrap items-end gap-2">
-					<div class="flex-1 min-w-[12rem]">
-						<label class="label" for="sdwan-import-file">Importar CSV</label>
-						<input class="input" type="file" id="sdwan-import-file" name="file" accept=".csv,.txt">
+				<form id="sdwan-import-form" class="space-y-2">
+					<div class="flex flex-wrap items-end gap-2">
+						<div class="flex-1 min-w-[12rem]">
+							<label class="label" for="sdwan-import-file">Importar CSV</label>
+							<input class="input" type="file" id="sdwan-import-file" name="file" accept=".csv,.txt">
+						</div>
+						<a href="/dashboard/sdwan-import/template" class="btn btn-ghost btn-sm">Modelo CSV</a>
+						<button type="button" id="sdwan-import-preview-btn" class="btn btn-ghost btn-sm">Validar CSV</button>
+						<button type="submit" class="btn btn-secondary btn-sm">Importar</button>
 					</div>
-					<a href="/dashboard/sdwan-import/template" class="btn btn-ghost btn-sm">Modelo CSV</a>
-					<button type="submit" class="btn btn-secondary btn-sm">Importar</button>
+					<div id="sdwan-import-result" class="hidden rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700"></div>
 				</form>
 				<form id="sdwan-stores-upload-form" class="flex flex-wrap items-end gap-2">
 					<div class="flex-1 min-w-[12rem]">
@@ -80,7 +86,9 @@
 					</div>
 					<button type="submit" class="btn btn-secondary btn-sm">Enviar</button>
 				</form>
+				<?php if (view_is_admin($user ?? null)): ?>
 				<button type="button" id="sdwan-cleanup-btn" class="btn btn-ghost btn-sm text-red-600">Executar limpeza de arquivos</button>
+				<?php endif; ?>
 			</div>
 		</div>
 		<?php if (view_is_admin($user ?? null)): ?>
@@ -192,6 +200,19 @@
 		</form>
 	</section>
 
+	<section class="ui-card ui-card-body mb-6" id="sdwan-inconsistencies-section">
+		<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+			<div>
+				<h3 class="text-lg font-bold text-slate-800">Inconsistências</h3>
+				<p class="text-sm text-slate-600">Lojas pendentes, registros sem PDV, sem imagem ou com localizado acima do previsto.</p>
+			</div>
+			<p class="text-sm font-semibold text-amber-700" id="sdwan-inconsistencies-total">0 alerta(s)</p>
+		</div>
+		<div id="sdwan-inconsistencies-body" class="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+			<p class="text-slate-500 col-span-full">Carregue os dados para ver inconsistências.</p>
+		</div>
+	</section>
+
 	<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
 		<section class="ui-card ui-card-body">
 			<h3 class="text-lg font-bold text-slate-800 mb-1">Distribuição por loja</h3>
@@ -213,6 +234,7 @@
 
 	<section class="ui-card ui-card-body mb-6">
 		<h3 class="text-lg font-bold text-slate-800 mb-4">Painel por loja</h3>
+		<p class="text-xs text-slate-500 mb-3">Clique em uma loja para filtrar os registros abaixo.</p>
 		<div class="overflow-x-auto">
 			<table class="data-table" id="sdwan-store-panel-table">
 				<thead>

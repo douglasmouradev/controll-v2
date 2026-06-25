@@ -879,6 +879,7 @@ final class DashboardController extends Controller
 			'chart' => SdwanEntry::pieChartByStore($filters),
 			'progress' => SdwanEntry::progressChart($filters),
 			'store_panel' => SdwanEntry::storePanel($filters),
+			'inconsistencies' => SdwanEntry::inconsistencies($filters),
 			'settings' => SdwanSettings::apiPayload(),
 			'can_manage' => SdwanPermission::canManage(),
 			'can_admin' => SdwanPermission::canAdmin(),
@@ -1249,6 +1250,23 @@ final class DashboardController extends Controller
 		$user = Auth::instance()->user();
 		$userId = isset($user['id']) ? (int) $user['id'] : null;
 		$result = SdwanImportService::importCsvFile($_FILES['file'], $userId);
+		$this->json($result, ($result['success'] ?? false) ? 200 : 422);
+	}
+
+	public function sdwanImportPreview(): void
+	{
+		$this->requireAuth([]);
+		if (!SdwanPermission::canManage()) {
+			$this->json(['success' => false, 'message' => 'Sem permissão'], 403);
+			return;
+		}
+
+		if (!isset($_FILES['file'])) {
+			$this->json(['success' => false, 'message' => 'Arquivo não enviado'], 400);
+			return;
+		}
+
+		$result = SdwanImportService::previewCsvFile($_FILES['file']);
 		$this->json($result, ($result['success'] ?? false) ? 200 : 422);
 	}
 
