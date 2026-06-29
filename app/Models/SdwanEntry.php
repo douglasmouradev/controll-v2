@@ -40,6 +40,15 @@ final class SdwanEntry
 		}
 	}
 
+	public static function hasEquipmentColumns(): bool
+	{
+		try {
+			return DatabaseSchema::columnExists(Database::pdo(), 'sdwan_entries', 'serie_antena');
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
 	/** @param array<string, mixed> $filters @return array<int, array<string, mixed>> */
 	public static function storePanel(array $filters = []): array
 	{
@@ -382,8 +391,15 @@ final class SdwanEntry
 		$hasImage = self::hasImageColumns();
 		$hasSource = self::hasSourceColumns();
 
+		$hasEquipment = self::hasEquipmentColumns();
+
 		$columns = ['xpads_previsto', 'quantidade_localizada', 'pdv_numero', 'pdv_serie', 'loja', 'created_by'];
 		$placeholders = [':xpads_previsto', ':quantidade_localizada', ':pdv_numero', ':pdv_serie', ':loja', ':created_by'];
+
+		if ($hasEquipment) {
+			array_splice($columns, 4, 0, ['serie_antena', 'serie_acupad', 'setor']);
+			array_splice($placeholders, 4, 0, [':serie_antena', ':serie_acupad', ':setor']);
+		}
 
 		if ($hasImage) {
 			array_push($columns, 'image_path', 'image_name', 'image_type', 'image_size');
@@ -404,6 +420,11 @@ final class SdwanEntry
 			':loja' => (string) ($data['loja'] ?? ''),
 			':created_by' => $createdBy,
 		];
+		if ($hasEquipment) {
+			$params[':serie_antena'] = (string) ($data['serie_antena'] ?? '');
+			$params[':serie_acupad'] = (string) ($data['serie_acupad'] ?? '');
+			$params[':setor'] = (string) ($data['setor'] ?? '');
+		}
 		if ($hasImage) {
 			$params[':image_path'] = $data['image_path'] ?? null;
 			$params[':image_name'] = $data['image_name'] ?? null;
@@ -429,13 +450,17 @@ final class SdwanEntry
 
 		$pdo = Database::pdo();
 		$hasImage = self::hasImageColumns();
+		$hasEquipment = self::hasEquipmentColumns();
+		$equipmentSet = $hasEquipment
+			? 'serie_antena = :serie_antena, serie_acupad = :serie_acupad, setor = :setor, '
+			: '';
 		$sql = $hasImage
 			? 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada,
-				pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, loja = :loja,
+				pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja,
 				image_path = :image_path, image_name = :image_name, image_type = :image_type, image_size = :image_size
 				WHERE id = :id'
 			: 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada,
-				pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, loja = :loja WHERE id = :id';
+				pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja WHERE id = :id';
 
 		$params = [
 			':id' => $id,
@@ -445,6 +470,11 @@ final class SdwanEntry
 			':pdv_serie' => (string) ($data['pdv_serie'] ?? ''),
 			':loja' => (string) ($data['loja'] ?? ''),
 		];
+		if ($hasEquipment) {
+			$params[':serie_antena'] = (string) ($data['serie_antena'] ?? '');
+			$params[':serie_acupad'] = (string) ($data['serie_acupad'] ?? '');
+			$params[':setor'] = (string) ($data['setor'] ?? '');
+		}
 		if ($hasImage) {
 			$params[':image_path'] = $data['image_path'] ?? null;
 			$params[':image_name'] = $data['image_name'] ?? null;
@@ -490,20 +520,30 @@ final class SdwanEntry
 		$quantidadeLocalizada = max(0, (int) ($input['quantidade_localizada'] ?? 0));
 		$pdvNumero = trim((string) ($input['pdv_numero'] ?? ''));
 		$pdvSerie = trim((string) ($input['pdv_serie'] ?? ''));
+		$serieAntena = trim((string) ($input['serie_antena'] ?? ''));
+		$serieAcupad = trim((string) ($input['serie_acupad'] ?? ''));
+		$setor = trim((string) ($input['setor'] ?? ''));
 
 		if ($pdvNumero !== '' && self::existsPdvInStore($loja, $pdvNumero, $excludeId)) {
 			return ['success' => false, 'message' => 'Este Nº PDV já está cadastrado para a loja ' . $loja];
 		}
 
+		$data = [
+			'xpads_previsto' => $xpadsPrevisto,
+			'quantidade_localizada' => $quantidadeLocalizada,
+			'pdv_numero' => $pdvNumero,
+			'pdv_serie' => $pdvSerie,
+			'loja' => $loja,
+		];
+		if (self::hasEquipmentColumns()) {
+			$data['serie_antena'] = $serieAntena;
+			$data['serie_acupad'] = $serieAcupad;
+			$data['setor'] = $setor;
+		}
+
 		$result = [
 			'success' => true,
-			'data' => [
-				'xpads_previsto' => $xpadsPrevisto,
-				'quantidade_localizada' => $quantidadeLocalizada,
-				'pdv_numero' => $pdvNumero,
-				'pdv_serie' => $pdvSerie,
-				'loja' => $loja,
-			],
+			'data' => $data,
 		];
 
 		if ($quantidadeLocalizada > $xpadsPrevisto && $xpadsPrevisto > 0) {

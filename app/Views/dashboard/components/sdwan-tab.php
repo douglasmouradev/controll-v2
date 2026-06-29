@@ -169,6 +169,18 @@
 				<input class="input" name="pdv_serie" id="sdwan-pdv-serie" placeholder="Série do PDV">
 			</div>
 			<div>
+				<label class="label" for="sdwan-serie-antena">Série da antena</label>
+				<input class="input" name="serie_antena" id="sdwan-serie-antena" placeholder="Série da antena">
+			</div>
+			<div>
+				<label class="label" for="sdwan-serie-acupad">Série do Acupad</label>
+				<input class="input" name="serie_acupad" id="sdwan-serie-acupad" placeholder="Série do Acupad">
+			</div>
+			<div>
+				<label class="label" for="sdwan-setor">Setor</label>
+				<input class="input" name="setor" id="sdwan-setor" placeholder="Setor">
+			</div>
+			<div>
 				<label class="label" for="sdwan-loja">Loja</label>
 				<input class="input" name="loja" id="sdwan-loja" list="sdwan-loja-list" placeholder="Digite a sigla da loja" autocomplete="off" style="text-transform: uppercase;" required>
 				<datalist id="sdwan-loja-list"></datalist>
@@ -311,6 +323,9 @@
 						<th>Qtd. localizada</th>
 						<th>Nº PDV</th>
 						<th>Nº Série PDV</th>
+						<th>Série antena</th>
+						<th>Série Acupad</th>
+						<th>Setor</th>
 						<th>Loja</th>
 						<th>Cadastrado por</th>
 						<th>Imagem</th>
@@ -319,7 +334,7 @@
 				</thead>
 				<tbody id="sdwan-table-body">
 					<tr>
-						<td colspan="10" class="empty-state">Nenhum registro cadastrado.</td>
+						<td colspan="13" class="empty-state">Nenhum registro cadastrado.</td>
 					</tr>
 				</tbody>
 			</table>

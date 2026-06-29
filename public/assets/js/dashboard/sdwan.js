@@ -283,6 +283,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		document.getElementById('sdwan-quantidade-localizada').value = String(entry.quantidade_localizada ?? 0);
 		document.getElementById('sdwan-pdv-numero').value = entry.pdv_numero || '';
 		document.getElementById('sdwan-pdv-serie').value = entry.pdv_serie || '';
+		document.getElementById('sdwan-serie-antena').value = entry.serie_antena || '';
+		document.getElementById('sdwan-serie-acupad').value = entry.serie_acupad || '';
+		document.getElementById('sdwan-setor').value = entry.setor || '';
 		if (lojaInput) {
 			lojaInput.value = entry.loja || '';
 			updateLojaHint(findStoreBySigla(entry.loja || ''));
@@ -466,6 +469,9 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${escapeHtml(String(entry.quantidade_localizada ?? 0))}</td>
 				<td>${escapeHtml(entry.pdv_numero || '-')}</td>
 				<td>${escapeHtml(entry.pdv_serie || '-')}</td>
+				<td>${escapeHtml(entry.serie_antena || '-')}</td>
+				<td>${escapeHtml(entry.serie_acupad || '-')}</td>
+				<td>${escapeHtml(entry.setor || '-')}</td>
 				<td>${escapeHtml(entry.loja || '-')}</td>
 				<td class="text-sm">${escapeHtml(entry.created_by_name || '-')}</td>
 				<td class="sdwan-image-cell">${imageCellHtml(entry)}</td>
@@ -479,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	function renderTable(entries) {
 		if (!Array.isArray(entries) || entries.length === 0) {
-			tableBody.innerHTML = '<tr><td colspan="10" class="empty-state">Nenhum registro encontrado.</td></tr>';
+			tableBody.innerHTML = '<tr><td colspan="13" class="empty-state">Nenhum registro encontrado.</td></tr>';
 			return;
 		}
 		tableBody.innerHTML = entries.map(rowHtml).join('');

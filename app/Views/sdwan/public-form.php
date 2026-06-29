@@ -39,6 +39,18 @@
 				<label class="label" for="sdwan-public-pdv-serie">Nº Serie PDV</label>
 				<input class="input" name="pdv_serie" id="sdwan-public-pdv-serie" placeholder="Série do PDV">
 			</div>
+			<div>
+				<label class="label" for="sdwan-public-serie-antena">Série da antena</label>
+				<input class="input" name="serie_antena" id="sdwan-public-serie-antena" placeholder="Série da antena">
+			</div>
+			<div>
+				<label class="label" for="sdwan-public-serie-acupad">Série do Acupad</label>
+				<input class="input" name="serie_acupad" id="sdwan-public-serie-acupad" placeholder="Série do Acupad">
+			</div>
+			<div>
+				<label class="label" for="sdwan-public-setor">Setor</label>
+				<input class="input" name="setor" id="sdwan-public-setor" placeholder="Setor">
+			</div>
 			<div class="md:col-span-2">
 				<label class="label" for="sdwan-public-loja">Loja</label>
 				<input class="input" name="loja" id="sdwan-public-loja" list="sdwan-public-loja-list" placeholder="Digite a sigla da loja" autocomplete="off" style="text-transform: uppercase;" required>
