@@ -24,6 +24,12 @@
 		if (selectedTab) selectedTab.classList.remove('hidden');
 		if (tabId === 'sdwan' && !(options && options.skipAcupadEvent)) {
 			document.dispatchEvent(new CustomEvent('acupad-tab-open'));
+			const params = new URLSearchParams(window.location.search);
+			if (params.get('tab') !== 'sdwan') {
+				params.set('tab', 'sdwan');
+				const hash = window.location.hash || '';
+				window.history.replaceState({}, '', '?' + params.toString() + hash);
+			}
 		}
 	};
 

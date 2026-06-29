@@ -1112,6 +1112,20 @@ document.addEventListener('DOMContentLoaded', function () {
 		});
 	});
 
+	// sidebar-script dispara acupad-tab-open no DOMContentLoaded antes deste script
+	// registrar o listener; garante carga dos dados ao atualizar a página (F5).
+	(function bootAcupadTabIfActive() {
+		const params = new URLSearchParams(window.location.search);
+		const sdwanTab = document.getElementById('tab-sdwan');
+		const onSdwanTab = params.get('tab') === 'sdwan'
+			|| (sdwanTab && !sdwanTab.classList.contains('hidden'));
+		if (!onSdwanTab) return;
+		initAcupadTab({
+			loja: params.get('loja') || '',
+			entryId: params.get('entry_id') || params.get('entry') || null,
+		});
+	})();
+
 	document.getElementById('sdwan-store-panel-table')?.addEventListener('click', (event) => {
 		const filterBtn = event.target.closest('[data-sdwan-filter-loja]');
 		if (filterBtn) {
