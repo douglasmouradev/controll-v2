@@ -281,6 +281,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		entryIdInput.value = String(entry.id || '');
 		document.getElementById('sdwan-xpads-previsto').value = String(entry.xpads_previsto ?? 0);
 		document.getElementById('sdwan-quantidade-localizada').value = String(entry.quantidade_localizada ?? 0);
+		document.getElementById('sdwan-quantidade-utilizada').value = String(entry.quantidade_utilizada ?? 0);
 		document.getElementById('sdwan-pdv-numero').value = entry.pdv_numero || '';
 		document.getElementById('sdwan-pdv-serie').value = entry.pdv_serie || '';
 		document.getElementById('sdwan-serie-antena').value = entry.serie_antena || '';
@@ -467,6 +468,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td><span class="sdwan-source-badge ${sourceClass}">${escapeHtml(entry.source_label || 'Dashboard')}</span></td>
 				<td>${escapeHtml(String(entry.xpads_previsto ?? 0))}${warningBadge}</td>
 				<td>${escapeHtml(String(entry.quantidade_localizada ?? 0))}</td>
+				<td>${escapeHtml(String(entry.quantidade_utilizada ?? 0))}</td>
 				<td>${escapeHtml(entry.pdv_numero || '-')}</td>
 				<td>${escapeHtml(entry.pdv_serie || '-')}</td>
 				<td>${escapeHtml(entry.serie_antena || '-')}</td>
@@ -485,7 +487,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	function renderTable(entries) {
 		if (!Array.isArray(entries) || entries.length === 0) {
-			tableBody.innerHTML = '<tr><td colspan="13" class="empty-state">Nenhum registro encontrado.</td></tr>';
+			tableBody.innerHTML = '<tr><td colspan="14" class="empty-state">Nenhum registro encontrado.</td></tr>';
 			return;
 		}
 		tableBody.innerHTML = entries.map(rowHtml).join('');

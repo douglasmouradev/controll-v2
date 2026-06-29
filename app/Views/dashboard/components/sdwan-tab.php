@@ -161,6 +161,10 @@
 				<input class="input" type="number" min="0" step="1" name="quantidade_localizada" id="sdwan-quantidade-localizada" placeholder="0" required>
 			</div>
 			<div>
+				<label class="label" for="sdwan-quantidade-utilizada">Quantidade utilizada</label>
+				<input class="input" type="number" min="0" step="1" name="quantidade_utilizada" id="sdwan-quantidade-utilizada" placeholder="0">
+			</div>
+			<div>
 				<label class="label" for="sdwan-pdv-numero">Nº PDV</label>
 				<input class="input" name="pdv_numero" id="sdwan-pdv-numero" placeholder="Número do PDV">
 			</div>
@@ -321,6 +325,7 @@
 						<th>Origem</th>
 						<th>Acupad previstos</th>
 						<th>Qtd. localizada</th>
+						<th>Qtd. utilizada</th>
 						<th>Nº PDV</th>
 						<th>Nº Série PDV</th>
 						<th>Série antena</th>
@@ -334,7 +339,7 @@
 				</thead>
 				<tbody id="sdwan-table-body">
 					<tr>
-						<td colspan="13" class="empty-state">Nenhum registro cadastrado.</td>
+						<td colspan="14" class="empty-state">Nenhum registro cadastrado.</td>
 					</tr>
 				</tbody>
 			</table>

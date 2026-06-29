@@ -55,6 +55,7 @@ final class SdwanEntryService
 		return [
 			'xpads_previsto' => (int) ($row['xpads_previsto'] ?? 0),
 			'quantidade_localizada' => (int) ($row['quantidade_localizada'] ?? 0),
+			'quantidade_utilizada' => (int) ($row['quantidade_utilizada'] ?? 0),
 			'pdv_numero' => (string) ($row['pdv_numero'] ?? ''),
 			'pdv_serie' => (string) ($row['pdv_serie'] ?? ''),
 			'serie_antena' => (string) ($row['serie_antena'] ?? ''),

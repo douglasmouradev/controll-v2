@@ -32,6 +32,10 @@
 				<input class="input" type="number" min="0" step="1" name="quantidade_localizada" id="sdwan-public-quantidade-localizada" placeholder="0" required>
 			</div>
 			<div>
+				<label class="label" for="sdwan-public-quantidade-utilizada">Quantidade utilizada</label>
+				<input class="input" type="number" min="0" step="1" name="quantidade_utilizada" id="sdwan-public-quantidade-utilizada" placeholder="0">
+			</div>
+			<div>
 				<label class="label" for="sdwan-public-pdv-numero">Nº PDV</label>
 				<input class="input" name="pdv_numero" id="sdwan-public-pdv-numero" placeholder="Número do PDV">
 			</div>

@@ -49,6 +49,15 @@ final class SdwanEntry
 		}
 	}
 
+	public static function hasQuantidadeUtilizadaColumn(): bool
+	{
+		try {
+			return DatabaseSchema::columnExists(Database::pdo(), 'sdwan_entries', 'quantidade_utilizada');
+		} catch (\Throwable $e) {
+			return false;
+		}
+	}
+
 	/** @param array<string, mixed> $filters @return array<int, array<string, mixed>> */
 	public static function storePanel(array $filters = []): array
 	{
@@ -392,9 +401,15 @@ final class SdwanEntry
 		$hasSource = self::hasSourceColumns();
 
 		$hasEquipment = self::hasEquipmentColumns();
+		$hasQuantidadeUtilizada = self::hasQuantidadeUtilizadaColumn();
 
 		$columns = ['xpads_previsto', 'quantidade_localizada', 'pdv_numero', 'pdv_serie', 'loja', 'created_by'];
 		$placeholders = [':xpads_previsto', ':quantidade_localizada', ':pdv_numero', ':pdv_serie', ':loja', ':created_by'];
+
+		if ($hasQuantidadeUtilizada) {
+			array_splice($columns, 2, 0, ['quantidade_utilizada']);
+			array_splice($placeholders, 2, 0, [':quantidade_utilizada']);
+		}
 
 		if ($hasEquipment) {
 			array_splice($columns, 4, 0, ['serie_antena', 'serie_acupad', 'setor']);
@@ -420,6 +435,9 @@ final class SdwanEntry
 			':loja' => (string) ($data['loja'] ?? ''),
 			':created_by' => $createdBy,
 		];
+		if ($hasQuantidadeUtilizada) {
+			$params[':quantidade_utilizada'] = (int) ($data['quantidade_utilizada'] ?? 0);
+		}
 		if ($hasEquipment) {
 			$params[':serie_antena'] = (string) ($data['serie_antena'] ?? '');
 			$params[':serie_acupad'] = (string) ($data['serie_acupad'] ?? '');
@@ -451,16 +469,18 @@ final class SdwanEntry
 		$pdo = Database::pdo();
 		$hasImage = self::hasImageColumns();
 		$hasEquipment = self::hasEquipmentColumns();
+		$hasQuantidadeUtilizada = self::hasQuantidadeUtilizadaColumn();
+		$quantidadeUtilizadaSet = $hasQuantidadeUtilizada ? 'quantidade_utilizada = :quantidade_utilizada, ' : '';
 		$equipmentSet = $hasEquipment
 			? 'serie_antena = :serie_antena, serie_acupad = :serie_acupad, setor = :setor, '
 			: '';
 		$sql = $hasImage
-			? 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada,
-				pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja,
+			? 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada, '
+				. $quantidadeUtilizadaSet . 'pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja,
 				image_path = :image_path, image_name = :image_name, image_type = :image_type, image_size = :image_size
 				WHERE id = :id'
-			: 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada,
-				pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja WHERE id = :id';
+			: 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada, '
+				. $quantidadeUtilizadaSet . 'pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja WHERE id = :id';
 
 		$params = [
 			':id' => $id,
@@ -470,6 +490,9 @@ final class SdwanEntry
 			':pdv_serie' => (string) ($data['pdv_serie'] ?? ''),
 			':loja' => (string) ($data['loja'] ?? ''),
 		];
+		if ($hasQuantidadeUtilizada) {
+			$params[':quantidade_utilizada'] = (int) ($data['quantidade_utilizada'] ?? 0);
+		}
 		if ($hasEquipment) {
 			$params[':serie_antena'] = (string) ($data['serie_antena'] ?? '');
 			$params[':serie_acupad'] = (string) ($data['serie_acupad'] ?? '');
@@ -518,6 +541,7 @@ final class SdwanEntry
 
 		$xpadsPrevisto = max(0, (int) ($input['xpads_previsto'] ?? 0));
 		$quantidadeLocalizada = max(0, (int) ($input['quantidade_localizada'] ?? 0));
+		$quantidadeUtilizada = max(0, (int) ($input['quantidade_utilizada'] ?? 0));
 		$pdvNumero = trim((string) ($input['pdv_numero'] ?? ''));
 		$pdvSerie = trim((string) ($input['pdv_serie'] ?? ''));
 		$serieAntena = trim((string) ($input['serie_antena'] ?? ''));
@@ -535,6 +559,9 @@ final class SdwanEntry
 			'pdv_serie' => $pdvSerie,
 			'loja' => $loja,
 		];
+		if (self::hasQuantidadeUtilizadaColumn()) {
+			$data['quantidade_utilizada'] = $quantidadeUtilizada;
+		}
 		if (self::hasEquipmentColumns()) {
 			$data['serie_antena'] = $serieAntena;
 			$data['serie_acupad'] = $serieAcupad;
