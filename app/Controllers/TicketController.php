@@ -545,27 +545,45 @@ final class TicketController extends Controller
 		}
 
 		$user = Auth::instance()->user();
+		$filesKey = TicketAttachmentService::resolveFilesKey('images');
+		$uploadedCount = 0;
+		if ($filesKey !== null) {
+			$uploadedCount = TicketAttachmentService::handleUpload($id, $filesKey, $user);
+		}
+
 		$responseResult = TicketService::saveSupportResponse($id, $response, $user ?: []);
-		if (!$responseResult['success']) {
+		$responseSaved = !empty($responseResult['success']);
+
+		if ($filesKey !== null && $uploadedCount === 0) {
+			$this->json([
+				'success' => false,
+				'message' => 'Nenhum anexo foi salvo. Use imagem (JPG, PNG, WEBP) ou PDF de até 40 MB.',
+			], 422);
+			return;
+		}
+
+		if (!$responseSaved && $uploadedCount === 0) {
 			$this->json($responseResult, 422);
 			return;
 		}
 
-		$hadAttachments = !empty($_FILES['images']) && is_array($_FILES['images']['name'] ?? null);
-		if ($hadAttachments) {
-			TicketAttachmentService::handleUpload($id, 'images', $user);
+		$messages = [];
+		if ($responseSaved && $response !== '') {
+			$messages[] = 'Resposta salva com sucesso';
+		}
+		if ($uploadedCount > 0) {
+			$messages[] = $uploadedCount === 1
+				? '1 anexo salvo com sucesso'
+				: $uploadedCount . ' anexos salvos com sucesso';
+		}
+		if ($messages === []) {
+			$messages[] = $responseResult['message'] ?? 'Salvo com sucesso';
 		}
 
-		$hasUploadedAttachments = $hadAttachments;
-		$success = $responseResult['success'] || $hasUploadedAttachments;
-		$message = $success ? ($responseResult['message'] ?? 'Resposta salva com sucesso') : 'Falha ao salvar resposta';
-		if (!$responseResult['success'] && $hasUploadedAttachments) {
-			$message = 'Anexos salvos com sucesso';
-		}
-		
 		$this->json([
-			'success' => $success,
-			'message' => $message,
+			'success' => true,
+			'message' => implode('. ', $messages),
+			'uploaded_count' => $uploadedCount,
 		]);
 	}
 

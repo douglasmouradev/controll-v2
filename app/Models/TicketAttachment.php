@@ -20,7 +20,9 @@ final class TicketAttachment
 			':file_name' => $data['file_name'],
 			':file_type' => $data['file_type'],
 			':file_size' => (int) $data['file_size'],
-			':uploaded_by' => (int) $data['uploaded_by'],
+			':uploaded_by' => isset($data['uploaded_by']) && (int) $data['uploaded_by'] > 0
+				? (int) $data['uploaded_by']
+				: null,
 		]);
 		return (int) Database::pdo()->lastInsertId();
 	}
