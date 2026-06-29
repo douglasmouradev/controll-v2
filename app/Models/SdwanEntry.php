@@ -49,6 +49,23 @@ final class SdwanEntry
 		}
 	}
 
+	/** @param array<string, mixed> $input */
+	public static function equipmentMigrationWarning(array $input): ?string
+	{
+		if (self::hasEquipmentColumns()) {
+			return null;
+		}
+
+		$hasData = trim((string) ($input['serie_antena'] ?? '')) !== ''
+			|| trim((string) ($input['serie_acupad'] ?? '')) !== ''
+			|| trim((string) ($input['setor'] ?? '')) !== '';
+		if (!$hasData) {
+			return null;
+		}
+
+		return 'As colunas de equipamento ainda não existem no banco. Execute php bin/migrate.php no servidor.';
+	}
+
 	public static function hasQuantidadeUtilizadaColumn(): bool
 	{
 		try {
@@ -568,13 +585,11 @@ final class SdwanEntry
 			'quantidade_utilizada' => $quantidadeUtilizada,
 			'pdv_numero' => $pdvNumero,
 			'pdv_serie' => $pdvSerie,
+			'serie_antena' => $serieAntena,
+			'serie_acupad' => $serieAcupad,
+			'setor' => $setor,
 			'loja' => $loja,
 		];
-		if (self::hasEquipmentColumns()) {
-			$data['serie_antena'] = $serieAntena;
-			$data['serie_acupad'] = $serieAcupad;
-			$data['setor'] = $setor;
-		}
 
 		$result = [
 			'success' => true,

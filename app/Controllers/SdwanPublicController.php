@@ -83,6 +83,12 @@ final class SdwanPublicController extends Controller
 			if (!empty($validation['warning'])) {
 				$response['warning'] = $validation['warning'];
 			}
+			$equipmentWarning = SdwanEntry::equipmentMigrationWarning($_POST);
+			if ($equipmentWarning !== null) {
+				$response['warning'] = isset($response['warning'])
+					? $response['warning'] . ' ' . $equipmentWarning
+					: $equipmentWarning;
+			}
 			$this->json($response);
 		} catch (\InvalidArgumentException $e) {
 			if ($id > 0) {

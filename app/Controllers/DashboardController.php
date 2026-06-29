@@ -971,6 +971,12 @@ final class DashboardController extends Controller
 			if (!empty($validation['warning'])) {
 				$response['warning'] = $validation['warning'];
 			}
+			$equipmentWarning = SdwanEntry::equipmentMigrationWarning($_POST);
+			if ($equipmentWarning !== null) {
+				$response['warning'] = isset($response['warning'])
+					? $response['warning'] . ' ' . $equipmentWarning
+					: $equipmentWarning;
+			}
 			SdwanAudit::record('create', 'entry:' . $id);
 			$this->json($response);
 		} catch (\InvalidArgumentException $e) {
@@ -1027,6 +1033,12 @@ final class DashboardController extends Controller
 			];
 			if (!empty($validation['warning'])) {
 				$response['warning'] = $validation['warning'];
+			}
+			$equipmentWarning = SdwanEntry::equipmentMigrationWarning($_POST);
+			if ($equipmentWarning !== null) {
+				$response['warning'] = isset($response['warning'])
+					? $response['warning'] . ' ' . $equipmentWarning
+					: $equipmentWarning;
 			}
 			SdwanAudit::record('update', 'entry:' . $id);
 			$this->json($response);
