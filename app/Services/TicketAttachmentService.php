@@ -39,10 +39,16 @@ final class TicketAttachmentService
 		return null;
 	}
 
-	public static function handleUpload(int $ticketId, string $filesKey, ?array $user = null): int
+	public static function handleUpload(int $ticketId, string $filesKey, ?array $user = null): array
 	{
+		$errors = [];
+		$postError = UploadLimits::postBodyTooLargeMessage();
+		if ($postError !== null) {
+			return ['count' => 0, 'errors' => [$postError]];
+		}
+
 		if (empty($_FILES[$filesKey]) || !is_array($_FILES[$filesKey]['name'] ?? null)) {
-			return 0;
+			return ['count' => 0, 'errors' => $errors];
 		}
 
 		$user = $user ?? Auth::instance()->user();
@@ -51,29 +57,39 @@ final class TicketAttachmentService
 		$uploadDir = self::storageDir();
 		if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true)) {
 			error_log('TicketAttachmentService: não foi possível criar diretório ' . $uploadDir);
-			return 0;
+			return ['count' => 0, 'errors' => ['Não foi possível preparar o diretório de anexos.']];
 		}
 		if (!is_writable($uploadDir)) {
 			error_log('TicketAttachmentService: diretório sem permissão de escrita ' . $uploadDir);
-			return 0;
+			return ['count' => 0, 'errors' => ['Diretório de anexos sem permissão de escrita.']];
 		}
 
-		$maxFiles = 20;
-		$maxSize = 40 * 1024 * 1024;
+		$maxFiles = UploadLimits::MAX_FILES;
+		$maxSize = UploadLimits::MAX_FILE_BYTES;
 		$fileCount = count($files['name']);
 		$processed = 0;
 
 		for ($i = 0; $i < $fileCount && $processed < $maxFiles; $i++) {
-			if (($files['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-				error_log('TicketAttachmentService: erro no upload #' . $i . ' código ' . (int) ($files['error'][$i] ?? 0));
+			$fileName = (string) ($files['name'][$i] ?? '');
+			$uploadError = (int) ($files['error'][$i] ?? UPLOAD_ERR_NO_FILE);
+			if ($uploadError !== UPLOAD_ERR_OK) {
+				$message = UploadLimits::uploadErrorMessage($uploadError, $fileName);
+				if ($message !== null) {
+					$errors[] = $message;
+				}
+				error_log('TicketAttachmentService: erro no upload #' . $i . ' código ' . $uploadError);
 				continue;
 			}
 
-			$fileName = (string) $files['name'][$i];
 			$fileTmp = (string) $files['tmp_name'][$i];
 			$fileType = (string) ($files['type'][$i] ?? '');
 			$fileSize = (int) ($files['size'][$i] ?? 0);
-			if ($fileSize <= 0 || $fileSize > $maxSize) {
+			if ($fileSize <= 0) {
+				$errors[] = 'Arquivo inválido ou vazio' . ($fileName !== '' ? ' (' . $fileName . ')' : '') . '.';
+				continue;
+			}
+			if ($fileSize > $maxSize) {
+				$errors[] = 'Arquivo muito grande (máx. ' . UploadLimits::formatBytes($maxSize) . '): ' . $fileName . '.';
 				continue;
 			}
 
@@ -85,6 +101,7 @@ final class TicketAttachmentService
 				}
 				$allowedMimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf'];
 				if ($detectedMime !== '' && !in_array($detectedMime, $allowedMimes, true)) {
+					$errors[] = 'Tipo de arquivo não permitido: ' . $fileName . '.';
 					error_log('TicketAttachmentService: MIME não permitido ' . $detectedMime . ' (' . $fileName . ')');
 					continue;
 				}
@@ -95,6 +112,7 @@ final class TicketAttachmentService
 			$isImage = strpos($fileType, 'image/') === 0 || in_array($ext, $imageExts, true);
 			$isPdf = $fileType === 'application/pdf' || $ext === 'pdf';
 			if (!$isImage && !$isPdf) {
+				$errors[] = 'Tipo de arquivo não permitido: ' . $fileName . '.';
 				continue;
 			}
 
@@ -106,6 +124,7 @@ final class TicketAttachmentService
 			$newFileName = 'ticket_' . $ticketId . '_' . time() . '_' . $i . '.' . $ext;
 			$filePath = $uploadDir . '/' . $newFileName;
 			if (!@move_uploaded_file($fileTmp, $filePath)) {
+				$errors[] = 'Falha ao salvar o arquivo' . ($fileName !== '' ? ' (' . $fileName . ')' : '') . '.';
 				error_log('TicketAttachmentService: falha ao mover arquivo para ' . $filePath);
 				continue;
 			}
@@ -122,11 +141,12 @@ final class TicketAttachmentService
 				$processed++;
 			} catch (\Throwable $e) {
 				@unlink($filePath);
+				$errors[] = 'Falha ao registrar anexo' . ($fileName !== '' ? ' (' . $fileName . ')' : '') . '.';
 				error_log('TicketAttachmentService: falha ao gravar anexo no banco: ' . $e->getMessage());
 			}
 		}
 
-		return $processed;
+		return ['count' => $processed, 'errors' => $errors];
 	}
 
 	public static function resolveFilesystemPath(string $filePath): ?string

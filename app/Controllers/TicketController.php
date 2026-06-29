@@ -158,7 +158,12 @@ final class TicketController extends Controller
 			]);
 			$attachmentWarning = null;
 			try {
-				TicketAttachmentService::handleUpload((int) $id, 'attachments', $user);
+				$uploadResult = TicketAttachmentService::handleUpload((int) $id, 'attachments', $user);
+				if ($uploadResult['count'] === 0 && TicketAttachmentService::resolveFilesKey('attachments') !== null) {
+					$attachmentWarning = !empty($uploadResult['errors'])
+						? implode(' ', $uploadResult['errors'])
+						: 'Chamado criado, mas alguns anexos não foram salvos.';
+				}
 			} catch (\Throwable $e) {
 				error_log('Erro ao salvar anexos na abertura do chamado #' . $id . ': ' . $e->getMessage());
 				$attachmentWarning = 'Chamado criado, mas alguns anexos não foram salvos.';
@@ -376,14 +381,18 @@ final class TicketController extends Controller
 				throw $e;
 			}
 			// Processar anexos adicionais enviados na edição (attachments[])
-			TicketAttachmentService::handleUpload($ticketId, 'attachments', $user);
-
-			DashboardCache::invalidateStats();
-			$this->json([
+			$uploadResult = TicketAttachmentService::handleUpload($ticketId, 'attachments', $user);
+			$response = [
 				'success' => true,
 				'message' => 'Chamado atualizado com sucesso',
 				'id' => $ticketId,
-			]);
+			];
+			if ($uploadResult['count'] === 0 && TicketAttachmentService::resolveFilesKey('attachments') !== null && !empty($uploadResult['errors'])) {
+				$response['attachment_warning'] = implode(' ', $uploadResult['errors']);
+			}
+
+			DashboardCache::invalidateStats();
+			$this->json($response);
 		} catch (\Throwable $e) {
 			error_log('Erro ao atualizar chamado: ' . $e->getMessage());
 			$this->logTicketUpdateDebug('update_unexpected_exception', [
@@ -547,8 +556,11 @@ final class TicketController extends Controller
 		$user = Auth::instance()->user();
 		$filesKey = TicketAttachmentService::resolveFilesKey('images');
 		$uploadedCount = 0;
+		$uploadErrors = [];
 		if ($filesKey !== null) {
-			$uploadedCount = TicketAttachmentService::handleUpload($id, $filesKey, $user);
+			$uploadResult = TicketAttachmentService::handleUpload($id, $filesKey, $user);
+			$uploadedCount = (int) ($uploadResult['count'] ?? 0);
+			$uploadErrors = $uploadResult['errors'] ?? [];
 		}
 
 		$responseResult = TicketService::saveSupportResponse($id, $response, $user ?: []);
@@ -557,7 +569,9 @@ final class TicketController extends Controller
 		if ($filesKey !== null && $uploadedCount === 0) {
 			$this->json([
 				'success' => false,
-				'message' => 'Nenhum anexo foi salvo. Use imagem (JPG, PNG, WEBP) ou PDF de até 40 MB.',
+				'message' => !empty($uploadErrors)
+					? implode(' ', $uploadErrors)
+					: 'Nenhum anexo foi salvo. Use imagem (JPG, PNG, WEBP) ou PDF de até 40 MB.',
 			], 422);
 			return;
 		}

@@ -398,14 +398,9 @@ document.addEventListener('DOMContentLoaded', function() {
 						body: fd,
 						headers: { 'X-Requested-With': 'XMLHttpRequest' }
 					});
-					const contentType = res.headers.get('content-type');
-					let data;
-					if (contentType && contentType.includes('application/json')) {
-						data = await res.json();
-					} else {
-						const text = await res.text();
-						console.error('Resposta não é JSON:', text.substring(0, 500));
-						throw new Error(`Servidor retornou ${contentType || 'texto'} em vez de JSON.`);
+					const data = await parseJsonResponse(res);
+					if (!data) {
+						throw new Error('Resposta inválida do servidor');
 					}
 					if (data && data.success) {
 						showToast(isEdit ? 'Chamado atualizado' : 'Chamado aberto', 'success');
@@ -467,9 +462,8 @@ document.addEventListener('DOMContentLoaded', function() {
 						if (isImage) {
 							const img = document.createElement('img');
 							img.className = 'w-8 h-8 object-cover rounded';
-							const reader = new FileReader();
-							reader.onload = (ev) => { img.src = ev.target?.result || ''; };
-							reader.readAsDataURL(file);
+							img.src = URL.createObjectURL(file);
+							img.onload = () => URL.revokeObjectURL(img.src);
 							icon.innerHTML = '';
 							icon.appendChild(img);
 						} else if (isPdf) {
@@ -629,24 +623,35 @@ document.addEventListener('DOMContentLoaded', function() {
 				const imagePreview = document.getElementById('image-preview');
 				
 				if (imageInput && imagePreview) {
-					imageInput.addEventListener('change', (e) => {
+					let previewObjectUrls = [];
+					const clearImagePreview = () => {
+						previewObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+						previewObjectUrls = [];
 						imagePreview.innerHTML = '';
-						const files = Array.from(e.target.files);
-						
+					};
+					imageInput.addEventListener('change', (e) => {
+						clearImagePreview();
+						const files = Array.from(e.target.files || []);
+						const MAX_SIZE = 40 * 1024 * 1024;
 						files.forEach((file) => {
-							if (file.type.startsWith('image/')) {
-								const reader = new FileReader();
-								reader.onload = (event) => {
-									const div = document.createElement('div');
-									div.className = 'relative';
-									div.innerHTML = `
-										<img src="${event.target.result}" class="w-full h-24 object-cover rounded border">
-										<span class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">${escapeHtml(file.name)}</span>
-									`;
-									imagePreview.appendChild(div);
-								};
-								reader.readAsDataURL(file);
+							if (!file.type.startsWith('image/')) {
+								return;
 							}
+							if (file.size > MAX_SIZE) {
+								if (typeof showToast === 'function') {
+									showToast(`Imagem muito grande (máx. 40 MB): ${file.name}`, 'error');
+								}
+								return;
+							}
+							const objectUrl = URL.createObjectURL(file);
+							previewObjectUrls.push(objectUrl);
+							const div = document.createElement('div');
+							div.className = 'relative';
+							div.innerHTML = `
+								<img src="${objectUrl}" class="w-full h-24 object-cover rounded border">
+								<span class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">${escapeHtml(file.name)} (${formatFileSizeMb(file.size)})</span>
+							`;
+							imagePreview.appendChild(div);
 						});
 					});
 				}
@@ -696,6 +701,9 @@ document.addEventListener('DOMContentLoaded', function() {
 						const fd = new FormData();
 						fd.set('id', id);
 						fd.set('response', responseText);
+						const originalLabel = newBtn.textContent;
+						newBtn.disabled = true;
+						newBtn.textContent = 'Enviando...';
 						
 						// Adicionar imagens
 						const currentImageInput = document.getElementById('support-images');
@@ -711,7 +719,7 @@ document.addEventListener('DOMContentLoaded', function() {
 								body: fd,
 								headers: { 'X-Requested-With': 'XMLHttpRequest' }
 							});
-							const data = await res.json();
+							const data = await parseJsonResponse(res);
 							
 							if (data.success) {
 								showToast(data.message || 'Salvo com sucesso', 'success');
@@ -742,11 +750,14 @@ document.addEventListener('DOMContentLoaded', function() {
 								// Recarregar anexos
 								loadAttachments(id);
 							} else {
-								showToast(data.message || 'Erro ao salvar resposta');
+								showToast(data.message || 'Erro ao salvar resposta', 'error');
 							}
 						} catch (error) {
 							console.error('Erro:', error);
-							showToast('Erro ao conectar com o servidor');
+							showToast('Erro ao conectar com o servidor', 'error');
+						} finally {
+							newBtn.disabled = false;
+							newBtn.textContent = originalLabel || 'Salvar resposta';
 						}
 					});
 				}

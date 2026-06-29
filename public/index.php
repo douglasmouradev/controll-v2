@@ -81,6 +81,22 @@ $routes = require $routesFile;
 // Simple Router
 $router = new App\Core\Router($routes);
 $requestPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
+$requestMethod = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+if ($requestMethod === 'POST') {
+	$postTooLarge = \App\Services\UploadLimits::postBodyTooLargeMessage();
+	if ($postTooLarge !== null) {
+		if (ob_get_level() > 0) {
+			ob_clean();
+		}
+		http_response_code(413);
+		header('Content-Type: application/json; charset=utf-8');
+		echo json_encode([
+			'success' => false,
+			'message' => $postTooLarge,
+		], JSON_UNESCAPED_UNICODE);
+		exit;
+	}
+}
 if (preg_match('#^/(?:sdwan|acupad)/cadastro/(\d{4})$#', $requestPath, $sdwanMatches)) {
 	$_GET['code'] = $sdwanMatches[1];
 	$requestPath = str_starts_with($requestPath, '/acupad/') ? '/acupad/cadastro' : '/sdwan/cadastro';

@@ -73,4 +73,9 @@ echo "==> Limpeza ACUPAD: 0 3 * * * ${PHP_BIN} ${APP_DIR}/bin/sdwan-cleanup.php"
 chown -R www:www storage public/uploads 2>/dev/null || true
 chmod -R 775 storage public/uploads 2>/dev/null || true
 
+echo "==> Limites de upload PHP (web):"
+"${PHP_BIN}" -r "echo 'upload_max_filesize=' . ini_get('upload_max_filesize') . PHP_EOL . 'post_max_size=' . ini_get('post_max_size') . PHP_EOL;" 2>/dev/null || true
+echo "==> Se uploads grandes ainda falharem, configure no Nginx do site: client_max_body_size 100m;"
+echo "==> O .user.ini pode levar alguns minutos para aplicar; reinicie o PHP-FPM se necessário."
+
 echo "==> Deploy concluído: $(git log -1 --oneline)"

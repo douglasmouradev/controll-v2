@@ -1,4 +1,21 @@
-﻿	function canDeleteAttachments() {
+﻿	function formatFileSizeMb(bytes) {
+		return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+	}
+
+	async function parseJsonResponse(res) {
+		const contentType = res.headers.get('content-type') || '';
+		if (contentType.includes('application/json')) {
+			return await res.json();
+		}
+		const text = await res.text();
+		if (res.status === 413) {
+			return { success: false, message: 'Arquivo muito grande para o servidor. Tente um arquivo menor ou contate o administrador.' };
+		}
+		const snippet = text ? text.substring(0, 200) : '';
+		return { success: false, message: snippet || `Erro HTTP ${res.status}` };
+	}
+
+	function canDeleteAttachments() {
 		const el = document.getElementById('ticket-modal') || document.getElementById('modal-abrir-chamado');
 		return el?.dataset?.isAdmin === '1';
 	}
