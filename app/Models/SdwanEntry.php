@@ -743,11 +743,19 @@ final class SdwanEntry
 
 		$filter = self::buildFilterWhere($filters);
 		$pdo = Database::pdo();
+		self::ensureSchemaReady();
+		$utilizadaSelect = self::hasQuantidadeUtilizadaColumn()
+			? ', e.quantidade_utilizada'
+			: ', 0 AS quantidade_utilizada';
+		$equipmentSelect = self::hasEquipmentColumns()
+			? ', e.serie_antena, e.serie_acupad, e.setor'
+			: ", '' AS serie_antena, '' AS serie_acupad, '' AS setor";
 		$sourceSelect = self::hasSourceColumns() ? ', e.entry_source' : '';
-		$imageSelect = self::hasImageColumns() ? ', e.id, e.image_path' : ', e.id';
+		$imageSelect = self::hasImageColumns() ? ', e.image_path' : '';
 		$stmt = $pdo->prepare('
-			SELECT e.loja, e.xpads_previsto, e.quantidade_localizada, e.pdv_numero, e.pdv_serie, e.created_at,
-				u.name AS created_by_name' . $sourceSelect . $imageSelect . '
+			SELECT e.loja, e.xpads_previsto, e.quantidade_localizada' . $utilizadaSelect . ',
+				e.pdv_numero, e.pdv_serie' . $equipmentSelect . ', e.created_at,
+				u.name AS created_by_name' . $sourceSelect . $imageSelect . ', e.id
 			FROM sdwan_entries e
 			LEFT JOIN users u ON u.id = e.created_by
 			WHERE ' . $filter['where'] . '
