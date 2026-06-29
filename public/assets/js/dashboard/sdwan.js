@@ -712,6 +712,9 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (qtdUtilizadaInput) {
 			formData.set('quantidade_utilizada', qtdUtilizadaInput.value === '' ? '0' : qtdUtilizadaInput.value);
 		}
+		formData.set('serie_antena', document.getElementById('sdwan-serie-antena')?.value || '');
+		formData.set('serie_acupad', document.getElementById('sdwan-serie-acupad')?.value || '');
+		formData.set('setor', document.getElementById('sdwan-setor')?.value || '');
 		if (compressedImageFile) {
 			formData.set('image', compressedImageFile, compressedImageFile.name);
 		} else if (imageInput?.files?.[0] && typeof compressImageFile === 'function') {

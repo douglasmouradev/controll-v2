@@ -56,6 +56,15 @@ final class SdwanEntryService
 		if (array_key_exists('quantidade_utilizada', $post)) {
 			$data['quantidade_utilizada'] = max(0, (int) $post['quantidade_utilizada']);
 		}
+		if (array_key_exists('serie_antena', $post)) {
+			$data['serie_antena'] = trim((string) $post['serie_antena']);
+		}
+		if (array_key_exists('serie_acupad', $post)) {
+			$data['serie_acupad'] = trim((string) $post['serie_acupad']);
+		}
+		if (array_key_exists('setor', $post)) {
+			$data['setor'] = trim((string) $post['setor']);
+		}
 
 		return $data;
 	}
