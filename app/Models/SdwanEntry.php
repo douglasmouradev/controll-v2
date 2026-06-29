@@ -51,36 +51,10 @@ final class SdwanEntry
 
 	public static function hasQuantidadeUtilizadaColumn(): bool
 	{
-		self::prepareQuantidadeUtilizadaColumn();
-
 		try {
 			return DatabaseSchema::columnExists(Database::pdo(), 'sdwan_entries', 'quantidade_utilizada');
 		} catch (\Throwable $e) {
 			return false;
-		}
-	}
-
-	private static bool $quantidadeUtilizadaPrepared = false;
-
-	private static function prepareQuantidadeUtilizadaColumn(): void
-	{
-		if (self::$quantidadeUtilizadaPrepared || !self::tableReady()) {
-			return;
-		}
-
-		self::$quantidadeUtilizadaPrepared = true;
-
-		try {
-			$pdo = Database::pdo();
-			if (DatabaseSchema::columnExists($pdo, 'sdwan_entries', 'quantidade_utilizada')) {
-				return;
-			}
-
-			$pdo->exec(
-				'ALTER TABLE sdwan_entries ADD COLUMN quantidade_utilizada INT UNSIGNED NOT NULL DEFAULT 0 AFTER quantidade_localizada'
-			);
-		} catch (\Throwable $e) {
-			error_log('ACUPAD: não foi possível garantir coluna quantidade_utilizada: ' . $e->getMessage());
 		}
 	}
 
@@ -132,7 +106,7 @@ final class SdwanEntry
 			'source' => trim((string) ($_GET['source'] ?? $_POST['source_filter'] ?? '')),
 			'date_from' => trim((string) ($_GET['date_from'] ?? $_POST['date_from_filter'] ?? '')),
 			'date_to' => trim((string) ($_GET['date_to'] ?? $_POST['date_to_filter'] ?? '')),
-			'page' => max(1, (int) ($_GET['page'] ?? 1)),
+			'page' => max(1, (int) ($_GET['sdwan_page'] ?? $_POST['sdwan_page'] ?? 1)),
 			'per_page' => min(100, max(10, (int) ($_GET['per_page'] ?? 25))),
 		];
 	}
@@ -258,16 +232,16 @@ final class SdwanEntry
 			return ['total' => 0, 'xpads_previsto' => 0, 'quantidade_localizada' => 0, 'quantidade_utilizada' => 0, 'total_lojas' => 0];
 		}
 
-		self::prepareQuantidadeUtilizadaColumn();
-
 		$filter = self::buildFilterWhere($filters);
 		$pdo = Database::pdo();
+		$utilizadaSelect = self::hasQuantidadeUtilizadaColumn()
+			? ', COALESCE(SUM(e.quantidade_utilizada), 0) AS quantidade_utilizada'
+			: ', 0 AS quantidade_utilizada';
 		$stmt = $pdo->prepare('
 			SELECT
 				COUNT(*) AS total,
 				COALESCE(SUM(e.xpads_previsto), 0) AS xpads_previsto,
-				COALESCE(SUM(e.quantidade_localizada), 0) AS quantidade_localizada,
-				COALESCE(SUM(e.quantidade_utilizada), 0) AS quantidade_utilizada,
+				COALESCE(SUM(e.quantidade_localizada), 0) AS quantidade_localizada' . $utilizadaSelect . ',
 				COUNT(DISTINCT e.loja) AS total_lojas
 			FROM sdwan_entries e
 			WHERE ' . $filter['where']
@@ -429,19 +403,24 @@ final class SdwanEntry
 			throw new \RuntimeException('Tabela ACUPAD não configurada. Execute as migrations.');
 		}
 
-		self::prepareQuantidadeUtilizadaColumn();
-
 		$pdo = Database::pdo();
 		$hasImage = self::hasImageColumns();
 		$hasSource = self::hasSourceColumns();
 		$hasEquipment = self::hasEquipmentColumns();
+		$hasQuantidadeUtilizada = self::hasQuantidadeUtilizadaColumn();
 
-		$columns = ['xpads_previsto', 'quantidade_localizada', 'quantidade_utilizada', 'pdv_numero', 'pdv_serie'];
-		$placeholders = [':xpads_previsto', ':quantidade_localizada', ':quantidade_utilizada', ':pdv_numero', ':pdv_serie'];
+		$columns = ['xpads_previsto', 'quantidade_localizada', 'pdv_numero', 'pdv_serie'];
+		$placeholders = [':xpads_previsto', ':quantidade_localizada', ':pdv_numero', ':pdv_serie'];
+
+		if ($hasQuantidadeUtilizada) {
+			array_splice($columns, 2, 0, ['quantidade_utilizada']);
+			array_splice($placeholders, 2, 0, [':quantidade_utilizada']);
+		}
 
 		if ($hasEquipment) {
-			array_push($columns, 'serie_antena', 'serie_acupad', 'setor');
-			array_push($placeholders, ':serie_antena', ':serie_acupad', ':setor');
+			$equipmentIndex = 4 + ($hasQuantidadeUtilizada ? 1 : 0);
+			array_splice($columns, $equipmentIndex, 0, ['serie_antena', 'serie_acupad', 'setor']);
+			array_splice($placeholders, $equipmentIndex, 0, [':serie_antena', ':serie_acupad', ':setor']);
 		}
 
 		array_push($columns, 'loja', 'created_by');
@@ -461,12 +440,14 @@ final class SdwanEntry
 		$params = [
 			':xpads_previsto' => (int) ($data['xpads_previsto'] ?? 0),
 			':quantidade_localizada' => (int) ($data['quantidade_localizada'] ?? 0),
-			':quantidade_utilizada' => (int) ($data['quantidade_utilizada'] ?? 0),
 			':pdv_numero' => (string) ($data['pdv_numero'] ?? ''),
 			':pdv_serie' => (string) ($data['pdv_serie'] ?? ''),
 			':loja' => (string) ($data['loja'] ?? ''),
 			':created_by' => $createdBy,
 		];
+		if ($hasQuantidadeUtilizada) {
+			$params[':quantidade_utilizada'] = (int) ($data['quantidade_utilizada'] ?? 0);
+		}
 		if ($hasEquipment) {
 			$params[':serie_antena'] = (string) ($data['serie_antena'] ?? '');
 			$params[':serie_acupad'] = (string) ($data['serie_acupad'] ?? '');
@@ -495,31 +476,33 @@ final class SdwanEntry
 			return false;
 		}
 
-		self::prepareQuantidadeUtilizadaColumn();
-
 		$pdo = Database::pdo();
 		$hasImage = self::hasImageColumns();
 		$hasEquipment = self::hasEquipmentColumns();
+		$hasQuantidadeUtilizada = self::hasQuantidadeUtilizadaColumn();
+		$quantidadeUtilizadaSet = $hasQuantidadeUtilizada ? 'quantidade_utilizada = :quantidade_utilizada, ' : '';
 		$equipmentSet = $hasEquipment
 			? 'serie_antena = :serie_antena, serie_acupad = :serie_acupad, setor = :setor, '
 			: '';
 		$sql = $hasImage
-			? 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada,
-				quantidade_utilizada = :quantidade_utilizada, pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja,
+			? 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada, '
+				. $quantidadeUtilizadaSet . 'pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja,
 				image_path = :image_path, image_name = :image_name, image_type = :image_type, image_size = :image_size
 				WHERE id = :id'
-			: 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada,
-				quantidade_utilizada = :quantidade_utilizada, pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja WHERE id = :id';
+			: 'UPDATE sdwan_entries SET xpads_previsto = :xpads_previsto, quantidade_localizada = :quantidade_localizada, '
+				. $quantidadeUtilizadaSet . 'pdv_numero = :pdv_numero, pdv_serie = :pdv_serie, ' . $equipmentSet . 'loja = :loja WHERE id = :id';
 
 		$params = [
 			':id' => $id,
 			':xpads_previsto' => (int) ($data['xpads_previsto'] ?? 0),
 			':quantidade_localizada' => (int) ($data['quantidade_localizada'] ?? 0),
-			':quantidade_utilizada' => (int) ($data['quantidade_utilizada'] ?? 0),
 			':pdv_numero' => (string) ($data['pdv_numero'] ?? ''),
 			':pdv_serie' => (string) ($data['pdv_serie'] ?? ''),
 			':loja' => (string) ($data['loja'] ?? ''),
 		];
+		if ($hasQuantidadeUtilizada) {
+			$params[':quantidade_utilizada'] = (int) ($data['quantidade_utilizada'] ?? 0);
+		}
 		if ($hasEquipment) {
 			$params[':serie_antena'] = (string) ($data['serie_antena'] ?? '');
 			$params[':serie_acupad'] = (string) ($data['serie_acupad'] ?? '');
@@ -557,8 +540,6 @@ final class SdwanEntry
 	/** @return array{success: bool, message?: string, data?: array<string, mixed>, warning?: string} */
 	public static function validateInput(array $input, ?int $excludeId = null): array
 	{
-		self::prepareQuantidadeUtilizadaColumn();
-
 		$loja = strtoupper(trim((string) ($input['loja'] ?? '')));
 		if ($loja === '') {
 			return ['success' => false, 'message' => 'Informe a loja'];

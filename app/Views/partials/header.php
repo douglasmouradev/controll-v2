@@ -47,7 +47,16 @@ $bodyClass = $isDashboard ? 'layout-dashboard' : ($isAuth ? 'layout-auth' : '');
 				}
 				init.headers = headers;
 			}
-			return originalFetch(input, init);
+			return originalFetch(input, init).then(function (response) {
+				if (response.status === 401) {
+					window.location.href = '/login';
+					return response;
+				}
+				if (response.status === 403 && method !== 'GET') {
+					window.location.reload();
+				}
+				return response;
+			});
 		};
 	})();
 	</script>

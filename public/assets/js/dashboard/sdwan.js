@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (filters.source) params.set('source', filters.source);
 		if (filters.date_from) params.set('date_from', filters.date_from);
 		if (filters.date_to) params.set('date_to', filters.date_to);
-		if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+		if (filters.page && filters.page > 1) params.set('sdwan_page', String(filters.page));
 		const query = params.toString();
 		return query ? `?${query}` : '';
 	}
@@ -187,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (filters.source) params.set('source', filters.source);
 		if (filters.date_from) params.set('date_from', filters.date_from);
 		if (filters.date_to) params.set('date_to', filters.date_to);
-		if (filters.page && filters.page > 1) params.set('page', String(filters.page));
+		if (filters.page && filters.page > 1) params.set('sdwan_page', String(filters.page));
 		const query = params.toString();
 		const hash = window.location.hash || '';
 		const newUrl = query ? `${window.location.pathname}?${query}${hash}` : `${window.location.pathname}${hash}`;
@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (filterSource) filterSource.value = params.get('source') || '';
 		if (filterDateFrom) filterDateFrom.value = params.get('date_from') || '';
 		if (filterDateTo) filterDateTo.value = params.get('date_to') || '';
-		currentPage = Math.max(1, parseInt(params.get('page') || '1', 10) || 1);
+		currentPage = Math.max(1, parseInt(params.get('sdwan_page') || params.get('page') || '1', 10) || 1);
 	}
 
 	function updateExportLinks() {
