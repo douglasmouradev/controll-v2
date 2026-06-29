@@ -27,6 +27,7 @@ final class SdwanEntryService
 		}
 
 		$data = self::entryPayloadFromRow($current);
+		$data = self::mergePostScalars($data, $post);
 
 		if ($removeImage && !$hasUpload) {
 			SdwanImageService::deleteImage((string) ($current['image_path'] ?? ''));
@@ -47,6 +48,16 @@ final class SdwanEntryService
 				SdwanEntry::update($entryId, array_merge($data, $imageData));
 			}
 		}
+	}
+
+	/** @param array<string, mixed> $data @param array<string, mixed> $post @return array<string, mixed> */
+	private static function mergePostScalars(array $data, array $post): array
+	{
+		if (array_key_exists('quantidade_utilizada', $post)) {
+			$data['quantidade_utilizada'] = max(0, (int) $post['quantidade_utilizada']);
+		}
+
+		return $data;
 	}
 
 	/** @param array<string, mixed> $row */

@@ -708,6 +708,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		completeLojaSigla();
 
 		const formData = new FormData(form);
+		const qtdUtilizadaInput = document.getElementById('sdwan-quantidade-utilizada');
+		if (qtdUtilizadaInput) {
+			formData.set('quantidade_utilizada', qtdUtilizadaInput.value === '' ? '0' : qtdUtilizadaInput.value);
+		}
 		if (compressedImageFile) {
 			formData.set('image', compressedImageFile, compressedImageFile.name);
 		} else if (imageInput?.files?.[0] && typeof compressImageFile === 'function') {
