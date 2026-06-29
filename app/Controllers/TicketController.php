@@ -720,9 +720,8 @@ final class TicketController extends Controller
 			return;
 		}
 		$normalizedRole = TicketAccess::normalizeRole((string) ($user['role'] ?? ''));
-		$isOwner = (int) ($ticket['user_id'] ?? 0) === (int) ($user['id'] ?? 0);
-		if (!$isOwner && !in_array($normalizedRole, ['support', 'admin'], true)) {
-			$this->json(['success' => false, 'message' => 'Você não tem permissão para excluir este anexo'], 403);
+		if ($normalizedRole !== 'admin') {
+			$this->json(['success' => false, 'message' => 'Apenas administradores podem excluir anexos'], 403);
 			return;
 		}
 		$ok = TicketAttachment::delete($attachmentId);

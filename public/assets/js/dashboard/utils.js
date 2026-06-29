@@ -1,4 +1,19 @@
-﻿	// Função para escapar HTML
+﻿	function canDeleteAttachments() {
+		const el = document.getElementById('ticket-modal') || document.getElementById('modal-abrir-chamado');
+		return el?.dataset?.isAdmin === '1';
+	}
+
+	function attachmentDeleteBtnHtml(attachmentId, variant) {
+		if (!canDeleteAttachments()) {
+			return '';
+		}
+		const classes = variant === 'pdf'
+			? 'mb-1 self-end bg-red-600 text-white text-xs rounded px-1 py-0.5 attachment-delete-btn'
+			: 'absolute top-1 right-1 bg-red-600 text-white text-xs rounded px-1 py-0.5 attachment-delete-btn';
+		return `<button type="button" class="${classes}" data-attachment-id="${attachmentId}" title="Excluir anexo">×</button>`;
+	}
+
+	// Função para escapar HTML
 	function escapeHtml(text) {
 		const div = document.createElement('div');
 		div.textContent = text;

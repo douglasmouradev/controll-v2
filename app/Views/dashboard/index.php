@@ -80,7 +80,7 @@ $access_logs = $access_logs ?? [];
 </div>
 
 <!-- Modal de Abrir Chamado -->
-<dialog id="modal-abrir-chamado" class="ui-modal">
+<dialog id="modal-abrir-chamado" class="ui-modal" data-is-admin="<?php echo view_is_admin($user) ? '1' : '0'; ?>">
 	<div class="ui-modal-header">
 		<h2 class="text-lg font-semibold">Abrir Novo Chamado</h2>
 		<p class="text-sm text-blue-100 mt-0.5 opacity-90">Preencha os dados do atendimento</p>
@@ -302,7 +302,7 @@ $access_logs = $access_logs ?? [];
 </dialog>
 
 <!-- Modal de Detalhes do Chamado -->
-<dialog id="ticket-modal" class="ui-modal">
+<dialog id="ticket-modal" class="ui-modal" data-is-admin="<?php echo view_is_admin($user) ? '1' : '0'; ?>">
 	<div class="ui-modal-header">
 		<h2 class="text-lg font-semibold">Detalhes do chamado</h2>
 		<div id="ticket-status-notice" class="ticket-status-notice hidden" role="status" aria-live="polite"></div>

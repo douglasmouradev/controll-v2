@@ -19,7 +19,7 @@
 					if (isImage) {
 						html += `
 							<div class="relative" data-attachment-id="${att.id}">
-								<button type="button" class="absolute top-1 right-1 bg-red-600 text-white text-xs rounded px-1 py-0.5 attachment-delete-btn" data-attachment-id="${att.id}">X</button>
+								${attachmentDeleteBtnHtml(att.id, 'image')}
 								<img src="${escapeHtml(fileUrl)}" class="w-full h-24 object-cover rounded border cursor-pointer" onclick="window.open('${escapeHtml(fileUrl)}', '_blank')">
 								<span class="text-xs text-gray-500 block mt-1 truncate">${escapeHtml(name)}</span>
 							</div>
@@ -27,7 +27,7 @@
 					} else if (isPdf) {
 						html += `
 							<div class="flex flex-col items-start justify-start p-2 border rounded bg-gray-50 cursor-pointer hover:bg-gray-100" data-attachment-id="${att.id}">
-								<button type="button" class="mb-1 self-end bg-red-600 text-white text-xs rounded px-1 py-0.5 attachment-delete-btn" data-attachment-id="${att.id}">X</button>
+								${attachmentDeleteBtnHtml(att.id, 'pdf')}
 								<div class="flex items-center gap-2" onclick="window.open('${escapeHtml(fileUrl)}', '_blank')">
 									<span class="inline-flex items-center justify-center px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-700 border border-red-200">PDF</span>
 									<span class="text-xs text-gray-700 truncate max-w-[8rem]">${escapeHtml(name)}</span>
@@ -52,6 +52,7 @@
 			const data = await res.json();
 			const container = document.getElementById('attachments-container');
 			if (!container) return;
+			container.dataset.ticketId = String(ticketId);
 
 			if (data.success && Array.isArray(data.attachments) && data.attachments.length > 0) {
 				let html = '<div class="mt-4"><strong class="text-sm text-gray-700">Anexos:</strong><div class="grid grid-cols-3 gap-3 mt-2">';
@@ -65,15 +66,17 @@
 					const isPdf = type === 'application/pdf' || ext === 'pdf';
 					if (isImage) {
 						html += `
-							<div class="relative">
+							<div class="relative" data-attachment-id="${att.id}">
+								${attachmentDeleteBtnHtml(att.id, 'image')}
 								<img src="${escapeHtml(fileUrl)}" class="w-full h-24 object-cover rounded border cursor-pointer" onclick="window.open('${escapeHtml(fileUrl)}', '_blank')">
 								<span class="text-xs text-gray-500 block mt-1 truncate">${escapeHtml(name)}</span>
 							</div>
 						`;
 					} else if (isPdf) {
 						html += `
-							<div class="flex flex-col items-start justify-start p-2 border rounded bg-gray-50 cursor-pointer hover:bg-gray-100" onclick="window.open('${escapeHtml(fileUrl)}', '_blank')">
-								<div class="flex items-center gap-2">
+							<div class="flex flex-col items-start justify-start p-2 border rounded bg-gray-50 cursor-pointer hover:bg-gray-100" data-attachment-id="${att.id}">
+								${attachmentDeleteBtnHtml(att.id, 'pdf')}
+								<div class="flex items-center gap-2" onclick="window.open('${escapeHtml(fileUrl)}', '_blank')">
 									<span class="inline-flex items-center justify-center px-2 py-1 text-xs font-semibold rounded bg-red-100 text-red-700 border border-red-200">PDF</span>
 									<span class="text-xs text-gray-700 truncate max-w-[8rem]">${escapeHtml(name)}</span>
 								</div>
@@ -124,8 +127,11 @@
 		}
 		if (e.target.classList && e.target.classList.contains('attachment-delete-btn')) {
 			const attachmentId = e.target.dataset.attachmentId;
-			const container = document.getElementById('ticket-existing-attachments');
-			const ticketId = container && container.dataset ? container.dataset.ticketId : null;
+			const editContainer = document.getElementById('ticket-existing-attachments');
+			const detailContainer = document.getElementById('attachments-container');
+			const ticketModal = document.getElementById('ticket-modal');
+			let ticketId = editContainer?.dataset?.ticketId || detailContainer?.dataset?.ticketId || ticketModal?.dataset?.ticketId;
+			const isDetailView = Boolean(detailContainer?.dataset?.ticketId || (!editContainer?.dataset?.ticketId && ticketModal?.dataset?.ticketId));
 			if (!attachmentId || !ticketId) {
 				return;
 			}
@@ -146,7 +152,11 @@
 						if (typeof showToast === 'function') {
 							showToast(data.message || 'Anexo excluído');
 						}
-						loadAttachmentsForEdit(ticketId);
+						if (isDetailView) {
+							loadAttachments(ticketId);
+						} else {
+							loadAttachmentsForEdit(ticketId);
+						}
 					} else if (typeof showToast === 'function') {
 						showToast(data.message || 'Erro ao excluir anexo');
 					}
