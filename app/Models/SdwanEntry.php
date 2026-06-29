@@ -6,12 +6,34 @@ namespace App\Models;
 use App\Services\Database;
 use App\Services\DatabaseSchema;
 use App\Services\DateFormatter;
+use App\Services\Migrator;
 use App\Services\SdwanImageService;
 use App\Services\StoreAddressService;
 use PDO;
 
 final class SdwanEntry
 {
+	private static bool $schemaEnsured = false;
+
+	public static function ensureSchemaReady(): void
+	{
+		if (self::$schemaEnsured) {
+			return;
+		}
+		self::$schemaEnsured = true;
+
+		if (!self::tableReady()) {
+			return;
+		}
+
+		try {
+			Migrator::ensureSdwanEntryColumns(Database::pdo());
+			DatabaseSchema::clearCache();
+		} catch (\Throwable $e) {
+			error_log('ACUPAD ensureSchemaReady: ' . $e->getMessage());
+		}
+	}
+
 	public static function tableReady(): bool
 	{
 		try {
@@ -43,6 +65,7 @@ final class SdwanEntry
 	public static function hasEquipmentColumns(): bool
 	{
 		try {
+			self::ensureSchemaReady();
 			return DatabaseSchema::columnExists(Database::pdo(), 'sdwan_entries', 'serie_antena');
 		} catch (\Throwable $e) {
 			return false;
@@ -52,6 +75,8 @@ final class SdwanEntry
 	/** @param array<string, mixed> $input */
 	public static function equipmentMigrationWarning(array $input): ?string
 	{
+		self::ensureSchemaReady();
+
 		if (self::hasEquipmentColumns()) {
 			return null;
 		}
@@ -63,12 +88,13 @@ final class SdwanEntry
 			return null;
 		}
 
-		return 'As colunas de equipamento ainda não existem no banco. Execute php bin/migrate.php no servidor.';
+		return 'Não foi possível gravar série antena, série Acupad ou setor. Verifique permissões ALTER no banco ou contate o administrador.';
 	}
 
 	public static function hasQuantidadeUtilizadaColumn(): bool
 	{
 		try {
+			self::ensureSchemaReady();
 			return DatabaseSchema::columnExists(Database::pdo(), 'sdwan_entries', 'quantidade_utilizada');
 		} catch (\Throwable $e) {
 			return false;
@@ -192,6 +218,8 @@ final class SdwanEntry
 	 */
 	public static function listFiltered(array $filters): array
 	{
+		self::ensureSchemaReady();
+
 		if (!self::tableReady()) {
 			return ['entries' => [], 'pagination' => self::emptyPagination($filters)];
 		}
@@ -557,6 +585,8 @@ final class SdwanEntry
 	/** @return array{success: bool, message?: string, data?: array<string, mixed>, warning?: string} */
 	public static function validateInput(array $input, ?int $excludeId = null): array
 	{
+		self::ensureSchemaReady();
+
 		$loja = strtoupper(trim((string) ($input['loja'] ?? '')));
 		if ($loja === '') {
 			return ['success' => false, 'message' => 'Informe a loja'];

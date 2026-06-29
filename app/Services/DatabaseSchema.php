@@ -19,12 +19,21 @@ final class DatabaseSchema
 			return self::$tableCache[$table];
 		}
 
-		$stmt = $pdo->prepare(
-			'SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
-			 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?'
-		);
-		$stmt->execute([$table]);
-		self::$tableCache[$table] = ((int) $stmt->fetchColumn()) > 0;
+		$schema = self::schemaName($pdo);
+		if ($schema !== '') {
+			$stmt = $pdo->prepare(
+				'SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES
+				 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?'
+			);
+			$stmt->execute([$schema, $table]);
+			if ((int) $stmt->fetchColumn() > 0) {
+				self::$tableCache[$table] = true;
+				return true;
+			}
+		}
+
+		$stmt = $pdo->query("SHOW TABLES LIKE '" . str_replace("'", "''", $table) . "'");
+		self::$tableCache[$table] = (bool) $stmt->fetch(PDO::FETCH_NUM);
 
 		return self::$tableCache[$table];
 	}
@@ -36,12 +45,24 @@ final class DatabaseSchema
 			return self::$columnCache[$key];
 		}
 
-		$stmt = $pdo->prepare(
-			'SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-			 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+		$schema = self::schemaName($pdo);
+		if ($schema !== '') {
+			$stmt = $pdo->prepare(
+				'SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+				 WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?'
+			);
+			$stmt->execute([$schema, $table, $column]);
+			if ((int) $stmt->fetchColumn() > 0) {
+				self::$columnCache[$key] = true;
+				return true;
+			}
+		}
+
+		$stmt = $pdo->query(
+			'SHOW COLUMNS FROM `' . str_replace('`', '``', $table) . '` LIKE '
+			. "'" . str_replace("'", "''", $column) . "'"
 		);
-		$stmt->execute([$table, $column]);
-		self::$columnCache[$key] = ((int) $stmt->fetchColumn()) > 0;
+		self::$columnCache[$key] = (bool) $stmt->fetch(PDO::FETCH_ASSOC);
 
 		return self::$columnCache[$key];
 	}
@@ -50,5 +71,20 @@ final class DatabaseSchema
 	{
 		self::$tableCache = [];
 		self::$columnCache = [];
+	}
+
+	private static function schemaName(PDO $pdo): string
+	{
+		$name = trim((string) (getenv('DB_NAME') ?: ''));
+		if ($name !== '') {
+			return $name;
+		}
+
+		try {
+			$current = $pdo->query('SELECT DATABASE()')->fetchColumn();
+			return is_string($current) ? $current : '';
+		} catch (\Throwable $e) {
+			return '';
+		}
 	}
 }

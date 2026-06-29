@@ -49,7 +49,7 @@ final class Migrator
 
 		$ensured = [];
 		try {
-			$ensured = self::ensureSdwanColumns($pdo);
+			$ensured = self::ensureSdwanEntryColumns($pdo);
 		} catch (\Throwable $e) {
 			$errors['ensure_sdwan_columns'] = $e->getMessage();
 		}
@@ -94,7 +94,7 @@ final class Migrator
 	}
 
 	/** @return list<string> */
-	private static function ensureSdwanColumns(PDO $pdo): array
+	public static function ensureSdwanEntryColumns(PDO $pdo): array
 	{
 		if (!DatabaseSchema::tableExists($pdo, 'sdwan_entries')) {
 			return [];
@@ -113,18 +113,34 @@ final class Migrator
 				continue;
 			}
 
-			$sql = sprintf(
-				'ALTER TABLE sdwan_entries ADD COLUMN `%s` %s AFTER `%s`',
-				str_replace('`', '``', $column),
-				$definition,
-				str_replace('`', '``', $after)
-			);
-			$pdo->exec($sql);
+			$quotedColumn = '`' . str_replace('`', '``', $column) . '`';
+			$quotedAfter = '`' . str_replace('`', '``', $after) . '`';
+			$sqlAfter = "ALTER TABLE sdwan_entries ADD COLUMN {$quotedColumn} {$definition} AFTER {$quotedAfter}";
+			$sqlPlain = "ALTER TABLE sdwan_entries ADD COLUMN {$quotedColumn} {$definition}";
+
+			try {
+				$pdo->exec($sqlAfter);
+			} catch (\Throwable $e) {
+				if (self::isDuplicateColumnError($e)) {
+					DatabaseSchema::clearCache();
+					continue;
+				}
+				$pdo->exec($sqlPlain);
+			}
+
 			DatabaseSchema::clearCache();
 			$added[] = 'sdwan_entries.' . $column;
 		}
 
 		return $added;
+	}
+
+	private static function isDuplicateColumnError(\Throwable $e): bool
+	{
+		$message = strtolower($e->getMessage());
+
+		return str_contains($message, 'duplicate column')
+			|| str_contains($message, '1060');
 	}
 
 	private static function ensureMigrationsTable(PDO $pdo): void
