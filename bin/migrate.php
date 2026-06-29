@@ -12,6 +12,9 @@ foreach ($result['applied'] as $migration) {
 foreach ($result['skipped'] as $migration) {
 	echo "[SKIP] {$migration}\n";
 }
+foreach ($result['ensured'] ?? [] as $column) {
+	echo "[OK] Ensured column: {$column}\n";
+}
 foreach ($result['errors'] as $migration => $error) {
 	echo "[ERR] {$migration}: {$error}\n";
 }

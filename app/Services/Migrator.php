@@ -14,7 +14,7 @@ final class Migrator
 
 		$dir = (defined('BASE_PATH') ? BASE_PATH : dirname(__DIR__, 2)) . '/database/migrations';
 		if (!is_dir($dir)) {
-			return ['applied' => [], 'skipped' => [], 'errors' => []];
+			return ['applied' => [], 'skipped' => [], 'errors' => [], 'ensured' => []];
 		}
 
 		$files = glob($dir . '/*.sql') ?: [];
@@ -38,7 +38,7 @@ final class Migrator
 			}
 
 			try {
-				$pdo->exec($sql);
+				self::execSql($pdo, $sql);
 				$stmt = $pdo->prepare('INSERT INTO schema_migrations (migration) VALUES (?)');
 				$stmt->execute([$name]);
 				$applied[] = $name;
@@ -47,11 +47,84 @@ final class Migrator
 			}
 		}
 
-		if ($applied !== []) {
+		$ensured = [];
+		try {
+			$ensured = self::ensureSdwanColumns($pdo);
+		} catch (\Throwable $e) {
+			$errors['ensure_sdwan_columns'] = $e->getMessage();
+		}
+
+		if ($applied !== [] || $ensured !== []) {
 			DatabaseSchema::clearCache();
 		}
 
-		return ['applied' => $applied, 'skipped' => $skipped, 'errors' => $errors];
+		return ['applied' => $applied, 'skipped' => $skipped, 'errors' => $errors, 'ensured' => $ensured];
+	}
+
+	private static function execSql(PDO $pdo, string $sql): void
+	{
+		$driver = (string) $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+		if (stripos($driver, 'mysql') === false) {
+			$pdo->exec($sql);
+			return;
+		}
+
+		$previousMulti = null;
+		try {
+			$previousMulti = $pdo->getAttribute(PDO::MYSQL_ATTR_MULTI_STATEMENTS);
+			$pdo->setAttribute(PDO::MYSQL_ATTR_MULTI_STATEMENTS, true);
+		} catch (\Throwable $e) {
+			$pdo->exec($sql);
+			return;
+		}
+
+		try {
+			$pdo->exec($sql);
+			try {
+				while ($pdo->nextRowset()) {
+				}
+			} catch (\Throwable $e) {
+				// Sem mais result sets.
+			}
+		} finally {
+			if ($previousMulti !== null) {
+				$pdo->setAttribute(PDO::MYSQL_ATTR_MULTI_STATEMENTS, (bool) $previousMulti);
+			}
+		}
+	}
+
+	/** @return list<string> */
+	private static function ensureSdwanColumns(PDO $pdo): array
+	{
+		if (!DatabaseSchema::tableExists($pdo, 'sdwan_entries')) {
+			return [];
+		}
+
+		$added = [];
+		$specs = [
+			['quantidade_utilizada', 'INT UNSIGNED NOT NULL DEFAULT 0', 'quantidade_localizada'],
+			['serie_antena', "VARCHAR(60) NOT NULL DEFAULT ''", 'pdv_serie'],
+			['serie_acupad', "VARCHAR(60) NOT NULL DEFAULT ''", 'serie_antena'],
+			['setor', "VARCHAR(120) NOT NULL DEFAULT ''", 'serie_acupad'],
+		];
+
+		foreach ($specs as [$column, $definition, $after]) {
+			if (DatabaseSchema::columnExists($pdo, 'sdwan_entries', $column)) {
+				continue;
+			}
+
+			$sql = sprintf(
+				'ALTER TABLE sdwan_entries ADD COLUMN `%s` %s AFTER `%s`',
+				str_replace('`', '``', $column),
+				$definition,
+				str_replace('`', '``', $after)
+			);
+			$pdo->exec($sql);
+			DatabaseSchema::clearCache();
+			$added[] = 'sdwan_entries.' . $column;
+		}
+
+		return $added;
 	}
 
 	private static function ensureMigrationsTable(PDO $pdo): void
