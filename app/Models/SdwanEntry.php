@@ -225,20 +225,23 @@ final class SdwanEntry
 		return ['page' => 1, 'per_page' => $perPage, 'total' => 0, 'total_pages' => 1];
 	}
 
-	/** @param array<string, mixed> $filters @return array{total: int, xpads_previsto: int, quantidade_localizada: int, total_lojas: int} */
+	/** @param array<string, mixed> $filters @return array{total: int, xpads_previsto: int, quantidade_localizada: int, quantidade_utilizada: int, total_lojas: int} */
 	public static function summary(array $filters = []): array
 	{
 		if (!self::tableReady()) {
-			return ['total' => 0, 'xpads_previsto' => 0, 'quantidade_localizada' => 0, 'total_lojas' => 0];
+			return ['total' => 0, 'xpads_previsto' => 0, 'quantidade_localizada' => 0, 'quantidade_utilizada' => 0, 'total_lojas' => 0];
 		}
 
 		$filter = self::buildFilterWhere($filters);
 		$pdo = Database::pdo();
+		$utilizadaSelect = self::hasQuantidadeUtilizadaColumn()
+			? ', COALESCE(SUM(e.quantidade_utilizada), 0) AS quantidade_utilizada'
+			: ', 0 AS quantidade_utilizada';
 		$stmt = $pdo->prepare('
 			SELECT
 				COUNT(*) AS total,
 				COALESCE(SUM(e.xpads_previsto), 0) AS xpads_previsto,
-				COALESCE(SUM(e.quantidade_localizada), 0) AS quantidade_localizada,
+				COALESCE(SUM(e.quantidade_localizada), 0) AS quantidade_localizada' . $utilizadaSelect . ',
 				COUNT(DISTINCT e.loja) AS total_lojas
 			FROM sdwan_entries e
 			WHERE ' . $filter['where']
@@ -250,6 +253,7 @@ final class SdwanEntry
 			'total' => (int) ($row['total'] ?? 0),
 			'xpads_previsto' => (int) ($row['xpads_previsto'] ?? 0),
 			'quantidade_localizada' => (int) ($row['quantidade_localizada'] ?? 0),
+			'quantidade_utilizada' => (int) ($row['quantidade_utilizada'] ?? 0),
 			'total_lojas' => (int) ($row['total_lojas'] ?? 0),
 		];
 	}
@@ -306,13 +310,20 @@ final class SdwanEntry
 	public static function progressChart(array $filters = []): array
 	{
 		$summary = self::summary($filters);
+		$labels = ['Acupad previstos', 'Quantidade localizada'];
+		$data = [
+			(int) ($summary['xpads_previsto'] ?? 0),
+			(int) ($summary['quantidade_localizada'] ?? 0),
+		];
+
+		if (self::hasQuantidadeUtilizadaColumn()) {
+			$labels[] = 'Quantidade utilizada';
+			$data[] = (int) ($summary['quantidade_utilizada'] ?? 0);
+		}
 
 		return [
-			'labels' => ['Acupad previstos', 'Quantidade localizada'],
-			'data' => [
-				(int) ($summary['xpads_previsto'] ?? 0),
-				(int) ($summary['quantidade_localizada'] ?? 0),
-			],
+			'labels' => $labels,
+			'data' => $data,
 		];
 	}
 

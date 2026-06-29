@@ -10,7 +10,7 @@
 		</div>
 	</div>
 
-	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-2">
+	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-2">
 		<div class="ui-card ui-stat-card">
 			<p class="ui-stat-label">Registros</p>
 			<p class="ui-stat-value text-blue-900" id="sdwan-total-rows">0</p>
@@ -24,8 +24,12 @@
 			<p class="ui-stat-value text-orange-600" id="sdwan-total-localizada">0</p>
 		</div>
 		<div class="ui-card ui-stat-card">
+			<p class="ui-stat-label">Quantidade utilizada</p>
+			<p class="ui-stat-value text-emerald-600" id="sdwan-total-utilizada">0</p>
+		</div>
+		<div class="ui-card ui-stat-card">
 			<p class="ui-stat-label">Lojas</p>
-			<p class="ui-stat-value text-emerald-600" id="sdwan-total-lojas">0</p>
+			<p class="ui-stat-value text-sky-700" id="sdwan-total-lojas">0</p>
 		</div>
 	</div>
 	<p class="text-xs text-slate-500 mb-6" id="sdwan-stats-filter-note">Totais conforme filtros aplicados.</p>
@@ -239,7 +243,7 @@
 			<p id="sdwan-chart-empty" class="hidden text-sm text-slate-500 text-center py-8">Nenhum dado para o gráfico.</p>
 		</section>
 		<section class="ui-card ui-card-body">
-			<h3 class="text-lg font-bold text-slate-800 mb-1">Previsto vs localizado</h3>
+			<h3 class="text-lg font-bold text-slate-800 mb-1">Previsto vs localizado vs utilizado</h3>
 			<p class="text-sm text-slate-600 mb-4">Comparativo geral dos registros filtrados.</p>
 			<div class="h-72">
 				<canvas id="sdwan-progress-chart" class="w-full h-full"></canvas>

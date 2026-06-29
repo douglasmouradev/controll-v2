@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function () {
 	const totalRowsEl = document.getElementById('sdwan-total-rows');
 	const totalXpadsEl = document.getElementById('sdwan-total-xpads');
 	const totalLocalizadaEl = document.getElementById('sdwan-total-localizada');
+	const totalUtilizadaEl = document.getElementById('sdwan-total-utilizada');
 	const totalLojasEl = document.getElementById('sdwan-total-lojas');
 	const lojaInput = document.getElementById('sdwan-loja');
 	const lojaDatalist = document.getElementById('sdwan-loja-list');
@@ -304,11 +305,13 @@ document.addEventListener('DOMContentLoaded', function () {
 		if (totalRowsEl) totalRowsEl.textContent = String(summary.total ?? 0);
 		if (totalXpadsEl) totalXpadsEl.textContent = String(summary.xpads_previsto ?? 0);
 		if (totalLocalizadaEl) totalLocalizadaEl.textContent = String(summary.quantidade_localizada ?? 0);
+		if (totalUtilizadaEl) totalUtilizadaEl.textContent = String(summary.quantidade_utilizada ?? 0);
 		if (totalLojasEl) totalLojasEl.textContent = String(summary.total_lojas ?? 0);
 		if (goalFilteredSummaryEl) {
 			const previsto = Number(summary.xpads_previsto ?? 0);
 			const localizada = Number(summary.quantidade_localizada ?? 0);
-			goalFilteredSummaryEl.textContent = `Filtrado: ${localizada.toLocaleString('pt-BR')} localizados de ${previsto.toLocaleString('pt-BR')} previstos`;
+			const utilizada = Number(summary.quantidade_utilizada ?? 0);
+			goalFilteredSummaryEl.textContent = `Filtrado: ${localizada.toLocaleString('pt-BR')} localizados, ${utilizada.toLocaleString('pt-BR')} utilizados de ${previsto.toLocaleString('pt-BR')} previstos`;
 		}
 		const hasFilters = !!(filterLoja?.value.trim() || filterPdv?.value.trim() || filterSource?.value || filterDateFrom?.value || filterDateTo?.value);
 		if (statsFilterNoteEl) {
@@ -383,9 +386,10 @@ document.addEventListener('DOMContentLoaded', function () {
 		const emptyEl = document.getElementById('sdwan-progress-empty');
 		if (!canvas || typeof Chart === 'undefined') return;
 
-		const labels = Array.isArray(chart?.labels) ? chart.labels : ['Acupad previstos', 'Quantidade localizada'];
-		const dataValues = Array.isArray(chart?.data) ? chart.data : [0, 0];
+		const labels = Array.isArray(chart?.labels) ? chart.labels : ['Acupad previstos', 'Quantidade localizada', 'Quantidade utilizada'];
+		const dataValues = Array.isArray(chart?.data) ? chart.data : [0, 0, 0];
 		const total = dataValues.reduce((acc, value) => acc + Number(value || 0), 0);
+		const barColors = ['#7c3aed', '#f97316', '#059669'];
 
 		if (total === 0) {
 			if (sdwanProgressChart) {
@@ -405,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			datasets: [{
 				label: 'Totais',
 				data: dataValues,
-				backgroundColor: ['#7c3aed', '#f97316'],
+				backgroundColor: labels.map((_, idx) => barColors[idx] || '#64748b'),
 				borderRadius: 6,
 			}],
 		};
