@@ -515,7 +515,7 @@ document.addEventListener('DOMContentLoaded', function () {
 		storePanelRows = Array.isArray(rows) ? rows : [];
 		const sorted = sortStorePanelRows(storePanelRows);
 		if (sorted.length === 0) {
-			storePanelBody.innerHTML = '<tr><td colspan="6" class="empty-state">Nenhum dado por loja.</td></tr>';
+			storePanelBody.innerHTML = '<tr><td colspan="7" class="empty-state">Nenhum dado por loja.</td></tr>';
 			return;
 		}
 		storePanelBody.innerHTML = sorted.map((row) => `
@@ -526,6 +526,7 @@ document.addEventListener('DOMContentLoaded', function () {
 				<td>${escapeHtml(String(row.registros ?? 0))}</td>
 				<td>${escapeHtml(String(row.xpads_previsto ?? 0))}</td>
 				<td>${escapeHtml(String(row.quantidade_localizada ?? 0))}</td>
+				<td>${escapeHtml(String(row.quantidade_utilizada ?? 0))}</td>
 				<td>${escapeHtml(String(row.pendente ?? 0))}</td>
 				<td><span class="sdwan-store-percent">${escapeHtml(String(row.percent ?? 0))}%</span></td>
 			</tr>

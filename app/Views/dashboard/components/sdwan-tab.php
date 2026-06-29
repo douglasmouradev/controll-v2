@@ -263,12 +263,13 @@
 						<th><button type="button" class="sdwan-sort-btn" data-sort="registros">Registros</button></th>
 						<th><button type="button" class="sdwan-sort-btn" data-sort="xpads_previsto">Acupad previstos</button></th>
 						<th><button type="button" class="sdwan-sort-btn" data-sort="quantidade_localizada">Localizado</button></th>
+						<th><button type="button" class="sdwan-sort-btn" data-sort="quantidade_utilizada">Quantidade utilizada</button></th>
 						<th><button type="button" class="sdwan-sort-btn" data-sort="pendente">Pendente</button></th>
 						<th><button type="button" class="sdwan-sort-btn" data-sort="percent">%</button></th>
 					</tr>
 				</thead>
 				<tbody id="sdwan-store-panel-body">
-					<tr><td colspan="6" class="empty-state">Nenhum dado por loja.</td></tr>
+					<tr><td colspan="7" class="empty-state">Nenhum dado por loja.</td></tr>
 				</tbody>
 			</table>
 		</div>

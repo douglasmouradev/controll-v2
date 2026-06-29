@@ -110,12 +110,16 @@ final class SdwanEntry
 
 		$filter = self::buildFilterWhere($filters);
 		$pdo = Database::pdo();
+		self::ensureSchemaReady();
+		$utilizadaSelect = self::hasQuantidadeUtilizadaColumn()
+			? ', COALESCE(SUM(e.quantidade_utilizada), 0) AS quantidade_utilizada'
+			: ', 0 AS quantidade_utilizada';
 		$stmt = $pdo->prepare('
 			SELECT
 				e.loja,
 				COUNT(*) AS registros,
 				COALESCE(SUM(e.xpads_previsto), 0) AS xpads_previsto,
-				COALESCE(SUM(e.quantidade_localizada), 0) AS quantidade_localizada
+				COALESCE(SUM(e.quantidade_localizada), 0) AS quantidade_localizada' . $utilizadaSelect . '
 			FROM sdwan_entries e
 			WHERE ' . $filter['where'] . '
 			GROUP BY e.loja
@@ -134,6 +138,7 @@ final class SdwanEntry
 				'registros' => (int) ($row['registros'] ?? 0),
 				'xpads_previsto' => $previsto,
 				'quantidade_localizada' => $localizada,
+				'quantidade_utilizada' => (int) ($row['quantidade_utilizada'] ?? 0),
 				'pendente' => max(0, $previsto - $localizada),
 				'percent' => $percent,
 			];
