@@ -47,6 +47,10 @@ final class Migrator
 			}
 		}
 
+		if ($applied !== []) {
+			DatabaseSchema::clearCache();
+		}
+
 		return ['applied' => $applied, 'skipped' => $skipped, 'errors' => $errors];
 	}
 

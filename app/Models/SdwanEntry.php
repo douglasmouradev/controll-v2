@@ -423,8 +423,9 @@ final class SdwanEntry
 		}
 
 		if ($hasEquipment) {
-			array_splice($columns, 4, 0, ['serie_antena', 'serie_acupad', 'setor']);
-			array_splice($placeholders, 4, 0, [':serie_antena', ':serie_acupad', ':setor']);
+			$equipmentIndex = 4 + ($hasQuantidadeUtilizada ? 1 : 0);
+			array_splice($columns, $equipmentIndex, 0, ['serie_antena', 'serie_acupad', 'setor']);
+			array_splice($placeholders, $equipmentIndex, 0, [':serie_antena', ':serie_acupad', ':setor']);
 		}
 
 		if ($hasImage) {
@@ -566,13 +567,11 @@ final class SdwanEntry
 		$data = [
 			'xpads_previsto' => $xpadsPrevisto,
 			'quantidade_localizada' => $quantidadeLocalizada,
+			'quantidade_utilizada' => $quantidadeUtilizada,
 			'pdv_numero' => $pdvNumero,
 			'pdv_serie' => $pdvSerie,
 			'loja' => $loja,
 		];
-		if (self::hasQuantidadeUtilizadaColumn()) {
-			$data['quantidade_utilizada'] = $quantidadeUtilizada;
-		}
 		if (self::hasEquipmentColumns()) {
 			$data['serie_antena'] = $serieAntena;
 			$data['serie_acupad'] = $serieAcupad;
